@@ -6,7 +6,7 @@ Designed for use with the [Mudae bot](https://top.gg/bot/432610292342587392) on 
 ## Features
 
 -   Import your collection from the `$mmsaty+ri-c+x+ko` command and show characters with their images, series, kakera, and key values.
--   Group characters by **Series**, **Note**, or **Keys**. Sort them by **name**, **kakera** or **keys**.
+-   Group and sort characters.
 -   A ranking system to number characters. 
 -   Bulk-apply notes or hex colors to entire series or selected groups.
 -   Automatically creates optimized $n and $ec commands ready to paste back into Discord.
