@@ -1376,9 +1376,9 @@
             AppState.ui.fitToScreen = shouldFit;
             document.getElementById('fit-on-btn').classList.toggle('active', shouldFit);
             document.getElementById('fit-off-btn').classList.toggle('active', !shouldFit);
-            
+
             document.body.classList.toggle('fit-width', shouldFit);
-            
+
             saveToLocalStorage();
         }
 
@@ -1639,15 +1639,19 @@
             });
             document.getElementById('seriesGrid').addEventListener('input', (e) => {
                 if (e.target.classList.contains('color-picker-input')) {
-                    const hexInput = e.target.nextElementSibling;
+                    const swatch = e.target.closest('.color-swatch-btn');
+                    const hexInput = swatch ? swatch.nextElementSibling : null;
+                    if (swatch) swatch.style.background = e.target.value;
                     if (hexInput && hexInput.classList.contains('color-hex-input')) {
                         hexInput.value = e.target.value;
                     }
                 } else if (e.target.classList.contains('color-hex-input')) {
-                    const colorPicker = e.target.previousElementSibling;
+                    const swatch = e.target.previousElementSibling;
+                    const colorPicker = swatch ? swatch.querySelector('input.color-picker-input') : null;
                     const val = e.target.value.trim();
-                    if (colorPicker && colorPicker.classList.contains('color-picker-input') && /^#([0-9a-fA-F]{6})$/i.test(val)) {
-                        colorPicker.value = val;
+                    if (/^#([0-9a-fA-F]{6})$/i.test(val)) {
+                        if (swatch) swatch.style.background = val;
+                        if (colorPicker) colorPicker.value = val;
                     }
                 }
             });
@@ -2068,9 +2072,10 @@ ${rouletteBarHTML}
 </div>
 </div>
 <div class="bulk-apply-group">
-<input type="color" class="color-picker-input" value="#7c3aed">
-<input type="text" class="note-input color-hex-input" placeholder="#RRGGBB">
-<div class="apply-btn-group">
+<div class="color-swatch-btn" onclick="this.querySelector('input').click()" style="width:32px;min-width:32px;align-self:stretch;background:#7c3aed;cursor:pointer;border-right:1px solid #2a2a3a;flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;">
+    <input type="color" class="color-picker-input" value="#7c3aed" style="position:absolute;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;margin:0;">
+</div>
+<input type="text" class="note-input color-hex-input" placeholder="#RRGGBB"><div class="apply-btn-group">
 <button data-action="bulk-color" data-target="all" class="btn">All</button>
 <button data-action="bulk-color" data-target="selected" class="btn">Selected</button>
 </div>
