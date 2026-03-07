@@ -1574,23 +1574,26 @@
 
                 case 'sort': {
                     const sortBy = target.dataset.sortBy;
-                    let groupCharsData = getGroupChars();
+                    const isAlreadyActive = target.classList.contains('active');
+                    const groupCharsData = getGroupChars();
 
                     const sortFunctions = {
-                        'original': (a, b) => a.originalIndex - b.originalIndex, 
+                        'original': (a, b) => a.originalIndex - b.originalIndex,
                         'az': (a, b) => a.name.localeCompare(b.name),
                         'rank': (a, b) => (a.rank || 999999) - (b.rank || 999999),
-                        'global': (a, b) => parseInt(a.globalRank || 999999) - parseInt(b.globalRank || 999999),
                         'kakera': (a, b) => parseInt(b.kakera || 0) - parseInt(a.kakera || 0),
                         'keys': (a, b) => parseInt(b.keys || 0) - parseInt(a.keys || 0)
                     };
 
                     groupCharsData.sort(sortFunctions[sortBy]);
 
-                    if (AppState.ui.rankingEnabled) {
+                    if (AppState.ui.rankingEnabled && isAlreadyActive) {
                         groupCharsData.forEach((char, index) => {
-                            AppState.seriesData[char.originalSeries].characters[char.originalIndex].rank = index + 1;
+                            const originalChar = AppState.seriesData[char.originalSeries].characters[char.originalIndex];
+                            originalChar.rank = index + 1;
+                            char.rank = index + 1;
                         });
+                        saveToLocalStorage();
                     }
 
                     const charList = groupCard.querySelector('.characters-list');
@@ -2036,7 +2039,7 @@ ${rouletteBarHTML}
                     displayName = '(No Color)';
                 }
 
-                if (AppState.ui.rankingEnabled && data.characters.every(c => c.rank === 0)) {
+                if (AppState.ui.rankingEnabled && data.characters.every(c => (c.rank === 0 || !c.rank))) {
                     data.characters.forEach((char, index) => char.rank = index + 1);
                 }
                 
