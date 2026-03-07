@@ -1777,7 +1777,7 @@
 ${isRankingEnabled ? `<div class="character-rank-badge" data-action="edit-rank">${char.rank > 0 ? char.rank : '#'}</div>` : ''}
 <img src="${char.image}" alt="${char.name}" loading="lazy" onerror="handleImageError(this)">
 <div class="character-info">
-<div class="character-name" title="${char.name}">${char.name}</div>
+<div class="character-name" title="${escapeHTML(char.name)}">${escapeHTML(char.name)}</div>
 ${(() => {
                     if (!char.owner) return '';
                     const letter = char.owner[0].toUpperCase();
@@ -1789,7 +1789,7 @@ ${(() => {
                 ${escapeHTML(char.owner)}
             </div>`;
                 })()}
-<div class="character-note" data-action="edit-note" title="${hasNote ? char.note : 'Click to add note'}" style="background: #13131a; padding: 4px; font-size: 0.7em; color: ${hasNote ? '#9ca3af' : '#dc2626; font-weight: bold'}; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-radius: 4px;">${hasNote ? char.note : 'No note!'}</div>
+<div class="character-note" data-action="edit-note" title="${hasNote ? escapeHTML(char.note) : 'Click to add note'}" style="background: #13131a; padding: 4px; font-size: 0.7em; color: ${hasNote ? '#9ca3af' : '#dc2626; font-weight: bold'}; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-radius: 4px;">${hasNote ? escapeHTML(char.note) : 'No note!'}</div>
 <div class="character-stats">
 <div class="stat-badge"><div class="stat-badge-label">Rank</div><div class="stat-badge-value">${char.globalRank ? '#' + char.globalRank : '#?'}</div></div>
 <div class="stat-badge"><div class="stat-badge-label">Ka</div><div class="stat-badge-value">${char.kakera || '?'}</div></div>
