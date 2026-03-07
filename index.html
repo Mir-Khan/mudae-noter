@@ -1239,22 +1239,26 @@
     </div>
 
     <script>
-        let seriesData = {};
-        let quickNotes = ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'];
-        let currentGrouping = 'series';
-        let currentSortMethod = 'count';
-        let isRankingEnabled = true;
-        let showDeselected = true;
-        let showDisabledIcon = true;
-        let preFilterCharacterStates = null;
-        let userPreferredColumns = 3;
+        const AppState = {
+            seriesData: {},
+            quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
+            preFilterCharacterStates: null,
+            ui: {
+                grouping: 'series',
+                sortMethod: 'count',
+                rankingEnabled: true,
+                showDeselected: true,
+                showDisabledIcon: true,
+                preferredColumns: 3
+            }
+        };
 
         function initQuickNotes() {
             displayQuickNotes();
         }
 
         function setGrouping(method) {
-            currentGrouping = method;
+            AppState.ui.grouping = method;
             const buttons = document.querySelectorAll('#group-series-btn, #group-note-btn, #group-keys-btn, #group-nogroup-btn, #group-kakera-btn, #group-color-btn, #group-gender-btn, #group-roulette-btn, #group-owner-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
             document.getElementById(`group-${method}-btn`).classList.add('active');
@@ -1276,10 +1280,10 @@
         }
 
         function sortGroups(method) {
-            if (Object.keys(seriesData).length === 0) {
+            if (Object.keys(AppState.seriesData).length === 0) {
                 return;
             }
-            currentSortMethod = method;
+            AppState.ui.sortMethod = method;
 
             const buttons = document.querySelectorAll('#sort-alpha-btn, #sort-count-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
@@ -1288,11 +1292,11 @@
             displaySeries();
         }
         function toggleRanking(enabled) {
-            isRankingEnabled = enabled;
+            AppState.ui.rankingEnabled = enabled;
             document.getElementById('ranking-on-btn').classList.toggle('active', enabled);
             document.getElementById('ranking-off-btn').classList.toggle('active', !enabled);
 
-            if (Object.keys(seriesData).length > 0) {
+            if (Object.keys(AppState.seriesData).length > 0) {
                 displaySeries();
             }
         }
@@ -1303,7 +1307,7 @@
             }
 
             if (columns > 1) {
-                userPreferredColumns = columns;
+                AppState.ui.preferredColumns = columns;
             }
 
             for (let i = 1; i <= 4; i++) {
@@ -1314,21 +1318,22 @@
             const activeBtn = document.getElementById(`grid-btn-${columns}`);
             if (activeBtn) activeBtn.classList.add('active');
 
-            localStorage.setItem('mudaeGridColumns', columns);
+            AppState.ui.preferredColumns = columns;
+            saveToLocalStorage();
         }
         function toggleDeselectedVisibility(shouldShow) {
-            showDeselected = shouldShow;
+            AppState.ui.showDeselected = shouldShow;
             document.getElementById('deselected-show-btn').classList.toggle('active', shouldShow);
             document.getElementById('deselected-hide-btn').classList.toggle('active', !shouldShow);
 
-            if (Object.keys(seriesData).length > 0) {
+            if (Object.keys(AppState.seriesData).length > 0) {
                 displaySeries();
             }
 
             saveToLocalStorage();
         }
         function toggleDisabledIconVisibility(shouldShow) {
-            showDisabledIcon = shouldShow;
+            AppState.ui.showDisabledIcon = shouldShow;
             document.getElementById('disabled-icon-show-btn').classList.toggle('active', shouldShow);
             document.getElementById('disabled-icon-hide-btn').classList.toggle('active', !shouldShow);
 
@@ -1342,7 +1347,7 @@
 
             const isColorCode = /^#([0-9a-fA-F]{3}){1,2}$/;
 
-            quickNotes.forEach(function (note, idx) {
+            AppState.quickNotes.forEach(function (note, idx) {
                 const noteEl = document.createElement('div');
                 noteEl.className = 'quick-note';
                 noteEl.onclick = function (e) {
@@ -1390,8 +1395,8 @@
         function addQuickNote() {
             const input = document.getElementById('newQuickNote');
             const note = input.value.trim();
-            if (note && quickNotes.indexOf(note) === -1) {
-                quickNotes.push(note);
+            if (note && AppState.quickNotes.indexOf(note) === -1) {
+                AppState.quickNotes.push(note);
                 displayQuickNotes();
                 input.value = '';
             }
@@ -1399,7 +1404,7 @@
         }
 
         function removeQuickNote(idx) {
-            quickNotes.splice(idx, 1);
+            AppState.quickNotes.splice(idx, 1);
             displayQuickNotes();
             saveToLocalStorage();
         }
@@ -1428,7 +1433,7 @@
                     e.stopPropagation();
                     const series = card.dataset.originalSeries;
                     const index = parseInt(card.dataset.originalIndex, 10);
-                    const char = seriesData[series].characters[index];
+                    const char = AppState.seriesData[series].characters[index];
                     target.style.display = 'none';
 
                     const input = document.createElement('input');
@@ -1457,7 +1462,7 @@
                         } else {
                             char.note = newValue.trim();
 
-                            if (currentGrouping === 'note') {
+                            if (AppState.ui.grouping === 'note') {
                                 needsFullRender = true;
                             } else {
                                 const hasNote = char.note && char.note.trim() !== '';
@@ -1490,8 +1495,8 @@
                         const identifierObjects = JSON.parse(groupCard.dataset.characters);
                         return identifierObjects.map(obj => {
                             const { series, index } = obj;
-                            if (seriesData[series] && seriesData[series].characters[index]) {
-                                return { ...seriesData[series].characters[index], originalSeries: series, originalIndex: index };
+                            if (AppState.seriesData[series] && AppState.seriesData[series].characters[index]) {
+                                return { ...AppState.seriesData[series].characters[index], originalSeries: series, originalIndex: index };
                             }
                             return null;
                         }).filter(Boolean);
@@ -1510,14 +1515,14 @@
                         groupCard.querySelectorAll('.character-card').forEach(cardEl => {
                             const series = cardEl.dataset.originalSeries;
                             const index = parseInt(cardEl.dataset.originalIndex, 10);
-                            const originalChar = seriesData[series]?.characters[index];
+                            const originalChar = AppState.seriesData[series]?.characters[index];
                             if (!originalChar) return;
 
                             const newExcludedState = isToggle ? !allCurrentlyExcluded : !originalChar.excluded;
                             if (originalChar.excluded !== newExcludedState) {
                                 originalChar.excluded = newExcludedState;
                                 cardEl.classList.toggle('excluded', newExcludedState);
-                                if (!showDeselected) {
+                                if (!AppState.ui.showDeselected) {
                                     cardEl.classList.toggle('hidden-char', newExcludedState);
                                 }
                             }
@@ -1540,9 +1545,9 @@
 
                         groupCharsData.sort(sortFunctions[sortBy]);
 
-                        if (isRankingEnabled) {
+                        if (AppState.ui.rankingEnabled) {
                             groupCharsData.forEach((char, index) => {
-                                seriesData[char.originalSeries].characters[char.originalIndex].rank = index + 1;
+                                AppState.seriesData[char.originalSeries].characters[char.originalIndex].rank = index + 1;
                             });
                         }
 
@@ -1569,7 +1574,7 @@
                         getGroupChars().forEach(char => {
                             const applies = (applyTo === 'all') || (applyTo === 'selected' && !char.excluded);
                             if (applies) {
-                                const originalChar = seriesData[char.originalSeries].characters[char.originalIndex];
+                                const originalChar = AppState.seriesData[char.originalSeries].characters[char.originalIndex];
                                 if (isNote) originalChar.note = newValue;
                                 else originalChar.color = newValue.trim();
                             }
@@ -1577,7 +1582,7 @@
 
                         input.value = '';
 
-                        if ((isNote && currentGrouping === 'note') || (!isNote && currentGrouping === 'color')) {
+                        if ((isNote && AppState.ui.grouping === 'note') || (!isNote && AppState.ui.grouping === 'color')) {
                             displaySeries();
                         } else {
                             const charList = groupCard.querySelector('.characters-list');
@@ -1599,7 +1604,7 @@
                 return;
             }
 
-            seriesData = {};
+            AppState.seriesData = {};
             const lines = input.split('\n');
             let currentSeries = null;
 
@@ -1610,7 +1615,7 @@
                 const seriesMatch = line.match(/^(.+?)\s*-\s*(\d+)\/(\d+)$/);
                 if (seriesMatch) {
                     currentSeries = seriesMatch[1].trim();
-                    seriesData[currentSeries] = {
+                    AppState.seriesData[currentSeries] = {
                         total: parseInt(seriesMatch[3]),
                         owned: parseInt(seriesMatch[2]),
                         characters: [],
@@ -1695,7 +1700,7 @@
                             cleanName = namePart;
                         }
 
-                        seriesData[currentSeries].characters.push({
+                        AppState.seriesData[currentSeries].characters.push({
                             name: cleanName,
                             displayName: cleanName,
                             image: imageUrl,
@@ -1714,7 +1719,7 @@
                 }
             }
 
-            if (Object.keys(seriesData).length === 0) {
+            if (Object.keys(AppState.seriesData).length === 0) {
                 showMessage('Parsing failed. Please ensure your input format is correct and contains at least one series.', 'error');
                 return;
             }
@@ -1732,7 +1737,7 @@
             let classNames = ['character-card'];
             if (char.excluded) classNames.push('excluded');
             if (char.isDisabled) classNames.push('permanently-disabled');
-            if (char.excluded && !showDeselected) classNames.push('hidden-char');
+            if (char.excluded && !AppState.ui.showDeselected) classNames.push('hidden-char');
 
             const colorCode = char.color || '#670d08';
             const hasNote = char.note && char.note.trim() !== '';
@@ -1774,7 +1779,7 @@
             rouletteBarHTML += '</div>';
 
             return `<div class="${classNames.join(' ')}" data-original-series="${char.originalSeries}" data-original-index="${char.originalIndex}" style="--card-color: ${colorCode};">
-${isRankingEnabled ? `<div class="character-rank-badge" data-action="edit-rank">${char.rank > 0 ? char.rank : '#'}</div>` : ''}
+${AppState.ui.rankingEnabled ? `<div class="character-rank-badge" data-action="edit-rank">${char.rank > 0 ? char.rank : '#'}</div>` : ''}
 <img src="${char.image}" alt="${char.name}" loading="lazy" onerror="handleImageError(this)">
 <div class="character-info">
 <div class="character-name" title="${escapeHTML(char.name)}">${escapeHTML(char.name)}</div>
@@ -1802,12 +1807,12 @@ ${rouletteBarHTML}
         }
 
         function selectAllCharacters() {
-            if (Object.keys(seriesData).length === 0) {
+            if (Object.keys(AppState.seriesData).length === 0) {
                 return;
             }
 
-            for (let seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach(function (char) {
+            for (let seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
                     char.excluded = false;
                 });
             }
@@ -1818,12 +1823,12 @@ ${rouletteBarHTML}
         }
 
         function deselectAllCharacters() {
-            if (Object.keys(seriesData).length === 0) {
+            if (Object.keys(AppState.seriesData).length === 0) {
                 return;
             }
 
-            for (let seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach(function (char) {
+            for (let seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
                     char.excluded = true;
                 });
             }
@@ -1834,12 +1839,12 @@ ${rouletteBarHTML}
         }
 
         function selectDisabledCharacters() {
-            if (Object.keys(seriesData).length === 0) {
+            if (Object.keys(AppState.seriesData).length === 0) {
                 return;
             }
 
-            for (let seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach(function (char) {
+            for (let seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
                     if (char.isDisabled) {
                         char.excluded = false;
                     }
@@ -1852,12 +1857,12 @@ ${rouletteBarHTML}
         }
 
         function deselectDisabledCharacters() {
-            if (Object.keys(seriesData).length === 0) {
+            if (Object.keys(AppState.seriesData).length === 0) {
                 return;
             }
 
-            for (let seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach(function (char) {
+            for (let seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
                     if (char.isDisabled) {
                         char.excluded = true;
                     }
@@ -1872,13 +1877,13 @@ ${rouletteBarHTML}
         function displaySeries() {
             const grid = document.getElementById('seriesGrid');
             grid.innerHTML = '';
-            if (Object.keys(seriesData).length === 0) return;
+            if (Object.keys(AppState.seriesData).length === 0) return;
 
             const groups = {};
-            for (const seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach((char, idx) => {
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach((char, idx) => {
                     let groupKey;
-                    switch (currentGrouping) {
+                    switch (AppState.ui.grouping) {
                         case 'note':
                             groupKey = char.note.trim();
                             break;
@@ -1947,8 +1952,8 @@ ${rouletteBarHTML}
 
             const sortedGroupEntries = Object.entries(groups).sort((a, b) => {
                 const [keyA, dataA] = a; const [keyB, dataB] = b;
-                if (currentSortMethod === 'count') return dataB.characters.length - dataA.characters.length;
-                if (currentGrouping === 'kakera') {
+                if (AppState.ui.sortMethod === 'count') return dataB.characters.length - dataA.characters.length;
+                if (AppState.ui.grouping === 'kakera') {
                     const valA = parseInt(keyA.split(' ')[0]); const valB = parseInt(keyB.split(' ')[0]);
                     return valA - valB;
                 }
@@ -1965,13 +1970,13 @@ ${rouletteBarHTML}
                 })));
 
                 let displayName = groupName;
-                if (currentGrouping === 'note' && groupName === '') {
+                if (AppState.ui.grouping === 'note' && groupName === '') {
                     displayName = '(No Note)';
-                } else if (currentGrouping === 'color' && groupName.toUpperCase() === '#670D08') {
+                } else if (AppState.ui.grouping === 'color' && groupName.toUpperCase() === '#670D08') {
                     displayName = '(No Color)';
                 }
 
-                if (isRankingEnabled && data.characters.every(c => c.rank === 0)) {
+                if (AppState.ui.rankingEnabled && data.characters.every(c => c.rank === 0)) {
                     data.characters.forEach((char, index) => char.rank = index + 1);
                 }
                 data.characters.sort((a, b) => a.rank - b.rank);
@@ -2019,7 +2024,7 @@ ${rouletteBarHTML}
 </div>`;
 
                 const hasVisibleChars = data.characters.some(c => !c.excluded);
-                if (showDeselected || hasVisibleChars) {
+                if (AppState.ui.showDeselected || hasVisibleChars) {
                     finalHTML += groupCardHTML;
                 }
             }
@@ -2029,21 +2034,21 @@ ${rouletteBarHTML}
             if (groupCount === 1) {
                 changeGridColumns(1);
             } else if (groupCount > 1 && grid.style.gridTemplateColumns.includes('repeat(1,')) {
-                changeGridColumns(userPreferredColumns);
+                changeGridColumns(AppState.ui.preferredColumns);
             }
         }
 
         function toggleCharacter(seriesName, charIdx) {
-            if (!seriesData[seriesName] || !seriesData[seriesName].characters[charIdx]) return;
+            if (!AppState.seriesData[seriesName] || !AppState.seriesData[seriesName].characters[charIdx]) return;
 
-            const char = seriesData[seriesName].characters[charIdx];
+            const char = AppState.seriesData[seriesName].characters[charIdx];
             char.excluded = !char.excluded;
 
             const cardElement = document.querySelector(`.character-card[data-original-series="${seriesName}"][data-original-index="${charIdx}"]`);
             if (cardElement) {
                 cardElement.classList.toggle('excluded', char.excluded);
 
-                if (char.excluded && !showDeselected) {
+                if (char.excluded && !AppState.ui.showDeselected) {
                     cardElement.classList.add('hidden-char');
                 } else {
                     cardElement.classList.remove('hidden-char');
@@ -2065,8 +2070,8 @@ ${rouletteBarHTML}
                 const identifierObjects = JSON.parse(groupCard.dataset.characters);
                 groupChars = identifierObjects.map(obj => {
                     const { series, index } = obj;
-                    if (seriesData[series] && seriesData[series].characters[index]) {
-                        return seriesData[series].characters[index];
+                    if (AppState.seriesData[series] && AppState.seriesData[series].characters[index]) {
+                        return AppState.seriesData[series].characters[index];
                     }
                     return null;
                 }).filter(Boolean);
@@ -2089,7 +2094,7 @@ ${rouletteBarHTML}
                 toggleBtn.classList.toggle('disabled', allExcluded);
             }
 
-            if (!showDeselected) {
+            if (!AppState.ui.showDeselected) {
                 groupCard.style.display = includedCount > 0 ? '' : 'none';
             }
         }
@@ -2097,11 +2102,11 @@ ${rouletteBarHTML}
         function toggleGroup(charactersInGroup, event) {
             if (!charactersInGroup || charactersInGroup.length === 0) return;
 
-            const allExcluded = charactersInGroup.every(c => seriesData[c.originalSeries].characters[c.originalIndex].excluded);
+            const allExcluded = charactersInGroup.every(c => AppState.seriesData[c.originalSeries].characters[c.originalIndex].excluded);
             const shouldExclude = !allExcluded;
 
             charactersInGroup.forEach(char => {
-                seriesData[char.originalSeries].characters[char.originalIndex].excluded = shouldExclude;
+                AppState.seriesData[char.originalSeries].characters[char.originalIndex].excluded = shouldExclude;
             });
 
             const button = event.currentTarget;
@@ -2114,12 +2119,12 @@ ${rouletteBarHTML}
                 const charCardsInGroup = groupCard.querySelectorAll('.character-card');
                 charCardsInGroup.forEach(card => {
                     card.classList.toggle('excluded', shouldExclude);
-                    if (!showDeselected) {
+                    if (!AppState.ui.showDeselected) {
                         card.classList.toggle('hidden-char', shouldExclude);
                     }
                 });
 
-                if (!showDeselected) {
+                if (!AppState.ui.showDeselected) {
                     groupCard.style.display = shouldExclude ? 'none' : '';
                 }
 
@@ -2139,7 +2144,7 @@ ${rouletteBarHTML}
             if (!charactersInGroup || charactersInGroup.length === 0) return;
 
             charactersInGroup.forEach(char => {
-                const charData = seriesData[char.originalSeries].characters[char.originalIndex];
+                const charData = AppState.seriesData[char.originalSeries].characters[char.originalIndex];
                 charData.excluded = !charData.excluded;
             });
 
@@ -2151,16 +2156,16 @@ ${rouletteBarHTML}
                 charCardsInGroup.forEach(card => {
                     const seriesName = card.dataset.originalSeries;
                     const charIndex = parseInt(card.dataset.originalIndex, 10);
-                    const charData = seriesData[seriesName].characters[charIndex];
+                    const charData = AppState.seriesData[seriesName].characters[charIndex];
                     card.classList.toggle('excluded', charData.excluded);
-                    if (!showDeselected) {
+                    if (!AppState.ui.showDeselected) {
                         card.classList.toggle('hidden-char', charData.excluded);
                     }
                 });
 
-                const includedCount = charactersInGroup.filter(c => !seriesData[c.originalSeries].characters[c.originalIndex].excluded).length;
+                const includedCount = charactersInGroup.filter(c => !AppState.seriesData[c.originalSeries].characters[c.originalIndex].excluded).length;
 
-                if (!showDeselected) {
+                if (!AppState.ui.showDeselected) {
                     groupCard.style.display = includedCount === 0 ? 'none' : '';
                 }
 
@@ -2183,31 +2188,33 @@ ${rouletteBarHTML}
         }
 
         function updateStats() {
-            const totalSeries = Object.keys(seriesData).length;
+            const totalSeries = Object.keys(AppState.seriesData).length;
             let totalChars = 0;
             let includedChars = 0;
 
-            for (let key in seriesData) {
-                const data = seriesData[key];
+            for (let key in AppState.seriesData) {
+                const data = AppState.seriesData[key];
                 totalChars += data.characters.length;
                 includedChars += data.characters.filter(function (c) { return !c.excluded; }).length;
             }
 
             const stats = document.getElementById('stats');
-            stats.innerHTML = '<div class="stats">' +
-                '<div class="stat-item">' +
-                '<div class="stat-label">Total Series</div>' +
-                '<div class="stat-value">' + totalSeries + '</div>' +
-                '</div>' +
-                '<div class="stat-item">' +
-                '<div class="stat-label">Total Characters</div>' +
-                '<div class="stat-value">' + totalChars + '</div>' +
-                '</div>' +
-                '<div class="stat-item">' +
-                '<div class="stat-label">Included Characters</div>' +
-                '<div class="stat-value">' + includedChars + '</div>' +
-                '</div>' +
-                '</div>';
+            stats.innerHTML = `
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Series</div>
+                        <div class="stat-value">${totalSeries}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Total Characters</div>
+                        <div class="stat-value">${totalChars}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Included Characters</div>
+                        <div class="stat-value">${includedChars}</div>
+                    </div>
+                </div>
+            `;
         }
 
         function scrollToTop() {
@@ -2232,7 +2239,7 @@ ${rouletteBarHTML}
             const orderedSelectedChars = Array.from(allSelectedCards).map(card => {
                 const seriesName = card.dataset.originalSeries;
                 const charIndex = parseInt(card.dataset.originalIndex, 10);
-                return seriesData[seriesName].characters[charIndex];
+                return AppState.seriesData[seriesName].characters[charIndex];
             });
 
             for (const char of orderedSelectedChars) {
@@ -2331,7 +2338,7 @@ ${rouletteBarHTML}
             const orderedSelectedChars = Array.from(allSelectedCards).map(card => {
                 const seriesName = card.dataset.originalSeries;
                 const charIndex = parseInt(card.dataset.originalIndex, 10);
-                return seriesData[seriesName].characters[charIndex];
+                return AppState.seriesData[seriesName].characters[charIndex];
             });
 
             for (const char of orderedSelectedChars) {
@@ -2430,14 +2437,10 @@ ${rouletteBarHTML}
             });
         }
 
-function clearAll() {
-            if (Object.keys(seriesData).length > 0) {
-                if (!confirm('This will clear all data')) return;
-            }
-
-            seriesData = {};
-            currentGrouping = 'series';
-            currentSortMethod = 'count';
+        function clearAll() {
+            AppState.seriesData = {};
+            AppState.ui.grouping = 'series';
+            AppState.ui.sortMethod = 'count';
 
             document.getElementById('input').value = '';
             document.getElementById('seriesGrid').innerHTML = '';
@@ -2464,17 +2467,16 @@ function clearAll() {
             document.getElementById('disabled-icon-hide-btn').classList.remove('active');
             document.querySelector('.container').classList.remove('hide-disabled-emoji');
 
-            localStorage.removeItem('mudaeSeriesData');
-            localStorage.removeItem('mudaeShowDisabledIcon');
+            localStorage.removeItem('mudaeAppState');
         }
 
         function applyFilter() {
-            if (Object.keys(seriesData).length === 0) return;
+            if (Object.keys(AppState.seriesData).length === 0) return;
 
-            if (preFilterCharacterStates === null) {
-                preFilterCharacterStates = {};
-                for (const seriesName in seriesData) {
-                    preFilterCharacterStates[seriesName] = seriesData[seriesName].characters.map(char => char.excluded);
+            if (AppState.preFilterCharacterStates === null) {
+                AppState.preFilterCharacterStates = {};
+                for (const seriesName in AppState.seriesData) {
+                    AppState.preFilterCharacterStates[seriesName] = AppState.seriesData[seriesName].characters.map(char => char.excluded);
                 }
             }
 
@@ -2486,8 +2488,8 @@ function clearAll() {
             const rouletteFilter = document.getElementById('filter-roulette').value;
             const ownerFilter = document.getElementById('filter-owner').value;
 
-            for (const seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach((char) => {
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach((char) => {
                     const charKakera = parseInt(char.kakera) || 0;
                     const charKeys = parseInt(char.keys) || 0;
 
@@ -2561,21 +2563,21 @@ function clearAll() {
             document.getElementById('filter-roulette').value = 'any';
             document.getElementById('filter-owner').value = 'any';
 
-            if (preFilterCharacterStates === null) {
+            if (AppState.preFilterCharacterStates === null) {
                 return;
             }
 
-            for (const seriesName in preFilterCharacterStates) {
-                if (seriesData[seriesName]) {
-                    preFilterCharacterStates[seriesName].forEach((wasExcluded, charIndex) => {
-                        if (seriesData[seriesName].characters[charIndex]) {
-                            seriesData[seriesName].characters[charIndex].excluded = wasExcluded;
+            for (const seriesName in AppState.preFilterCharacterStates) {
+                if (AppState.seriesData[seriesName]) {
+                    AppState.preFilterCharacterStates[seriesName].forEach((wasExcluded, charIndex) => {
+                        if (AppState.seriesData[seriesName].characters[charIndex]) {
+                            AppState.seriesData[seriesName].characters[charIndex].excluded = wasExcluded;
                         }
                     });
                 }
             }
 
-            preFilterCharacterStates = null;
+            AppState.preFilterCharacterStates = null;
 
             displaySeries();
             updateStats();
@@ -2584,8 +2586,8 @@ function clearAll() {
 
         function populateOwnerFilter() {
             const owners = new Set();
-            for (const seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach(char => {
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(char => {
                     if (char.owner) owners.add(char.owner);
                 });
             }
@@ -2633,11 +2635,7 @@ function clearAll() {
 
         function saveToLocalStorage() {
             try {
-                localStorage.setItem('mudaeSeriesData', JSON.stringify(seriesData));
-                localStorage.setItem('mudaeQuickNotes', JSON.stringify(quickNotes));
-                localStorage.setItem('mudaeRankingEnabled', JSON.stringify(isRankingEnabled));
-                localStorage.setItem('mudaeShowDeselected', JSON.stringify(showDeselected));
-                localStorage.setItem('mudaeShowDisabledIcon', JSON.stringify(showDisabledIcon));
+                localStorage.setItem('mudaeAppState', JSON.stringify(AppState));
             } catch (e) {
                 console.error('Failed to save to localStorage:', e);
             }
@@ -2645,44 +2643,25 @@ function clearAll() {
 
         function loadFromLocalStorage() {
             try {
-                const savedSeries = localStorage.getItem('mudaeSeriesData');
-                const savedNotes = localStorage.getItem('mudaeQuickNotes');
-                const savedShowDeselected = localStorage.getItem('mudaeShowDeselected');
+                const savedState = localStorage.getItem('mudaeAppState');
+                if (savedState) {
+                    const parsedState = JSON.parse(savedState);
+                    Object.assign(AppState, parsedState);
 
-                if (savedSeries) {
-                    seriesData = JSON.parse(savedSeries);
                     displaySeries();
                     updateStats();
-                    document.getElementById('generateBtn').disabled = Object.keys(seriesData).length === 0;
-                    document.getElementById('generateColorBtn').disabled = Object.keys(seriesData).length === 0;
-                    document.getElementById('playerStatsBtn').disabled = Object.keys(seriesData).length === 0;
-                }
-
-                if (savedNotes) {
-                    quickNotes = JSON.parse(savedNotes);
                     displayQuickNotes();
-                }
+                    changeGridColumns(AppState.ui.preferredColumns);
+                    toggleRanking(AppState.ui.rankingEnabled);
+                    toggleDeselectedVisibility(AppState.ui.showDeselected);
+                    toggleDisabledIconVisibility(AppState.ui.showDisabledIcon);
 
-                const savedColumns = localStorage.getItem('mudaeGridColumns');
-                if (savedColumns) {
-                    changeGridColumns(parseInt(savedColumns, 10));
+                    const hasData = Object.keys(AppState.seriesData).length > 0;
+                    document.getElementById('generateBtn').disabled = !hasData;
+                    document.getElementById('generateColorBtn').disabled = !hasData;
+                    document.getElementById('playerStatsBtn').disabled = !hasData;
                 } else {
                     changeGridColumns(3);
-                }
-
-                const savedRankingState = localStorage.getItem('mudaeRankingEnabled');
-                if (savedRankingState !== null) {
-                    toggleRanking(JSON.parse(savedRankingState));
-                }
-
-                if (savedShowDeselected !== null) {
-                    toggleDeselectedVisibility(JSON.parse(savedShowDeselected));
-                }
-
-                const savedShowDisabledIcon = localStorage.getItem('mudaeShowDisabledIcon');
-                if (savedShowDisabledIcon !== null) {
-                    toggleDisabledIconVisibility(JSON.parse(savedShowDisabledIcon));
-                } else {
                     toggleDisabledIconVisibility(true);
                 }
             } catch (e) {
@@ -2693,8 +2672,8 @@ function clearAll() {
             const playerStats = {};
             const defaultOwner = "No Owner";
 
-            for (const seriesName in seriesData) {
-                seriesData[seriesName].characters.forEach(char => {
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(char => {
                     const owner = char.owner ? char.owner : defaultOwner;
 
                     if (!playerStats[owner]) {
@@ -2849,13 +2828,7 @@ function clearAll() {
 
         function loadDemoData() {
             const inputField = document.getElementById('input');
-
-            if (inputField.value.trim() !== "" && !confirm("This will overwrite your current input. Continue?")) {
-                return;
-            }
-
             const demoText = inputField.getAttribute('placeholder');
-
             inputField.value = demoText;
         }
     </script>
