@@ -2446,6 +2446,7 @@ ${rouletteBarHTML}
                 commandParts.forEach((command, idx) => {
                     const commandItem = document.createElement('div');
                     commandItem.className = 'command-item';
+                    commandItem.style.borderLeftColor = color;
 
                     let headerText = `Color: ${color}`;
                     headerText += ` - ${charsWithThisColor.length} character${charsWithThisColor.length > 1 ? 's' : ''}`;
