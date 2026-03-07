@@ -2528,7 +2528,7 @@ ${rouletteBarHTML}
             document.getElementById('disabled-icon-hide-btn').classList.remove('active');
             document.querySelector('.container').classList.remove('hide-disabled-emoji');
 
-            localStorage.removeItem('mudaeAppState');
+            saveToLocalStorage();
         }
 
         function applyFilter() {
@@ -2708,8 +2708,9 @@ ${rouletteBarHTML}
                 if (savedState) {
                     const parsedState = JSON.parse(savedState);
                     Object.assign(AppState, parsedState);
+                    displayQuickNotes();
                 }
-                
+
                 document.querySelectorAll('[id^="group-"][id$="-btn"]').forEach(btn => btn.classList.remove('active'));
                 const activeGroupBtn = document.getElementById(`group-${AppState.ui.grouping}-btn`);
                 if (activeGroupBtn) activeGroupBtn.classList.add('active');
