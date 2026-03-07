@@ -435,7 +435,7 @@
         .character-card {
             position: relative;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, border-color 0.3s ease;
             border: 5px solid var(--card-color, transparent);
             border-radius: 8px;
             overflow: hidden;
@@ -455,7 +455,7 @@
         }
 
         .character-card.excluded {
-            filter: opacity(0.5);
+            opacity: 0.5;
         }
 
         .character-card.excluded img {
@@ -976,6 +976,29 @@
             margin: 20px auto 0;
             padding: 12px 30px;
         }
+
+        body.fit-width {
+            padding: 0;
+            gap: 0;
+        }
+
+        body.fit-width .container {
+            max-width: none;
+            flex: 1;
+            border-radius: 0;
+            border-top: none;
+            border-bottom: none;
+            border-left: none;
+            border-right: 1px solid #1f1f2e;
+        }
+
+        body.fit-width .quick-notes {
+            border-radius: 0;
+            border: none;
+            top: 0;
+            height: 100vh;
+            max-height: 100vh;
+        }
     </style>
 </head>
 
@@ -1134,6 +1157,12 @@
                             <button onclick="changeGridColumns(3)" id="grid-btn-3" class="btn btn-sm active">3</button>
                             <button onclick="changeGridColumns(4)" id="grid-btn-4" class="btn btn-sm">4</button>
                         </div>
+                        <div class="button-group">
+                            <label>Layout:</label>
+                            <button onclick="toggleFitToScreen(true)" id="fit-on-btn" class="btn btn-sm">Fit</button>
+                            <button onclick="toggleFitToScreen(false)" id="fit-off-btn"
+                                class="btn btn-sm active">Centered</button>
+                        </div>
                     </div>
 
                     <div class="control-group">
@@ -1249,7 +1278,8 @@
                 rankingEnabled: true,
                 showDeselected: true,
                 showDisabledIcon: true,
-                preferredColumns: 3
+                preferredColumns: 3,
+                fitToScreen: false
             }
         };
 
@@ -1341,6 +1371,17 @@
 
             saveToLocalStorage();
         }
+
+        function toggleFitToScreen(shouldFit) {
+            AppState.ui.fitToScreen = shouldFit;
+            document.getElementById('fit-on-btn').classList.toggle('active', shouldFit);
+            document.getElementById('fit-off-btn').classList.toggle('active', !shouldFit);
+            
+            document.body.classList.toggle('fit-width', shouldFit);
+            
+            saveToLocalStorage();
+        }
+
         function displayQuickNotes() {
             const list = document.getElementById('quickNotesList');
             list.innerHTML = '';
@@ -1563,7 +1604,8 @@
                     case 'bulk-color': {
                         const isNote = action === 'bulk-note';
                         const applyTo = target.dataset.target;
-                        const input = target.closest('.bulk-apply-group').querySelector('.note-input');
+                        const inputSelector = isNote ? '.note-input' : '.color-hex-input';
+                        const input = target.closest('.bulk-apply-group').querySelector(inputSelector);
                         const newValue = input.value;
 
                         if (!isNote && newValue.trim() !== "" && !/^#([0-9a-fA-F]{3}){1,2}$/.test(newValue)) {
@@ -1594,6 +1636,20 @@
 
                 updateStats();
                 saveToLocalStorage();
+            });
+            document.getElementById('seriesGrid').addEventListener('input', (e) => {
+                if (e.target.classList.contains('color-picker-input')) {
+                    const hexInput = e.target.nextElementSibling;
+                    if (hexInput && hexInput.classList.contains('color-hex-input')) {
+                        hexInput.value = e.target.value;
+                    }
+                } else if (e.target.classList.contains('color-hex-input')) {
+                    const colorPicker = e.target.previousElementSibling;
+                    const val = e.target.value.trim();
+                    if (colorPicker && colorPicker.classList.contains('color-picker-input') && /^#([0-9a-fA-F]{6})$/i.test(val)) {
+                        colorPicker.value = val;
+                    }
+                }
             });
         });
 
@@ -2012,7 +2068,8 @@ ${rouletteBarHTML}
 </div>
 </div>
 <div class="bulk-apply-group">
-<input type="text" class="note-input" placeholder="Apply color...">
+<input type="color" class="color-picker-input" value="#7c3aed">
+<input type="text" class="note-input color-hex-input" placeholder="#RRGGBB">
 <div class="apply-btn-group">
 <button data-action="bulk-color" data-target="all" class="btn">All</button>
 <button data-action="bulk-color" data-target="selected" class="btn">Selected</button>
@@ -2655,6 +2712,7 @@ ${rouletteBarHTML}
                     toggleRanking(AppState.ui.rankingEnabled);
                     toggleDeselectedVisibility(AppState.ui.showDeselected);
                     toggleDisabledIconVisibility(AppState.ui.showDisabledIcon);
+                    toggleFitToScreen(AppState.ui.fitToScreen);
 
                     const hasData = Object.keys(AppState.seriesData).length > 0;
                     document.getElementById('generateBtn').disabled = !hasData;
