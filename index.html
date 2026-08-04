@@ -38,6 +38,58 @@
             margin-bottom: 25px;
         }
 
+        .collections-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 25px;
+        }
+
+        .collections-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .collections-bar-left label {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            font-weight: 700;
+        }
+
+        .collections-bar select {
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            padding: 8px 12px;
+            border-radius: 6px;
+            height: 38px;
+            font-size: 0.9em;
+            min-width: 160px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .collections-bar select:focus {
+            outline: none;
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .collections-bar-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         h1 {
             color: #a78bfa;
             margin-bottom: 10px;
@@ -1046,6 +1098,19 @@
             </div>
         </div>
 
+        <div class="collections-bar">
+            <div class="collections-bar-left">
+                <label for="collectionSelect">Collection:</label>
+                <select id="collectionSelect" onchange="switchCollection(this.value)"></select>
+            </div>
+            <div class="collections-bar-actions">
+                <button onclick="createNewCollection()" class="btn btn-sm">+ New</button>
+                <button onclick="duplicateCollection()" class="btn btn-sm">Duplicate</button>
+                <button onclick="renameCollection()" class="btn btn-sm">Rename</button>
+                <button onclick="deleteCollection()" class="btn btn-sm btn-danger">Delete</button>
+            </div>
+        </div>
+
         <div class="input-section">
             <div class="controls-container">
                 <div class="actions-panel">
@@ -1067,6 +1132,11 @@
                         <button onclick="generateColorCommands()" id="generateColorBtn" class="btn btn-primary"
                             disabled>
                             Generate Colors
+                        </button>
+
+                        <button onclick="generateImgurCommands()" id="generateImgurBtn" class="btn btn-primary"
+                            disabled>
+                            Generate Imgur Links
                         </button>
 
                         <button onclick="showPlayerStats()" id="playerStatsBtn" class="btn btn-primary" disabled>
@@ -1222,6 +1292,14 @@
                                     <option value="both">Both</option>
                                 </select>
                             </div>
+                            <div class="filter-control">
+                                <label for="filter-imgur">Imgur Image</label>
+                                <select id="filter-imgur">
+                                    <option value="any">Any</option>
+                                    <option value="imgur_only">Imgur Only</option>
+                                    <option value="non_imgur">Non-Imgur Only</option>
+                                </select>
+                            </div>
 
                             <div class="filter-actions">
                                 <button onclick="applyFilter()" class="btn btn-sm btn-primary">Apply Filter</button>
@@ -1268,8 +1346,12 @@
     </div>
 
     <script>
+        const COLLECTIONS_META_KEY = 'mudaeCollectionsMeta';
+        const LEGACY_STATE_KEY = 'mudaeAppState';
+
         const AppState = {
             seriesData: {},
+            rawInput: '',
             quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
             preFilterCharacterStates: null,
             ui: {
@@ -1667,6 +1749,7 @@
                 return;
             }
 
+            AppState.rawInput = input;
             AppState.seriesData = {};
             const lines = input.split('\n');
             let currentSeries = null;
@@ -1792,6 +1875,7 @@
             updateStats();
             document.getElementById('generateBtn').disabled = false;
             document.getElementById('generateColorBtn').disabled = false;
+            document.getElementById('generateImgurBtn').disabled = false;
             document.getElementById('playerStatsBtn').disabled = false;
             saveToLocalStorage();
         }
@@ -2485,6 +2569,62 @@ ${rouletteBarHTML}
             }
         }
 
+        function generateImgurCommands() {
+            const commandsDiv = document.getElementById('commands');
+            commandsDiv.innerHTML = `
+ <div class="commands-section">
+  <h2 style="display: flex; justify-content: space-between; align-items: center;">
+   Imgur Links Found
+   <button onclick="scrollToTop()" class="btn btn-sm btn-primary" style="font-size: 0.7em; padding: 6px 12px;">Go to Top ↑</button>
+  </h2>
+ </div>`;
+            const container = commandsDiv.querySelector('.commands-section');
+
+            const allSelectedCards = document.querySelectorAll('#seriesGrid .character-card:not(.excluded)');
+
+            const orderedSelectedEntries = Array.from(allSelectedCards).map(card => {
+                const seriesName = card.dataset.originalSeries;
+                const charIndex = parseInt(card.dataset.originalIndex, 10);
+                const char = AppState.seriesData[seriesName] ? AppState.seriesData[seriesName].characters[charIndex] : null;
+                return { seriesName, char };
+            });
+
+            const imgurEntries = orderedSelectedEntries.filter(entry =>
+                entry.char && !entry.char.excluded && entry.char.image && /imgur\.com/i.test(entry.char.image)
+            );
+
+            imgurEntries.forEach(({ seriesName, char }) => {
+                const commandItem = document.createElement('div');
+                commandItem.className = 'command-item';
+
+                const command = `$ai ${char.name}$${char.image}`;
+
+                commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${escapeHTML(seriesName)} - ${escapeHTML(char.name)}</div>
+      </div>
+      <div class="command-text">${escapeHTML(command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+     `;
+                container.appendChild(commandItem);
+            });
+
+            if (imgurEntries.length === 0) {
+                const p = document.createElement('p');
+                p.style.color = '#6b7280';
+                p.style.padding = '20px';
+                p.textContent = 'No Imgur links found among selected characters.';
+                container.appendChild(p);
+            }
+
+            const imgurCommandsContainer = document.getElementById('commands').querySelector('.command-item');
+            if (imgurCommandsContainer) {
+                document.getElementById('goToCommandsBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('goToCommandsBtn').style.display = 'none';
+            }
+        }
+
         function scrollToCommands() {
             const commandsSection = document.getElementById('commands');
             if (commandsSection) {
@@ -2506,6 +2646,7 @@ ${rouletteBarHTML}
 
         function clearAll() {
             AppState.seriesData = {};
+            AppState.rawInput = '';
             AppState.ui.grouping = 'series';
             AppState.ui.sortMethod = 'count';
 
@@ -2518,6 +2659,7 @@ ${rouletteBarHTML}
             document.getElementById('generateBtn').disabled = true;
             document.getElementById('playerStatsBtn').disabled = true;
             document.getElementById('generateColorBtn').disabled = true;
+            document.getElementById('generateImgurBtn').disabled = true;
             document.getElementById('goToCommandsBtn').style.display = 'none';
 
             const groupButtons = document.querySelectorAll('#group-series-btn, #group-note-btn, #group-keys-btn, #group-nogroup-btn, #group-kakera-btn, #group-color-btn, #group-gender-btn, #group-roulette-btn, #group-owner-btn');
@@ -2554,6 +2696,7 @@ ${rouletteBarHTML}
             const genderFilter = document.getElementById('filter-gender').value;
             const rouletteFilter = document.getElementById('filter-roulette').value;
             const ownerFilter = document.getElementById('filter-owner').value;
+            const imgurFilter = document.getElementById('filter-imgur').value;
 
             for (const seriesName in AppState.seriesData) {
                 AppState.seriesData[seriesName].characters.forEach((char) => {
@@ -2608,7 +2751,16 @@ ${rouletteBarHTML}
                     }
                     let matchesOwner = (ownerFilter === 'any') || (char.owner === ownerFilter);
 
-                    const matchesFilter = matchesKakera && matchesKeys && matchesGender && matchesRoulette && matchesOwner;
+                    const isImgur = !!(char.image && /imgur\.com/i.test(char.image));
+                    let matchesImgur = true;
+                    switch (imgurFilter) {
+                        case 'any': matchesImgur = true; break;
+                        case 'imgur_only': matchesImgur = isImgur; break;
+                        case 'non_imgur': matchesImgur = !isImgur; break;
+                        default: matchesImgur = true;
+                    }
+
+                    const matchesFilter = matchesKakera && matchesKeys && matchesGender && matchesRoulette && matchesOwner && matchesImgur;
 
                     if (!matchesFilter) {
                         char.excluded = true;
@@ -2629,6 +2781,7 @@ ${rouletteBarHTML}
             document.getElementById('filter-gender').value = 'any';
             document.getElementById('filter-roulette').value = 'any';
             document.getElementById('filter-owner').value = 'any';
+            document.getElementById('filter-imgur').value = 'any';
 
             if (AppState.preFilterCharacterStates === null) {
                 return;
@@ -2700,9 +2853,166 @@ ${rouletteBarHTML}
             imgElement.parentNode.insertBefore(placeholder, imgElement);
         }
 
+        function collectionStateKey(id) {
+            return `mudaeCollection_${id}`;
+        }
+
+        function generateCollectionId() {
+            return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        }
+
+        function loadCollectionsMeta() {
+            try {
+                const raw = localStorage.getItem(COLLECTIONS_META_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                console.error('Failed to read collections meta:', e);
+                return null;
+            }
+        }
+
+        function saveCollectionsMeta(meta) {
+            try {
+                localStorage.setItem(COLLECTIONS_META_KEY, JSON.stringify(meta));
+            } catch (e) {
+                console.error('Failed to save collections meta:', e);
+            }
+        }
+
+        // Ensures a valid collections registry exists, migrating any pre-existing
+        // single-collection data (from before multi-collection support) into a
+        // "Collection 1" entry the first time this runs.
+        function ensureCollectionsMeta() {
+            let meta = loadCollectionsMeta();
+            if (meta && meta.activeId && meta.collections && meta.collections[meta.activeId] && Array.isArray(meta.order)) {
+                return meta;
+            }
+
+            const id = generateCollectionId();
+            meta = {
+                order: [id],
+                collections: { [id]: { id: id, name: 'Collection 1' } },
+                activeId: id
+            };
+
+            try {
+                const legacy = localStorage.getItem(LEGACY_STATE_KEY);
+                if (legacy) {
+                    localStorage.setItem(collectionStateKey(id), legacy);
+                }
+            } catch (e) {
+                console.error('Failed to migrate legacy collection data:', e);
+            }
+
+            saveCollectionsMeta(meta);
+            return meta;
+        }
+
+        function renderCollectionsBar() {
+            const meta = ensureCollectionsMeta();
+            const select = document.getElementById('collectionSelect');
+            if (!select) return meta;
+
+            select.innerHTML = '';
+            meta.order.forEach(function (id) {
+                const col = meta.collections[id];
+                if (!col) return;
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = col.name;
+                if (id === meta.activeId) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            return meta;
+        }
+
+        function switchCollection(id) {
+            const meta = ensureCollectionsMeta();
+            if (!meta.collections[id] || id === meta.activeId) return;
+            saveToLocalStorage();
+            meta.activeId = id;
+            saveCollectionsMeta(meta);
+            location.reload();
+        }
+
+        function createNewCollection() {
+            const name = prompt('Name for new collection:', 'New Collection');
+            if (name === null) return;
+            const trimmed = name.trim() || 'New Collection';
+
+            const meta = ensureCollectionsMeta();
+            saveToLocalStorage();
+
+            const id = generateCollectionId();
+            meta.collections[id] = { id: id, name: trimmed };
+            meta.order.push(id);
+            meta.activeId = id;
+            saveCollectionsMeta(meta);
+            location.reload();
+        }
+
+        function renameCollection() {
+            const meta = ensureCollectionsMeta();
+            const current = meta.collections[meta.activeId];
+            const name = prompt('Rename collection:', current.name);
+            if (name === null) return;
+            const trimmed = name.trim();
+            if (!trimmed) return;
+            current.name = trimmed;
+            saveCollectionsMeta(meta);
+            renderCollectionsBar();
+        }
+
+        function duplicateCollection() {
+            const meta = ensureCollectionsMeta();
+            saveToLocalStorage();
+
+            const sourceId = meta.activeId;
+            const sourceState = localStorage.getItem(collectionStateKey(sourceId));
+            const newId = generateCollectionId();
+            if (sourceState) {
+                localStorage.setItem(collectionStateKey(newId), sourceState);
+            }
+
+            const sourceName = meta.collections[sourceId].name;
+            meta.collections[newId] = { id: newId, name: sourceName + ' (Copy)' };
+            const idx = meta.order.indexOf(sourceId);
+            meta.order.splice(idx + 1, 0, newId);
+            meta.activeId = newId;
+            saveCollectionsMeta(meta);
+            location.reload();
+        }
+
+        function deleteCollection() {
+            const meta = ensureCollectionsMeta();
+            if (meta.order.length <= 1) {
+                showMessage('You need at least one collection.', 'error');
+                return;
+            }
+
+            const current = meta.collections[meta.activeId];
+            if (!confirm(`Delete "${current.name}"? This cannot be undone.`)) return;
+
+            const idx = meta.order.indexOf(meta.activeId);
+            try {
+                localStorage.removeItem(collectionStateKey(meta.activeId));
+            } catch (e) {
+                console.error('Failed to remove collection data:', e);
+            }
+            delete meta.collections[meta.activeId];
+            meta.order.splice(idx, 1);
+
+            const nextIdx = Math.max(0, idx - 1);
+            meta.activeId = meta.order[nextIdx];
+            saveCollectionsMeta(meta);
+            location.reload();
+        }
+
         function saveToLocalStorage() {
             try {
-                localStorage.setItem('mudaeAppState', JSON.stringify(AppState));
+                const meta = ensureCollectionsMeta();
+                localStorage.setItem(collectionStateKey(meta.activeId), JSON.stringify(AppState));
             } catch (e) {
                 console.error('Failed to save to localStorage:', e);
             }
@@ -2710,12 +3020,18 @@ ${rouletteBarHTML}
 
         function loadFromLocalStorage() {
             try {
-                const savedState = localStorage.getItem('mudaeAppState');
+                const meta = ensureCollectionsMeta();
+                renderCollectionsBar();
+
+                const savedState = localStorage.getItem(collectionStateKey(meta.activeId));
                 if (savedState) {
                     const parsedState = JSON.parse(savedState);
                     Object.assign(AppState, parsedState);
                     displayQuickNotes();
                 }
+
+                const inputField = document.getElementById('input');
+                if (inputField) inputField.value = AppState.rawInput || '';
 
                 document.querySelectorAll('[id^="group-"][id$="-btn"]').forEach(btn => btn.classList.remove('active'));
                 const activeGroupBtn = document.getElementById(`group-${AppState.ui.grouping}-btn`);
@@ -2754,6 +3070,7 @@ ${rouletteBarHTML}
                     updateStats();
                     document.getElementById('generateBtn').disabled = false;
                     document.getElementById('generateColorBtn').disabled = false;
+                    document.getElementById('generateImgurBtn').disabled = false;
                     document.getElementById('playerStatsBtn').disabled = false;
                 }
             } catch (e) {
