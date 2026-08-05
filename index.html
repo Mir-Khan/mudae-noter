@@ -90,6 +90,34 @@
             flex-wrap: wrap;
         }
 
+        .compare-panel {
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 25px;
+        }
+
+        .compare-panel-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .compare-panel-actions {
+            display: flex;
+            gap: 8px;
+            align-items: end;
+            grid-column: span 1;
+        }
+
+        .compare-panel-hint {
+            color: #9ca3af;
+            font-size: 0.8em;
+            margin-top: 12px;
+        }
+
         h1 {
             color: #a78bfa;
             margin-bottom: 10px;
@@ -1107,8 +1135,36 @@
                 <button onclick="createNewCollection()" class="btn btn-sm">+ New</button>
                 <button onclick="duplicateCollection()" class="btn btn-sm">Duplicate</button>
                 <button onclick="renameCollection()" class="btn btn-sm">Rename</button>
+                <button onclick="toggleCompareCollectionsPanel()" class="btn btn-sm">Compare</button>
                 <button onclick="deleteCollection()" class="btn btn-sm btn-danger">Delete</button>
             </div>
+        </div>
+
+        <div id="compareCollectionsPanel" class="compare-panel" style="display: none;">
+            <div class="compare-panel-row">
+                <div class="filter-control">
+                    <label for="compareCollectionA">Collection A</label>
+                    <select id="compareCollectionA"></select>
+                </div>
+                <div class="filter-control">
+                    <label for="compareCollectionB">Collection B</label>
+                    <select id="compareCollectionB"></select>
+                </div>
+                <div class="compare-panel-actions">
+                    <button onclick="runCollectionComparison()" class="btn btn-sm btn-primary">Compare &amp; Create
+                        Diff Collections</button>
+                    <button onclick="generateNoteTransferCommands()" class="btn btn-sm btn-primary">Transfer Notes
+                        (A → B)</button>
+                    <button onclick="toggleCompareCollectionsPanel(false)" class="btn btn-sm btn-secondary">Close</button>
+                </div>
+            </div>
+            <p class="compare-panel-hint">"Compare" creates two new collections: characters only Collection A has,
+                and characters only Collection B has. "Transfer Notes (A → B)" generates $n commands to copy notes
+                from Collection A onto matching characters in Collection B wherever B is missing that note - handy
+                after re-importing a collection on a new server, since notes don't carry over. Notes only transfer
+                when both sides show the same key count, since some notes are tied to a specific number of keys.
+                Matching uses global rank, image, and kakera value first (so characters renamed with Mudae's $alias
+                still match), falling back to series + name only when those aren't available.</p>
         </div>
 
         <div class="input-section">
@@ -3007,6 +3063,409 @@ ${rouletteBarHTML}
             meta.activeId = meta.order[nextIdx];
             saveCollectionsMeta(meta);
             location.reload();
+        }
+
+        function toggleCompareCollectionsPanel(forceState) {
+            const panel = document.getElementById('compareCollectionsPanel');
+            if (!panel) return;
+            const shouldShow = typeof forceState === 'boolean' ? forceState : panel.style.display === 'none';
+
+            if (shouldShow) {
+                const meta = ensureCollectionsMeta();
+                if (meta.order.length < 2) {
+                    showMessage('You need at least two collections to compare.', 'error');
+                    return;
+                }
+            }
+
+            panel.style.display = shouldShow ? 'block' : 'none';
+            if (shouldShow) populateCompareCollectionSelects();
+        }
+
+        function populateCompareCollectionSelects() {
+            const meta = ensureCollectionsMeta();
+            const selectA = document.getElementById('compareCollectionA');
+            const selectB = document.getElementById('compareCollectionB');
+            if (!selectA || !selectB) return;
+
+            const prevA = selectA.value;
+            const prevB = selectB.value;
+
+            [selectA, selectB].forEach(function (select) {
+                select.innerHTML = '';
+            });
+
+            meta.order.forEach(function (id) {
+                const col = meta.collections[id];
+                if (!col) return;
+
+                const optA = document.createElement('option');
+                optA.value = id;
+                optA.textContent = col.name;
+                selectA.appendChild(optA);
+
+                const optB = document.createElement('option');
+                optB.value = id;
+                optB.textContent = col.name;
+                selectB.appendChild(optB);
+            });
+
+            selectA.value = (prevA && meta.collections[prevA]) ? prevA : meta.activeId;
+
+            if (prevB && meta.collections[prevB] && prevB !== selectA.value) {
+                selectB.value = prevB;
+            } else {
+                const otherId = meta.order.find(function (id) { return id !== selectA.value; });
+                selectB.value = otherId || meta.activeId;
+            }
+        }
+
+        // Characters are matched between collections using several signals, from
+        // most to least reliable, so that a character renamed via Mudae's
+        // $alias command on one server still matches its counterpart on another:
+        //   1. Global rank (#123) - a bot-wide ID for the character, unaffected by alias
+        //   2. Image URL - the character's actual artwork link, unaffected by alias
+        //   3. Kakera value + series - both are bot-wide stats tied to the character
+        //   4. Series + character name - last-resort fallback (original behavior)
+        // A character counts as "matched" if ANY signal lines up, since a single
+        // strong match (e.g. same rank) is enough to prove it's the same character
+        // even if the others differ (custom image, kakera drift over time, etc).
+        function normalizeMatchPart(value) {
+            return (value || '').toString().trim().toLowerCase();
+        }
+
+        function characterMatchKeys(seriesName, char) {
+            const normSeries = normalizeMatchPart(seriesName);
+            const keys = {
+                nameSeries: 'name::' + normSeries + '::' + normalizeMatchPart(char.name)
+            };
+
+            if (char.globalRank) {
+                keys.rank = 'rank::' + normalizeMatchPart(char.globalRank);
+            }
+            if (char.image) {
+                keys.image = 'image::' + normalizeMatchPart(char.image);
+            }
+            if (char.kakera) {
+                keys.kakeraSeries = 'kakera::' + normSeries + '::' + normalizeMatchPart(char.kakera);
+            }
+
+            return keys;
+        }
+
+        function buildMatchIndex(seriesData) {
+            const index = { rank: new Set(), image: new Set(), kakeraSeries: new Set(), nameSeries: new Set() };
+            for (const seriesName in seriesData) {
+                seriesData[seriesName].characters.forEach(function (char) {
+                    const keys = characterMatchKeys(seriesName, char);
+                    if (keys.rank) index.rank.add(keys.rank);
+                    if (keys.image) index.image.add(keys.image);
+                    if (keys.kakeraSeries) index.kakeraSeries.add(keys.kakeraSeries);
+                    index.nameSeries.add(keys.nameSeries);
+                });
+            }
+            return index;
+        }
+
+        function characterExistsInIndex(seriesName, char, index) {
+            const keys = characterMatchKeys(seriesName, char);
+            if (keys.rank && index.rank.has(keys.rank)) return true;
+            if (keys.image && index.image.has(keys.image)) return true;
+            if (keys.kakeraSeries && index.kakeraSeries.has(keys.kakeraSeries)) return true;
+            return index.nameSeries.has(keys.nameSeries);
+        }
+
+        function loadCollectionStateById(id) {
+            try {
+                const raw = localStorage.getItem(collectionStateKey(id));
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                console.error('Failed to read collection state for comparison:', e);
+                return null;
+            }
+        }
+
+        function buildDiffSeriesData(sourceSeriesData, otherIndex) {
+            const result = {};
+            for (const seriesName in sourceSeriesData) {
+                const sourceSeries = sourceSeriesData[seriesName];
+                const uniqueChars = sourceSeries.characters
+                    .filter(function (char) { return !characterExistsInIndex(seriesName, char, otherIndex); })
+                    .map(function (char) { return Object.assign({}, char); });
+
+                if (uniqueChars.length === 0) continue;
+
+                result[seriesName] = {
+                    total: uniqueChars.length,
+                    owned: uniqueChars.length,
+                    note: sourceSeries.note || '',
+                    characters: uniqueChars
+                };
+            }
+            return result;
+        }
+
+
+        function createDiffCollection(name, seriesData) {
+            const meta = ensureCollectionsMeta();
+            const id = generateCollectionId();
+            meta.collections[id] = { id: id, name: name };
+            meta.order.push(id);
+            saveCollectionsMeta(meta);
+
+            const state = {
+                seriesData: seriesData,
+                rawInput: '',
+                quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
+                preFilterCharacterStates: null,
+                ui: {
+                    grouping: 'series',
+                    sortMethod: 'count',
+                    rankingEnabled: false,
+                    showDeselected: true,
+                    showDisabledIcon: true,
+                    preferredColumns: 3,
+                    fitToScreen: false
+                }
+            };
+
+            try {
+                localStorage.setItem(collectionStateKey(id), JSON.stringify(state));
+            } catch (e) {
+                console.error('Failed to save diff collection:', e);
+            }
+
+            return id;
+        }
+
+        function runCollectionComparison() {
+            const meta = ensureCollectionsMeta();
+            const idA = document.getElementById('compareCollectionA').value;
+            const idB = document.getElementById('compareCollectionB').value;
+
+            if (!idA || !idB) {
+                showMessage('Please select two collections to compare.', 'error');
+                return;
+            }
+            if (idA === idB) {
+                showMessage('Please select two different collections to compare.', 'error');
+                return;
+            }
+
+            // Persist any unsaved edits in the currently active collection before
+            // reading its data back out for comparison.
+            if (meta.activeId === idA || meta.activeId === idB) {
+                saveToLocalStorage();
+            }
+
+            const nameA = meta.collections[idA] ? meta.collections[idA].name : 'Collection A';
+            const nameB = meta.collections[idB] ? meta.collections[idB].name : 'Collection B';
+
+            const stateA = loadCollectionStateById(idA);
+            const stateB = loadCollectionStateById(idB);
+
+            const seriesDataA = (stateA && stateA.seriesData) ? stateA.seriesData : {};
+            const seriesDataB = (stateB && stateB.seriesData) ? stateB.seriesData : {};
+
+            const keysA = buildMatchIndex(seriesDataA);
+            const keysB = buildMatchIndex(seriesDataB);
+
+            const onlyInA = buildDiffSeriesData(seriesDataA, keysB);
+            const onlyInB = buildDiffSeriesData(seriesDataB, keysA);
+
+            const countA = Object.values(onlyInA).reduce(function (sum, s) { return sum + s.characters.length; }, 0);
+            const countB = Object.values(onlyInB).reduce(function (sum, s) { return sum + s.characters.length; }, 0);
+
+            const nameOnlyA = `${nameA} not in ${nameB}`;
+            const nameOnlyB = `${nameB} not in ${nameA}`;
+
+            createDiffCollection(nameOnlyA, onlyInA);
+            createDiffCollection(nameOnlyB, onlyInB);
+
+            renderCollectionsBar();
+            toggleCompareCollectionsPanel(false);
+            showMessage(`Comparison complete: created "${nameOnlyA}" (${countA} characters) and "${nameOnlyB}" (${countB} characters). Pick them from the Collection dropdown above to view.`, 'success');
+        }
+
+        // Builds a lookup of a collection's characters keyed by every signal
+        // characterMatchKeys can produce (rank/image/kakera+series/name+series),
+        // so a character from another collection can be matched to its actual
+        // entry here - not just checked for existence - even if it was renamed
+        // with Mudae's $alias on this server.
+        function buildMatchLookup(seriesData) {
+            const lookup = { rank: new Map(), image: new Map(), kakeraSeries: new Map(), nameSeries: new Map() };
+            for (const seriesName in seriesData) {
+                seriesData[seriesName].characters.forEach(function (char) {
+                    const keys = characterMatchKeys(seriesName, char);
+                    const entry = { seriesName: seriesName, char: char };
+                    if (keys.rank && !lookup.rank.has(keys.rank)) lookup.rank.set(keys.rank, entry);
+                    if (keys.image && !lookup.image.has(keys.image)) lookup.image.set(keys.image, entry);
+                    if (keys.kakeraSeries && !lookup.kakeraSeries.has(keys.kakeraSeries)) lookup.kakeraSeries.set(keys.kakeraSeries, entry);
+                    if (!lookup.nameSeries.has(keys.nameSeries)) lookup.nameSeries.set(keys.nameSeries, entry);
+                });
+            }
+            return lookup;
+        }
+
+        function findMatchingCharacter(seriesName, char, lookup) {
+            const keys = characterMatchKeys(seriesName, char);
+            if (keys.rank && lookup.rank.has(keys.rank)) return lookup.rank.get(keys.rank);
+            if (keys.image && lookup.image.has(keys.image)) return lookup.image.get(keys.image);
+            if (keys.kakeraSeries && lookup.kakeraSeries.has(keys.kakeraSeries)) return lookup.kakeraSeries.get(keys.kakeraSeries);
+            if (lookup.nameSeries.has(keys.nameSeries)) return lookup.nameSeries.get(keys.nameSeries);
+            return null;
+        }
+
+        // Generates $n commands to carry notes from Collection A over to their
+        // matching characters in Collection B, for characters both collections
+        // share where B is missing the note (or has a different one). Useful
+        // after re-importing a collection on a new server, since Mudae notes
+        // don't come along with the character data. Commands reference each
+        // character by its name in B (the server the command will run on), so
+        // aliasing differences between servers don't break the command.
+        function generateNoteTransferCommands() {
+            const meta = ensureCollectionsMeta();
+            const idA = document.getElementById('compareCollectionA').value;
+            const idB = document.getElementById('compareCollectionB').value;
+
+            if (!idA || !idB) {
+                showMessage('Please select two collections to compare.', 'error');
+                return;
+            }
+            if (idA === idB) {
+                showMessage('Please select two different collections to compare.', 'error');
+                return;
+            }
+
+            if (meta.activeId === idA || meta.activeId === idB) {
+                saveToLocalStorage();
+            }
+
+            const nameA = meta.collections[idA] ? meta.collections[idA].name : 'Collection A';
+            const nameB = meta.collections[idB] ? meta.collections[idB].name : 'Collection B';
+
+            const stateA = loadCollectionStateById(idA);
+            const stateB = loadCollectionStateById(idB);
+
+            const seriesDataA = (stateA && stateA.seriesData) ? stateA.seriesData : {};
+            const seriesDataB = (stateB && stateB.seriesData) ? stateB.seriesData : {};
+
+            const lookupB = buildMatchLookup(seriesDataB);
+
+            const commandsByNote = {};
+            let matchedCount = 0;
+            let toTransferCount = 0;
+            let keyMismatchCount = 0;
+
+            for (const seriesName in seriesDataA) {
+                seriesDataA[seriesName].characters.forEach(function (charA) {
+                    const noteA = (charA.note || '').trim();
+                    if (!noteA) return;
+
+                    const matchB = findMatchingCharacter(seriesName, charA, lookupB);
+                    if (!matchB) return;
+
+                    matchedCount++;
+
+                    // Some notes are tied to a specific key count (e.g. "need 2 more
+                    // keys"), so only transfer the note if both sides show the same
+                    // key value - otherwise it could carry over stale info.
+                    const keysA = (charA.keys || '').toString().trim();
+                    const keysB = (matchB.char.keys || '').toString().trim();
+                    if (keysA !== keysB) {
+                        keyMismatchCount++;
+                        return;
+                    }
+
+                    const noteB = (matchB.char.note || '').trim();
+                    if (noteA === noteB) return;
+
+                    toTransferCount++;
+                    if (!commandsByNote[noteA]) commandsByNote[noteA] = [];
+                    commandsByNote[noteA].push(matchB.char.name);
+                });
+            }
+
+            const commandsDiv = document.getElementById('commands');
+            commandsDiv.innerHTML = `
+ <div class="commands-section">
+  <h2 style="display: flex; justify-content: space-between; align-items: center;">
+   Note Transfer Commands (${escapeHTML(nameA)} → ${escapeHTML(nameB)})
+   <button onclick="scrollToTop()" class="btn btn-sm btn-primary" style="font-size: 0.7em; padding: 6px 12px;">Go to Top ↑</button>
+  </h2>
+ </div>`;
+            const container = commandsDiv.querySelector('.commands-section');
+
+            const sortedNotes = Object.keys(commandsByNote).sort(function (a, b) { return a.localeCompare(b); });
+
+            sortedNotes.forEach(function (note) {
+                const charNames = commandsByNote[note];
+
+                let commandParts = [];
+                const commandPrefix = '$n ';
+                const commandSuffix = ` $ ${note}`;
+                let currentCharacterString = '';
+
+                charNames.forEach(function (charName) {
+                    const separator = currentCharacterString ? '$' : '';
+                    const potentialNextString = currentCharacterString + separator + charName;
+
+                    if ((commandPrefix.length + potentialNextString.length + commandSuffix.length) > 1990) {
+                        commandParts.push(commandPrefix + currentCharacterString + commandSuffix);
+                        currentCharacterString = charName;
+                    } else {
+                        currentCharacterString = potentialNextString;
+                    }
+                });
+
+                if (currentCharacterString) {
+                    commandParts.push(commandPrefix + currentCharacterString + commandSuffix);
+                }
+
+                commandParts.forEach(function (command, idx) {
+                    const commandItem = document.createElement('div');
+                    commandItem.className = 'command-item';
+
+                    let headerText = `Note: ${note}`;
+                    headerText += ` - ${charNames.length} character${charNames.length > 1 ? 's' : ''}`;
+                    if (commandParts.length > 1) {
+                        headerText += ` (Part ${idx + 1}/${commandParts.length})`;
+                    }
+
+                    commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${escapeHTML(headerText)}</div>
+      </div>
+      <div class="command-text">${escapeHTML(command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+     `;
+                    container.appendChild(commandItem);
+                });
+            });
+
+            if (toTransferCount === 0) {
+                const p = document.createElement('p');
+                p.style.color = '#6b7280';
+                p.style.padding = '20px';
+                if (matchedCount === 0) {
+                    p.textContent = `No matching characters with notes found between "${nameA}" and "${nameB}".`;
+                } else if (keyMismatchCount > 0 && keyMismatchCount === matchedCount) {
+                    p.textContent = `Found ${matchedCount} matching character(s) with notes, but all had differing key counts between "${nameA}" and "${nameB}", so nothing was transferred.`;
+                } else {
+                    p.textContent = `All matching characters already have the same notes in "${nameB}".`;
+                }
+                container.appendChild(p);
+            }
+
+            const transferCommandsContainer = document.getElementById('commands').querySelector('.command-item');
+            if (transferCommandsContainer) {
+                document.getElementById('goToCommandsBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('goToCommandsBtn').style.display = 'none';
+            }
+
+            toggleCompareCollectionsPanel(false);
+            scrollToCommands();
         }
 
         function saveToLocalStorage() {
