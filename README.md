@@ -23,15 +23,14 @@ Designed for use with the [Mudae bot](https://top.gg/bot/432610292342587392) on 
 
 ## How to Use
 
-**Live Version:** [https://arczeus.github.io/mudae-noter/](https://arczeus.github.io/mudae-noter/)
+**run locally:** Download `index.html` and open in your browser
 
-**Or run locally:** Download `index.html` and open in your browser
-
-1. Run `$mmsaty+ri-c+x+ko` or `$mmasi-`.
+1. Run `$mmsaty+ri-c+x+ko` or `$mmasi-` in Discord.
 2. Copy the character list.
-3. Paste it in the page and click **Parse Input**.  
-4. Organize, rank, or note your characters.
-5. Click Generate Notes or Generate Colors to get your Discord commands.
+3. Paste it in the page and click **Parse Input** - this creates a collection (create more from the collection switcher if you want to keep multiple sets side by side).
+4. Organize, rank, or note your characters, or head to the **Sort** / **Series Order** tabs to reorder your collection or series.
+5. Click Generate Notes or Generate Colors (or the `$sm`/`$smpos`/`$smseries` buttons on the Sort/Series Order tabs) to get your Discord commands.
+6. Use **Compare & Transfer** to diff two collections and carry notes or colors between them, and `Ctrl+Z`/`Ctrl+Y` (or the Undo/Redo widget) to undo any changes.
 
 
 ## What's New in This Fork
