@@ -38,6 +38,34 @@
             margin-bottom: 25px;
         }
 
+        .app-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #2a2a3a;
+        }
+
+        .app-tab {
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #9ca3af;
+            font-weight: 700;
+            font-size: 1em;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .app-tab:hover {
+            color: #e5e7eb;
+        }
+
+        .app-tab.active {
+            color: #a78bfa;
+            border-bottom-color: #7c3aed;
+        }
+
         .collections-bar {
             display: flex;
             align-items: center;
@@ -116,6 +144,12 @@
             color: #9ca3af;
             font-size: 0.8em;
             margin-top: 12px;
+        }
+
+        .compare-panel-title {
+            color: #a78bfa;
+            font-size: 1em;
+            margin-bottom: 14px;
         }
 
         h1 {
@@ -680,6 +714,33 @@
             border: 1px solid #2a2a3a;
         }
 
+        .command-char-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .command-char-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 12px;
+            border: 1px solid #2a2a3a;
+            background: #0a0a0f;
+            color: #d1d5db;
+            font-size: 0.75em;
+        }
+
+        .command-char-chip-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
         .copy-btn {
             padding: 8px 20px;
             font-size: 0.9em;
@@ -1079,14 +1140,712 @@
             height: 100vh;
             max-height: 100vh;
         }
+
+        .sort-input-section {
+            margin-bottom: 20px;
+        }
+
+        .sort-input-section h2 {
+            margin-bottom: 6px;
+        }
+
+        .sort-hint {
+            color: #9ca3af;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+        }
+
+        .sort-input-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .sort-info-banner {
+            background: rgba(167, 139, 250, 0.1);
+            border: 1px solid #7c3aed;
+            color: #e5e7eb;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            margin-bottom: 20px;
+        }
+
+        .sort-info-banner code {
+            background: #0a0a0f;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
+        .sort-column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .sort-column-header h2 {
+            margin-bottom: 0;
+        }
+
+        .sort-count-badge {
+            color: #9ca3af;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .sort-view-toggle {
+            display: flex;
+            gap: 4px;
+        }
+
+        .sort-empty-hint {
+            color: #6b7280;
+            font-size: 0.85em;
+            padding: 20px;
+            text-align: center;
+            border: 1px dashed #2a2a3a;
+            border-radius: 8px;
+        }
+
+        .sort-character-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 75vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .sort-series-list-wide {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 75vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .sort-character-item,
+        .sort-series-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: grab;
+            transition: border-color 0.15s, transform 0.15s, padding 0.15s;
+        }
+
+        .sort-character-item:hover,
+        .sort-series-item:hover {
+            border-color: #7c3aed;
+        }
+
+        .sort-character-item.dragging,
+        .sort-series-item.dragging {
+            opacity: 0.4;
+        }
+
+        .sort-character-item.drag-over,
+        .sort-series-item.drag-over {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
+        }
+
+        .sort-drag-handle {
+            color: #6b7280;
+            font-size: 1.1em;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .sort-item-rank {
+            color: #a78bfa;
+            font-weight: 700;
+            font-size: 0.85em;
+            min-width: 30px;
+            text-align: center;
+            flex-shrink: 0;
+            cursor: text;
+            border-radius: 4px;
+            padding: 3px 2px;
+            border: 1px solid transparent;
+        }
+
+        .sort-item-rank:hover {
+            border-color: #7c3aed;
+            background: rgba(124, 58, 237, 0.12);
+        }
+
+        .sort-rank-input {
+            width: 46px;
+            flex-shrink: 0;
+            text-align: center;
+            border: 1px solid #7c3aed;
+            background: #1a1a24;
+            color: #e5e7eb;
+            border-radius: 4px;
+            padding: 3px 2px;
+            font-size: 0.85em;
+        }
+
+        .sort-item-thumb {
+            width: 46px;
+            height: 64px;
+            flex-shrink: 0;
+            border-radius: 5px;
+            overflow: hidden;
+            background: #0a0a0f;
+        }
+
+        .sort-item-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .sort-item-thumb-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55em;
+            color: #4b5563;
+            text-align: center;
+            padding: 2px;
+        }
+
+        .sort-item-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .sort-item-name {
+            color: #e5e7eb;
+            font-weight: 600;
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sort-item-series {
+            color: #9ca3af;
+            font-size: 0.75em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sort-note-icon {
+            display: none;
+            cursor: help;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        .sort-item-note {
+            color: #a78bfa;
+            background: rgba(124, 58, 237, 0.12);
+            border: 1px solid rgba(124, 58, 237, 0.35);
+            border-radius: 5px;
+            padding: 2px 7px;
+            font-size: 0.75em;
+            font-style: normal;
+            display: inline-block;
+            white-space: normal;
+            word-break: break-word;
+            max-width: fit-content;
+        }
+
+        .sort-item-kakera {
+            color: #4ade80;
+            font-weight: 700;
+            font-size: 0.8em;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .sort-color-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            flex-shrink: 0;
+        }
+
+        .sort-series-name {
+            flex: 1;
+            color: #e5e7eb;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .sort-series-count {
+            color: #9ca3af;
+            font-size: 0.8em;
+            flex-shrink: 0;
+        }
+
+        .sort-limit-warning {
+            color: #fb923c;
+            font-weight: 700;
+        }
+
+        /* Compact view: shrink each row so a lot more of a long list fits
+           on screen at once without scrolling, and swap the full note pill
+           for a small hover-icon indicator to save space. */
+        .sort-character-list.compact .sort-character-item {
+            padding: 4px 10px;
+            gap: 10px;
+        }
+
+        .sort-character-list.compact .sort-item-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+        }
+
+        .sort-character-list.compact .sort-item-series {
+            display: none;
+        }
+
+        .sort-character-list.compact .sort-item-note {
+            display: none;
+        }
+
+        .sort-character-list.compact .sort-note-icon {
+            display: inline;
+        }
+
+        .sort-character-list.compact .sort-item-name {
+            font-size: 0.85em;
+        }
+
+        .sort-character-list.compact .sort-item-info {
+            gap: 0;
+        }
+
+        /* Grid view: big portrait cards, closer to how Mudae itself shows a
+           collection, so the order is easy to eyeball at a glance. */
+        .sort-character-list.grid {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-start;
+            align-content: flex-start;
+        }
+
+        .sort-character-list.grid .sort-character-item {
+            flex-direction: column;
+            align-items: stretch;
+            width: 150px;
+            padding: 0;
+            gap: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sort-character-list.grid .sort-item-thumb {
+            width: 100%;
+            height: 220px;
+            border-radius: 0;
+        }
+
+        .sort-character-list.grid .sort-drag-handle {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            z-index: 3;
+            color: #e5e7eb;
+            background: rgba(10, 10, 15, 0.7);
+            border-radius: 4px;
+            padding: 0 4px;
+            cursor: grab;
+        }
+
+        .sort-character-list.grid .sort-item-rank {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            z-index: 3;
+            background: rgba(10, 10, 15, 0.85);
+            border: 1px solid #a78bfa;
+            min-width: 26px;
+        }
+
+        .sort-character-list.grid .sort-item-info {
+            padding: 8px 8px 4px;
+            text-align: center;
+        }
+
+        .sort-character-list.grid .sort-item-name {
+            justify-content: center;
+            font-size: 0.8em;
+        }
+
+        .sort-character-list.grid .sort-item-series {
+            font-size: 0.7em;
+        }
+
+        .sort-character-list.grid .sort-item-note {
+            align-self: center;
+        }
+
+        .sort-character-list.grid .sort-item-kakera {
+            padding: 0 8px 8px;
+            text-align: center;
+        }
+
+        .sort-character-item.selected,
+        .sort-character-list.grid .sort-character-item.selected {
+            border-color: #a78bfa;
+            background: rgba(124, 58, 237, 0.16);
+            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35);
+        }
+
+        .sort-select-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 2px solid #4b5563;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            color: transparent;
+            line-height: 1;
+        }
+
+        .sort-character-item.selected .sort-select-box {
+            border-color: #a78bfa;
+            background: #7c3aed;
+            color: white;
+        }
+
+        .sort-character-list.grid .sort-select-box {
+            position: absolute;
+            top: 6px;
+            right: 28px;
+            z-index: 3;
+            background: rgba(10, 10, 15, 0.75);
+        }
+
+        .sort-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+
+        .sort-toolbar input,
+        .sort-toolbar select {
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            padding: 7px 10px;
+            border-radius: 6px;
+            height: 36px;
+            font-size: 0.85em;
+        }
+
+        .sort-toolbar input:focus,
+        .sort-toolbar select:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        #sortSearchInput {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        #sortSeriesFilter {
+            max-width: 280px;
+        }
+
+        .sort-filter-note {
+            color: #fb923c;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .sort-selection-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            background: rgba(124, 58, 237, 0.12);
+            border: 1px solid #7c3aed;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+
+        .sort-selection-bar input[type="number"] {
+            width: 80px;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            padding: 7px 10px;
+            border-radius: 6px;
+            height: 34px;
+            font-size: 0.85em;
+        }
+
+        .sort-selection-count {
+            color: #a78bfa;
+            font-weight: 700;
+            font-size: 0.85em;
+            margin-right: 4px;
+        }
+
+        .sort-generate-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .sort-generate-row .btn {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .ms-filter {
+            position: relative;
+        }
+
+        .ms-filter-toggle {
+            min-width: 150px;
+            justify-content: space-between;
+        }
+
+        .ms-filter-toggle::after {
+            content: '▾';
+            margin-left: 8px;
+            color: #9ca3af;
+        }
+
+        .ms-filter-toggle.active {
+            background: #2a2a3a;
+            color: #e5e7eb;
+            border-color: #7c3aed;
+        }
+
+        .ms-filter-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            z-index: 20;
+            width: 260px;
+            background: #1a1a24;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .ms-filter-search {
+            width: 100%;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            padding: 6px 8px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+
+        .ms-filter-search:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        .ms-filter-actions {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .ms-filter-actions .btn {
+            flex: 1;
+            padding: 4px 8px;
+            font-size: 0.8em;
+        }
+
+        .ms-filter-options {
+            max-height: 220px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .ms-filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 6px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+            color: #d1d5db;
+        }
+
+        .ms-filter-option:hover {
+            background: rgba(124, 58, 237, 0.15);
+        }
+
+        .ms-filter-option input {
+            flex-shrink: 0;
+            accent-color: #7c3aed;
+        }
+
+        .ms-filter-option-empty {
+            color: #6b7280;
+            font-size: 0.85em;
+            padding: 6px;
+            text-align: center;
+        }
+
+        /* Series Order grid view: same card language as the character sort
+           grid, but each card represents an entire series. */
+        .sort-series-list-wide.grid {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-start;
+        }
+
+        .sort-series-list-wide.grid .sort-series-item {
+            flex-direction: column;
+            align-items: stretch;
+            width: 150px;
+            padding: 0;
+            gap: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sort-series-list-wide.grid .sort-item-thumb {
+            width: 100%;
+            height: 220px;
+            border-radius: 0;
+            flex-shrink: 0;
+        }
+
+        .sort-series-list-wide.grid .sort-drag-handle {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            z-index: 3;
+            color: #e5e7eb;
+            background: rgba(10, 10, 15, 0.7);
+            border-radius: 4px;
+            padding: 0 4px;
+            cursor: grab;
+        }
+
+        .sort-series-list-wide.grid .sort-item-rank {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            z-index: 3;
+            background: rgba(10, 10, 15, 0.85);
+            border: 1px solid #a78bfa;
+            min-width: 26px;
+            color: #a78bfa;
+            font-weight: 700;
+            font-size: 0.85em;
+            text-align: center;
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+
+        .sort-series-list-wide.grid .sort-series-name {
+            padding: 8px 8px 2px;
+            text-align: center;
+            font-size: 0.8em;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .sort-series-list-wide.grid .sort-series-count {
+            padding: 0 8px 8px;
+            text-align: center;
+        }
+
+        .sort-series-item.selected {
+            border-color: #a78bfa;
+            background: rgba(124, 58, 237, 0.16);
+            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35);
+        }
+
+        .sort-series-list-wide.grid .sort-select-box {
+            position: absolute;
+            top: 6px;
+            right: 28px;
+            z-index: 3;
+            background: rgba(10, 10, 15, 0.75);
+        }
+
+        /* Stays fixed on screen instead of living up in the collections bar,
+           so it's reachable without scrolling back up while working through
+           a long character or series list. */
+        .floating-undo-bar {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .floating-undo-bar .btn:disabled {
+            opacity: 0.5;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
+        <div class="app-tabs">
+            <button type="button" id="tab-notes-btn" class="app-tab active" onclick="switchAppTab('notes')">📝
+                Notes</button>
+            <button type="button" id="tab-sort-btn" class="app-tab" onclick="switchAppTab('sort')">🔀 Sort</button>
+            <button type="button" id="tab-series-btn" class="app-tab" onclick="switchAppTab('series')">📚 Series
+                Order</button>
+        </div>
+
         <div class="header-row">
-            <h1>Mudae Note Manager</h1>
-            <div class="instructions-list">
+            <h1>Mudae Collection Manager</h1>
+            <div class="instructions-list" id="notesInstructions">
                 <p class="instruction-item">
                     <strong>Get Started:</strong> Paste <code>$mmasi-</code> output in the box and&nbsp;<b>Parse
                         Input</b>.
@@ -1100,6 +1859,10 @@
                 <p class="instruction-item">
                     <strong>Selection:</strong> Cards can be clicked to toggle selection (<span class="dimmed">gray =
                         deselected</span>).
+                </p>
+                <p class="instruction-item">
+                    <strong>Search:</strong> The Search box in Options filters by name, series, note, or owner - it
+                    only changes what's shown, not your actual selection.
                 </p>
                 <p class="instruction-item">
                     <strong>Notes:</strong> Add notes individually or apply in bulk using the group inputs.
@@ -1119,9 +1882,64 @@
                     <strong>Quick Notes:</strong> The sidebar holds notes, emojis, or colors for quick copy-paste.
                 </p>
                 <p class="instruction-item">
+                    <strong>Undo:</strong> Made a mistake? The <span class="instruction-badge">↶ Undo</span> /
+                    <span class="instruction-badge">↷ Redo</span> buttons float in the bottom-right corner, or use
+                    <code>Ctrl+Z</code> / <code>Ctrl+Y</code>. Shared across Notes, Sort, and Series Order; lasts for
+                    this browser session only.
+                </p>
+                <p class="instruction-item">
                     <strong>Demo:</strong> <button onclick="loadDemoData()" class="btn btn-sm"
                         style="margin: 0 6px;">Load Demo</button>
                     and&nbsp;<b>Parse Input</b>.
+                </p>
+            </div>
+            <div class="instructions-list" id="sortInstructions" style="display: none;">
+                <p class="instruction-item">
+                    <strong>Get Started:</strong> Paste your <code>$mmmka+s</code> output in the box below
+                    and&nbsp;<b>Parse Sort Input</b>.
+                </p>
+                <p class="instruction-item">
+                    <strong>Auto-Fill:</strong> Notes, images, colors, and keys are pulled in automatically from
+                    whatever you've already parsed for this collection on the <b>Notes</b> tab.
+                </p>
+                <p class="instruction-item">
+                    <strong>Reorder:</strong> Drag by the <span class="instruction-badge">⠿</span> handle for nearby
+                    moves, or click the <span class="instruction-badge">#</span> number and type a position to jump a
+                    character anywhere in a long list.
+                </p>
+                <p class="instruction-item">
+                    <strong>View:</strong> <b>Compact</b> fits far more of your list on screen, <b>Grid</b> shows the
+                    full card art.
+                </p>
+                <p class="instruction-item">
+                    <strong>Multi-Move:</strong> Click cards to select (shift-click for a range), then drag any one of
+                    them or use the move buttons to shift the whole group.
+                </p>
+                <p class="instruction-item">
+                    <strong>Filter:</strong> Search or pick a series to work on just those characters - positions stay
+                    the overall ones, so the order you generate is still the full list.
+                </p>
+                <p class="instruction-item">
+                    <strong>Small Moves:</strong> With a few characters selected, <b>Generate $smpos</b> gives you a
+                    short command that only repositions those, instead of resending everything.
+                </p>
+                <p class="instruction-item">
+                    <strong>Same Collection:</strong> This uses the same collection selected above, so switch
+                    collections up top to sort a different one.
+                </p>
+            </div>
+            <div class="instructions-list" id="seriesInstructions" style="display: none;">
+                <p class="instruction-item">
+                    <strong>Auto-Built:</strong> This list comes from whatever series you've already parsed for this
+                    collection on the <b>Notes</b> tab - no separate import needed.
+                </p>
+                <p class="instruction-item">
+                    <strong>Reorder:</strong> Drag any series by its <span class="instruction-badge">⠿</span> handle
+                    into the order you want.
+                </p>
+                <p class="instruction-item">
+                    <strong>Generate:</strong> Click <b>Generate $smseries Command</b> to get a ready-to-paste,
+                    Discord-limit-safe command.
                 </p>
             </div>
         </div>
@@ -1135,12 +1953,16 @@
                 <button onclick="createNewCollection()" class="btn btn-sm">+ New</button>
                 <button onclick="duplicateCollection()" class="btn btn-sm">Duplicate</button>
                 <button onclick="renameCollection()" class="btn btn-sm">Rename</button>
-                <button onclick="toggleCompareCollectionsPanel()" class="btn btn-sm">Compare</button>
+                <button onclick="toggleCompareCollectionsPanel('compare')" class="btn btn-sm">Compare</button>
+                <button onclick="toggleCompareCollectionsPanel('transfer')" class="btn btn-sm">Transfer Notes</button>
+                <button onclick="toggleCompareCollectionsPanel('color')" class="btn btn-sm">Transfer Colors</button>
                 <button onclick="deleteCollection()" class="btn btn-sm btn-danger">Delete</button>
             </div>
         </div>
 
+        <div id="notesTabPanel">
         <div id="compareCollectionsPanel" class="compare-panel" style="display: none;">
+            <h3 id="comparePanelTitle" class="compare-panel-title">Compare Collections</h3>
             <div class="compare-panel-row">
                 <div class="filter-control">
                     <label for="compareCollectionA">Collection A</label>
@@ -1151,20 +1973,29 @@
                     <select id="compareCollectionB"></select>
                 </div>
                 <div class="compare-panel-actions">
-                    <button onclick="runCollectionComparison()" class="btn btn-sm btn-primary">Compare &amp; Create
-                        Diff Collections</button>
-                    <button onclick="generateNoteTransferCommands()" class="btn btn-sm btn-primary">Transfer Notes
-                        (A → B)</button>
+                    <button id="compareActionBtn" onclick="runCollectionComparison()"
+                        class="btn btn-sm btn-primary">Compare &amp; Create Diff Collections</button>
+                    <button id="transferActionBtn" onclick="generateNoteTransferCommands()"
+                        class="btn btn-sm btn-primary">Transfer Notes (A → B)</button>
+                    <button id="colorTransferActionBtn" onclick="generateColorTransferCommands()"
+                        class="btn btn-sm btn-primary">Transfer Colors (A → B)</button>
                     <button onclick="toggleCompareCollectionsPanel(false)" class="btn btn-sm btn-secondary">Close</button>
                 </div>
             </div>
-            <p class="compare-panel-hint">"Compare" creates two new collections: characters only Collection A has,
-                and characters only Collection B has. "Transfer Notes (A → B)" generates $n commands to copy notes
-                from Collection A onto matching characters in Collection B wherever B is missing that note - handy
-                after re-importing a collection on a new server, since notes don't carry over. Notes only transfer
-                when both sides show the same key count, since some notes are tied to a specific number of keys.
-                Matching uses global rank, image, and kakera value first (so characters renamed with Mudae's $alias
-                still match), falling back to series + name only when those aren't available.</p>
+            <p id="compareHint" class="compare-panel-hint">"Compare" creates two new collections: characters only
+                Collection A has, and characters only Collection B has.</p>
+            <p id="transferHint" class="compare-panel-hint">"Transfer Notes (A → B)" generates $n commands to copy
+                notes from Collection A onto matching characters in Collection B wherever B is missing that note -
+                handy after re-importing a collection on a new server, since notes don't carry over. Notes only
+                transfer when both sides show the same key count, since some notes are tied to a specific number of
+                keys. Matching uses global rank, image, and kakera value first (so characters renamed with Mudae's
+                $alias still match), falling back to series + name only when those aren't available.</p>
+            <p id="colorTransferHint" class="compare-panel-hint">"Transfer Colors (A → B)" generates $ec commands to
+                copy colors from Collection A onto matching characters in Collection B wherever B's color differs -
+                handy after re-importing a collection on a new server, since colors don't carry over. Only transfers
+                between characters you hold on both sides (at least 1 key in Collection A and Collection B), so it
+                won't paint a color onto a character in B you don't actually own yet. Matching uses global rank,
+                image, and kakera value first, falling back to series + name only when those aren't available.</p>
         </div>
 
         <div class="input-section">
@@ -1301,6 +2132,16 @@
                         </div>
                     </div>
 
+                    <div class="control-group">
+                        <h3>Search</h3>
+                        <div class="button-group" style="flex-wrap: nowrap;">
+                            <input type="text" id="notesSearchInput" placeholder="Search name, series, note, or owner..."
+                                oninput="onNotesSearchChange()" class="add-note-input" style="flex: 1;">
+                            <button type="button" class="btn btn-sm" onclick="clearNotesSearch()">Reset</button>
+                        </div>
+                        <div id="notesSearchNote" class="sort-filter-note" style="margin-top: 6px;"></div>
+                    </div>
+
                     <div class="control-group" id="filter-section">
                         <h3>Filter Characters</h3>
                         <div class="filter-controls-container">
@@ -1370,6 +2211,133 @@
         <div id="playerStatsSection" style="display: none;"></div>
         <div id="seriesGrid" class="series-grid"></div>
         <div id="commands"></div>
+        </div>
+
+        <div id="sortTabPanel" style="display: none;">
+            <div class="sort-input-section">
+                <h2>Import Kakera-Sorted List</h2>
+                <p class="sort-hint">Paste your <code>$mmmka+s</code> output below. Each line should look like
+                    <code>Pidgey - Pokédex 54 ka</code>.
+                </p>
+                <textarea id="sortInput"
+                    placeholder="Paste $mmmka+s output here&#10;=========================================&#10;Pidgey - Pokédex 54 ka&#10;Marcille Donato - Dungeon Meshi 1,304 ka"></textarea>
+                <div class="sort-input-actions">
+                    <button onclick="parseSortInput()" class="btn btn-primary">Parse Sort Input</button>
+                    <button onclick="clearSortData()" class="btn">Clear Sort List</button>
+                </div>
+            </div>
+
+            <div id="sortMessage"></div>
+            <div id="sortDataInfoBanner" class="sort-info-banner" style="display: none;"></div>
+
+            <div class="sort-column-header">
+                <h2>Character Order</h2>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <span id="sortCharCount" class="sort-count-badge"></span>
+                    <div class="sort-view-toggle">
+                        <button type="button" id="sort-view-detailed-btn" class="btn btn-sm active"
+                            onclick="setSortViewMode('detailed')">Detailed</button>
+                        <button type="button" id="sort-view-compact-btn" class="btn btn-sm"
+                            onclick="setSortViewMode('compact')">Compact</button>
+                        <button type="button" id="sort-view-grid-btn" class="btn btn-sm"
+                            onclick="setSortViewMode('grid')">Grid</button>
+                    </div>
+                </div>
+            </div>
+            <p class="sort-hint">Drag by the <span class="instruction-badge">⠿</span> handle to reorder nearby, or
+                click the <span class="instruction-badge">#</span> number to jump a character straight to a position
+                - handy for long lists. Click a card to select it (shift-click for a range) and move the whole
+                selection at once. Switch to <strong>Compact</strong> to fit more of your list on screen, or
+                <strong>Grid</strong> for full card art.</p>
+
+            <div class="sort-toolbar">
+                <input type="text" id="sortSearchInput" placeholder="Search name, series or note..."
+                    oninput="onSortFilterChange()">
+                <div class="ms-filter" id="sortSeriesFilterWrap">
+                    <button type="button" class="btn btn-sm ms-filter-toggle" id="sortSeriesFilterToggle"
+                        onclick="toggleMsPanel('sortSeriesFilterWrap')">All series</button>
+                    <div class="ms-filter-panel" id="sortSeriesFilterPanel" style="display: none;">
+                        <input type="text" class="ms-filter-search" placeholder="Search..."
+                            oninput="renderMsOptions('sortSeriesFilterWrap')">
+                        <div class="ms-filter-actions">
+                            <button type="button" class="btn btn-sm" onclick="setAllMsOptions('sortSeriesFilterWrap', true)">All</button>
+                            <button type="button" class="btn btn-sm" onclick="setAllMsOptions('sortSeriesFilterWrap', false)">None</button>
+                        </div>
+                        <div class="ms-filter-options" id="sortSeriesFilterOptions"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm" onclick="clearSortFilters()">Reset Filters</button>
+                <button type="button" class="btn btn-sm" onclick="selectAllShownSortEntries()">Select Shown</button>
+                <button type="button" class="btn btn-sm" onclick="clearSortSelection()">Clear Selection</button>
+                <span id="sortFilterNote" class="sort-filter-note"></span>
+            </div>
+
+            <div id="sortSelectionBar" class="sort-selection-bar" style="display: none;">
+                <span id="sortSelectionCount" class="sort-selection-count"></span>
+                <button type="button" class="btn btn-sm" onclick="moveSortSelectionToEdge('top')">Move to Top</button>
+                <button type="button" class="btn btn-sm" onclick="moveSortSelectionToEdge('bottom')">Move to
+                    Bottom</button>
+                <span style="color: #9ca3af; font-size: 0.85em;">Move to position</span>
+                <input type="number" id="sortMoveToPosition" min="1" placeholder="#">
+                <button type="button" class="btn btn-sm btn-primary" onclick="moveSortSelectionToTypedPosition()">Go</button>
+                <span id="sortSelectionHint" style="color: #9ca3af; font-size: 0.8em;"></span>
+            </div>
+
+            <div id="sortCharacterList" class="sort-character-list"></div>
+
+            <div class="sort-generate-row">
+                <button onclick="generateCharacterOrderCommand()" class="btn btn-primary">Generate Full $sm Order
+                    Command</button>
+                <button onclick="generateSmposCommand()" class="btn btn-primary">Generate $smpos for Selected</button>
+            </div>
+            <div id="characterOrderCommandOutput"></div>
+        </div>
+
+        <div id="seriesOrderTabPanel" style="display: none;">
+            <div id="seriesMessage"></div>
+            <div class="sort-column-header">
+                <h2>Series Order</h2>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <span id="sortSeriesCount" class="sort-count-badge"></span>
+                    <div class="sort-view-toggle">
+                        <button type="button" id="series-view-list-btn" class="btn btn-sm active"
+                            onclick="setSeriesViewMode('list')">List</button>
+                        <button type="button" id="series-view-grid-btn" class="btn btn-sm"
+                            onclick="setSeriesViewMode('grid')">Grid</button>
+                    </div>
+                </div>
+            </div>
+            <p class="sort-hint">Built automatically from whatever's parsed on the <strong>Notes</strong> tab. Drag
+                series into the order you want, then generate your <code>$smseries</code> command. Each series is
+                pictured using its highest-kakera character in <strong>Grid</strong> view. Click a series to select it
+                (shift-click for a range) and move the whole selection at once.</p>
+
+            <div class="sort-toolbar">
+                <input type="text" id="seriesSearchInput" placeholder="Search series..."
+                    oninput="onSeriesFilterChange()">
+                <button type="button" class="btn btn-sm" onclick="clearSeriesFilter()">Reset Filter</button>
+                <button type="button" class="btn btn-sm" onclick="selectAllShownSeries()">Select Shown</button>
+                <button type="button" class="btn btn-sm" onclick="clearSeriesSelection()">Clear Selection</button>
+                <span id="seriesFilterNote" class="sort-filter-note"></span>
+            </div>
+
+            <div id="seriesSelectionBar" class="sort-selection-bar" style="display: none;">
+                <span id="seriesSelectionCount" class="sort-selection-count"></span>
+                <button type="button" class="btn btn-sm" onclick="moveSeriesSelectionToEdge('top')">Move to Top</button>
+                <button type="button" class="btn btn-sm" onclick="moveSeriesSelectionToEdge('bottom')">Move to
+                    Bottom</button>
+                <span style="color: #9ca3af; font-size: 0.85em;">Move to position</span>
+                <input type="number" id="seriesMoveToPosition" min="1" placeholder="#">
+                <button type="button" class="btn btn-sm btn-primary" onclick="moveSeriesSelectionToTypedPosition()">Go</button>
+            </div>
+
+            <div id="sortSeriesList" class="sort-series-list-wide"></div>
+            <button onclick="generateSeriesOrderCommand()" class="btn btn-primary"
+                style="margin-top: 16px; width: 100%;">Generate $smseries Command</button>
+            <div id="seriesOrderCommandOutput"></div>
+        </div>
+
+
         <div class="footer">
             <div class="footer-contact">
                 Questions, feedback or bugs? Contact <strong>arczeus</strong> on Discord.
@@ -1401,6 +2369,13 @@
         </div>
     </div>
 
+    <div class="floating-undo-bar">
+        <button onclick="undoLastAction()" id="undoBtn" class="btn btn-sm" disabled
+            title="Undo the last change (Ctrl+Z)">↶ Undo</button>
+        <button onclick="redoLastAction()" id="redoBtn" class="btn btn-sm" disabled
+            title="Redo (Ctrl+Y)">↷ Redo</button>
+    </div>
+
     <script>
         const COLLECTIONS_META_KEY = 'mudaeCollectionsMeta';
         const LEGACY_STATE_KEY = 'mudaeAppState';
@@ -1410,6 +2385,9 @@
             rawInput: '',
             quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
             preFilterCharacterStates: null,
+            sortData: [],
+            sortRawInput: '',
+            seriesOrder: [],
             ui: {
                 grouping: 'series',
                 sortMethod: 'count',
@@ -1417,7 +2395,10 @@
                 showDeselected: true,
                 showDisabledIcon: true,
                 preferredColumns: 3,
-                fitToScreen: false
+                fitToScreen: false,
+                sortCompactView: false,
+                sortViewMode: 'detailed',
+                seriesViewMode: 'list'
             }
         };
 
@@ -1592,9 +2573,6 @@
             navigator.clipboard.writeText(text).then(function () {
             });
         }
-
-        initQuickNotes();
-        loadFromLocalStorage();
 
         document.getElementById('seriesGrid').addEventListener('click', (e) => {
             const target = e.target;
@@ -1936,11 +2914,61 @@
             saveToLocalStorage();
         }
 
+        // Per-session only, like the Sort/Series Order tabs' search - not part
+        // of AppState, so it doesn't get saved or affect the actual selection
+        // (char.excluded). Purely hides non-matching cards visually.
+        let notesSearchQuery = '';
+
+        function characterMatchesNotesSearch(char) {
+            if (!notesSearchQuery) return true;
+            const haystack = `${char.name} ${char.originalSeries || ''} ${char.note || ''} ${char.owner || ''}`.toLowerCase();
+            return haystack.includes(notesSearchQuery);
+        }
+
+        function characterIsShownInNotes(char) {
+            const hiddenByExclusion = char.excluded && !AppState.ui.showDeselected;
+            return !hiddenByExclusion && characterMatchesNotesSearch(char);
+        }
+
+        function onNotesSearchChange() {
+            const field = document.getElementById('notesSearchInput');
+            notesSearchQuery = field ? field.value.trim().toLowerCase() : '';
+            displaySeries();
+        }
+
+        function clearNotesSearch() {
+            const field = document.getElementById('notesSearchInput');
+            if (field) field.value = '';
+            notesSearchQuery = '';
+            displaySeries();
+        }
+
+        function updateNotesSearchNote() {
+            const note = document.getElementById('notesSearchNote');
+            if (!note) return;
+
+            if (!notesSearchQuery) {
+                note.textContent = '';
+                return;
+            }
+
+            let total = 0;
+            let matched = 0;
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    total++;
+                    const haystack = `${char.name} ${seriesName} ${char.note || ''} ${char.owner || ''}`.toLowerCase();
+                    if (haystack.includes(notesSearchQuery)) matched++;
+                });
+            }
+            note.textContent = `Showing ${matched} of ${total} characters matching search`;
+        }
+
         function createCharacterCardHTML(char) {
             let classNames = ['character-card'];
             if (char.excluded) classNames.push('excluded');
             if (char.isDisabled) classNames.push('permanently-disabled');
-            if (char.excluded && !AppState.ui.showDeselected) classNames.push('hidden-char');
+            if (!characterIsShownInNotes(char)) classNames.push('hidden-char');
 
             const colorCode = char.color || '#670d08';
             const hasNote = char.note && char.note.trim() !== '';
@@ -2230,11 +3258,20 @@ ${rouletteBarHTML}
 </div>`;
 
                 const hasVisibleChars = data.characters.some(c => !c.excluded);
-                if (AppState.ui.showDeselected || hasVisibleChars) {
+                // With a search active, a group only earns its spot if it has
+                // at least one character that's actually shown (i.e. passes
+                // both the exclusion/showDeselected rule and the search) -
+                // otherwise a matching character elsewhere shouldn't drag an
+                // unrelated, fully-non-matching group along with it.
+                const showGroup = notesSearchQuery
+                    ? data.characters.some(characterIsShownInNotes)
+                    : (AppState.ui.showDeselected || hasVisibleChars);
+                if (showGroup) {
                     finalHTML += groupCardHTML;
                 }
             }
             grid.innerHTML = finalHTML;
+            updateNotesSearchNote();
 
             const groupCount = sortedGroupEntries.length;
             if (groupCount === 1) {
@@ -2525,6 +3562,16 @@ ${rouletteBarHTML}
             }
         }
 
+        // Renders the small character-name chips shown under a color command's
+        // header, so it's easy to see at a glance which characters a given
+        // "N characters" count actually refers to without having to parse the
+        // raw command text.
+        function buildColorCharChips(names, color) {
+            return names.map(function (name) {
+                return `<span class="command-char-chip"><span class="command-char-chip-dot" style="background: ${escapeHTML(color)};"></span>${escapeHTML(name)}</span>`;
+            }).join('');
+        }
+
         function generateColorCommands() {
             const commandsDiv = document.getElementById('commands');
             commandsDiv.innerHTML = `
@@ -2567,6 +3614,7 @@ ${rouletteBarHTML}
                 let commandParts = [];
                 const commandPrefix = '$ec ';
                 const commandSuffix = ` $ ${color}`;
+                let currentNames = [];
                 let currentCharacterString = '';
 
                 for (const charName of allCharsNames) {
@@ -2574,20 +3622,20 @@ ${rouletteBarHTML}
                     const potentialNextString = currentCharacterString + separator + charName;
 
                     if ((commandPrefix.length + potentialNextString.length + commandSuffix.length) > 1990) {
-                        const finalCommand = commandPrefix + currentCharacterString + commandSuffix;
-                        commandParts.push(finalCommand);
+                        commandParts.push({ command: commandPrefix + currentCharacterString + commandSuffix, names: currentNames });
                         currentCharacterString = charName;
+                        currentNames = [charName];
                     } else {
                         currentCharacterString = potentialNextString;
+                        currentNames.push(charName);
                     }
                 }
 
                 if (currentCharacterString) {
-                    const finalCommand = commandPrefix + currentCharacterString + commandSuffix;
-                    commandParts.push(finalCommand);
+                    commandParts.push({ command: commandPrefix + currentCharacterString + commandSuffix, names: currentNames });
                 }
 
-                commandParts.forEach((command, idx) => {
+                commandParts.forEach((part, idx) => {
                     const commandItem = document.createElement('div');
                     commandItem.className = 'command-item';
                     commandItem.style.borderLeftColor = color;
@@ -2598,12 +3646,15 @@ ${rouletteBarHTML}
                         headerText += ` (Part ${idx + 1}/${commandParts.length})`;
                     }
 
+                    const chipsHtml = buildColorCharChips(part.names, color);
+
                     commandItem.innerHTML = `
       <div class="command-header">
-       <div class="command-series">${headerText}</div>
+       <div class="command-series">${escapeHTML(headerText)}</div>
       </div>
-      <div class="command-text">${command}</div>
-      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+      <div class="command-char-chips">${chipsHtml}</div>
+      <div class="command-text">${escapeHTML(part.command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${part.command.replace(/`/g, '\\`')}\`)">Copy Command</button>
      `;
                     container.appendChild(commandItem);
                 });
@@ -2892,7 +3943,18 @@ ${rouletteBarHTML}
         }
 
         function showMessage(text, type) {
-            const messageDiv = document.getElementById('message');
+            // #message lives inside the Notes panel, so whichever tab is
+            // actually visible gets its own message slot instead - otherwise
+            // feedback would be rendered into a hidden panel.
+            const sortPanel = document.getElementById('sortTabPanel');
+            const seriesPanel = document.getElementById('seriesOrderTabPanel');
+            let messageDiv;
+            if (sortPanel && sortPanel.style.display !== 'none') {
+                messageDiv = document.getElementById('sortMessage');
+            } else if (seriesPanel && seriesPanel.style.display !== 'none') {
+                messageDiv = document.getElementById('seriesMessage');
+            }
+            if (!messageDiv) messageDiv = document.getElementById('message');
             messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
             messageDiv.textContent = text;
             setTimeout(function () {
@@ -3065,21 +4127,69 @@ ${rouletteBarHTML}
             location.reload();
         }
 
-        function toggleCompareCollectionsPanel(forceState) {
+        // Compare, Transfer Notes, and Transfer Colors are three distinct
+        // features that happen to all need a "pick Collection A and B" panel,
+        // so they share one instead of duplicating that select/populate
+        // logic three times over. Each has its own bar button, though, and
+        // the panel switches its title/hint/visible action button to match
+        // whichever one was clicked - so from the user's side they read as
+        // separate, clearly-labeled tools rather than options crammed into
+        // one generic "Compare" panel.
+        const COMPARE_PANEL_MODES = {
+            compare: { title: 'Compare Collections', actionBtnId: 'compareActionBtn', hintId: 'compareHint' },
+            transfer: { title: 'Transfer Notes', actionBtnId: 'transferActionBtn', hintId: 'transferHint' },
+            color: { title: 'Transfer Colors', actionBtnId: 'colorTransferActionBtn', hintId: 'colorTransferHint' }
+        };
+
+        // Call with 'compare', 'transfer', or 'color' to open in that mode
+        // (or switch an already-open panel to it); call with false to
+        // force-close.
+        function toggleCompareCollectionsPanel(modeOrClose) {
             const panel = document.getElementById('compareCollectionsPanel');
             if (!panel) return;
-            const shouldShow = typeof forceState === 'boolean' ? forceState : panel.style.display === 'none';
 
-            if (shouldShow) {
+            if (modeOrClose === false) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            const mode = COMPARE_PANEL_MODES[modeOrClose] ? modeOrClose : 'compare';
+            const isOpen = panel.style.display !== 'none';
+
+            if (isOpen && panel.dataset.mode === mode) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            if (!isOpen) {
                 const meta = ensureCollectionsMeta();
                 if (meta.order.length < 2) {
                     showMessage('You need at least two collections to compare.', 'error');
                     return;
                 }
+                populateCompareCollectionSelects();
             }
 
-            panel.style.display = shouldShow ? 'block' : 'none';
-            if (shouldShow) populateCompareCollectionSelects();
+            panel.style.display = 'block';
+            setComparePanelMode(mode);
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function setComparePanelMode(mode) {
+            const panel = document.getElementById('compareCollectionsPanel');
+            if (!panel) return;
+            panel.dataset.mode = mode;
+
+            const title = document.getElementById('comparePanelTitle');
+            if (title) title.textContent = COMPARE_PANEL_MODES[mode].title;
+
+            Object.keys(COMPARE_PANEL_MODES).forEach(function (m) {
+                const cfg = COMPARE_PANEL_MODES[m];
+                const btn = document.getElementById(cfg.actionBtnId);
+                const hint = document.getElementById(cfg.hintId);
+                if (btn) btn.style.display = m === mode ? '' : 'none';
+                if (hint) hint.style.display = m === mode ? '' : 'none';
+            });
         }
 
         function populateCompareCollectionSelects() {
@@ -3218,6 +4328,9 @@ ${rouletteBarHTML}
                 rawInput: '',
                 quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
                 preFilterCharacterStates: null,
+                sortData: [],
+                sortRawInput: '',
+                seriesOrder: [],
                 ui: {
                     grouping: 'series',
                     sortMethod: 'count',
@@ -3225,7 +4338,10 @@ ${rouletteBarHTML}
                     showDeselected: true,
                     showDisabledIcon: true,
                     preferredColumns: 3,
-                    fitToScreen: false
+                    fitToScreen: false,
+                    sortCompactView: false,
+                    sortViewMode: 'detailed',
+                    seriesViewMode: 'list'
                 }
             };
 
@@ -3468,10 +4584,1530 @@ ${rouletteBarHTML}
             scrollToCommands();
         }
 
+        // Generates $ec commands to carry colors from Collection A over to
+        // their matching characters in Collection B, for characters both
+        // collections share where B's color differs from A's. Unlike notes
+        // (which only require matching key counts), this only transfers
+        // between characters actually held on both sides - at least 1 key in
+        // Collection A and Collection B - so a color can't get painted onto a
+        // character in B that hasn't even been rolled there yet.
+        function generateColorTransferCommands() {
+            const meta = ensureCollectionsMeta();
+            const idA = document.getElementById('compareCollectionA').value;
+            const idB = document.getElementById('compareCollectionB').value;
+
+            if (!idA || !idB) {
+                showMessage('Please select two collections to compare.', 'error');
+                return;
+            }
+            if (idA === idB) {
+                showMessage('Please select two different collections to compare.', 'error');
+                return;
+            }
+
+            if (meta.activeId === idA || meta.activeId === idB) {
+                saveToLocalStorage();
+            }
+
+            const nameA = meta.collections[idA] ? meta.collections[idA].name : 'Collection A';
+            const nameB = meta.collections[idB] ? meta.collections[idB].name : 'Collection B';
+
+            const stateA = loadCollectionStateById(idA);
+            const stateB = loadCollectionStateById(idB);
+
+            const seriesDataA = (stateA && stateA.seriesData) ? stateA.seriesData : {};
+            const seriesDataB = (stateB && stateB.seriesData) ? stateB.seriesData : {};
+
+            const lookupB = buildMatchLookup(seriesDataB);
+
+            const commandsByColor = {};
+            let matchedCount = 0;
+            let toTransferCount = 0;
+            let noKeysCount = 0;
+
+            for (const seriesName in seriesDataA) {
+                seriesDataA[seriesName].characters.forEach(function (charA) {
+                    const colorA = (charA.color || '').trim();
+                    if (!colorA) return;
+
+                    const matchB = findMatchingCharacter(seriesName, charA, lookupB);
+                    if (!matchB) return;
+
+                    matchedCount++;
+
+                    const keysA = parseInt(charA.keys) || 0;
+                    const keysB = parseInt(matchB.char.keys) || 0;
+                    if (keysA < 1 || keysB < 1) {
+                        noKeysCount++;
+                        return;
+                    }
+
+                    const colorB = (matchB.char.color || '').trim();
+                    if (colorA.toLowerCase() === colorB.toLowerCase()) return;
+
+                    toTransferCount++;
+                    if (!commandsByColor[colorA]) commandsByColor[colorA] = [];
+                    commandsByColor[colorA].push(matchB.char.name);
+                });
+            }
+
+            const commandsDiv = document.getElementById('commands');
+            commandsDiv.innerHTML = `
+ <div class="commands-section">
+  <h2 style="display: flex; justify-content: space-between; align-items: center;">
+   Color Transfer Commands (${escapeHTML(nameA)} → ${escapeHTML(nameB)})
+   <button onclick="scrollToTop()" class="btn btn-sm btn-primary" style="font-size: 0.7em; padding: 6px 12px;">Go to Top ↑</button>
+  </h2>
+ </div>`;
+            const container = commandsDiv.querySelector('.commands-section');
+
+            const sortedColors = Object.keys(commandsByColor).sort(function (a, b) { return a.localeCompare(b); });
+
+            sortedColors.forEach(function (color) {
+                const charNames = commandsByColor[color];
+
+                let commandParts = [];
+                const commandPrefix = '$ec ';
+                const commandSuffix = ` $ ${color}`;
+                let currentNames = [];
+                let currentCharacterString = '';
+
+                charNames.forEach(function (charName) {
+                    const separator = currentCharacterString ? '$' : '';
+                    const potentialNextString = currentCharacterString + separator + charName;
+
+                    if ((commandPrefix.length + potentialNextString.length + commandSuffix.length) > 1990) {
+                        commandParts.push({ command: commandPrefix + currentCharacterString + commandSuffix, names: currentNames });
+                        currentCharacterString = charName;
+                        currentNames = [charName];
+                    } else {
+                        currentCharacterString = potentialNextString;
+                        currentNames.push(charName);
+                    }
+                });
+
+                if (currentCharacterString) {
+                    commandParts.push({ command: commandPrefix + currentCharacterString + commandSuffix, names: currentNames });
+                }
+
+                commandParts.forEach(function (part, idx) {
+                    const commandItem = document.createElement('div');
+                    commandItem.className = 'command-item';
+                    commandItem.style.borderLeftColor = color;
+
+                    let headerText = `Color: ${color}`;
+                    headerText += ` - ${charNames.length} character${charNames.length > 1 ? 's' : ''}`;
+                    if (commandParts.length > 1) {
+                        headerText += ` (Part ${idx + 1}/${commandParts.length})`;
+                    }
+
+                    const chipsHtml = buildColorCharChips(part.names, color);
+
+                    commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${escapeHTML(headerText)}</div>
+      </div>
+      <div class="command-char-chips">${chipsHtml}</div>
+      <div class="command-text">${escapeHTML(part.command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${part.command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+     `;
+                    container.appendChild(commandItem);
+                });
+            });
+
+            if (toTransferCount === 0) {
+                const p = document.createElement('p');
+                p.style.color = '#6b7280';
+                p.style.padding = '20px';
+                if (matchedCount === 0) {
+                    p.textContent = `No matching characters with colors found between "${nameA}" and "${nameB}".`;
+                } else if (noKeysCount > 0 && noKeysCount === matchedCount) {
+                    p.textContent = `Found ${matchedCount} matching character(s) with colors, but none had at least 1 key on both sides between "${nameA}" and "${nameB}", so nothing was transferred.`;
+                } else {
+                    p.textContent = `All matching characters already have the same color in "${nameB}".`;
+                }
+                container.appendChild(p);
+            }
+
+            const transferCommandsContainer = document.getElementById('commands').querySelector('.command-item');
+            if (transferCommandsContainer) {
+                document.getElementById('goToCommandsBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('goToCommandsBtn').style.display = 'none';
+            }
+
+            toggleCompareCollectionsPanel(false);
+            scrollToCommands();
+        }
+
+        // ===================== Sort Tab =====================
+
+        // The active tab is intentionally NOT part of a collection's saved
+        // state - it's a page-level navigation choice. Storing it per-collection
+        // caused a bug where switching to a collection you'd never viewed on the
+        // Sort tab would bounce you back to Notes (that collection's own saved
+        // state, if any, defaulted to 'notes'). Keeping it in its own key means
+        // whichever tab you're on stays selected no matter which collection you
+        // switch to.
+        const ACTIVE_TAB_KEY = 'mudaeActiveTab';
+
+        function getStoredActiveTab() {
+            try {
+                return localStorage.getItem(ACTIVE_TAB_KEY) || 'notes';
+            } catch (e) {
+                return 'notes';
+            }
+        }
+
+        function setStoredActiveTab(tab) {
+            try {
+                localStorage.setItem(ACTIVE_TAB_KEY, tab);
+            } catch (e) {
+                console.error('Failed to save active tab:', e);
+            }
+        }
+
+        function applyActiveTabUI(tab) {
+            const notesPanel = document.getElementById('notesTabPanel');
+            const sortPanel = document.getElementById('sortTabPanel');
+            const seriesPanel = document.getElementById('seriesOrderTabPanel');
+            const notesBtn = document.getElementById('tab-notes-btn');
+            const sortBtn = document.getElementById('tab-sort-btn');
+            const seriesBtn = document.getElementById('tab-series-btn');
+            const notesInstructions = document.getElementById('notesInstructions');
+            const sortInstructions = document.getElementById('sortInstructions');
+            const seriesInstructions = document.getElementById('seriesInstructions');
+
+            const showSort = tab === 'sort';
+            const showSeries = tab === 'series';
+            const showNotes = !showSort && !showSeries;
+
+            if (notesPanel) notesPanel.style.display = showNotes ? '' : 'none';
+            if (sortPanel) sortPanel.style.display = showSort ? '' : 'none';
+            if (seriesPanel) seriesPanel.style.display = showSeries ? '' : 'none';
+            if (notesBtn) notesBtn.classList.toggle('active', showNotes);
+            if (sortBtn) sortBtn.classList.toggle('active', showSort);
+            if (seriesBtn) seriesBtn.classList.toggle('active', showSeries);
+            if (notesInstructions) notesInstructions.style.display = showNotes ? '' : 'none';
+            if (sortInstructions) sortInstructions.style.display = showSort ? '' : 'none';
+            if (seriesInstructions) seriesInstructions.style.display = showSeries ? '' : 'none';
+
+            if (showSort) {
+                const sortInputField = document.getElementById('sortInput');
+                if (sortInputField) sortInputField.value = AppState.sortRawInput || '';
+                renderSortCharacterList();
+                updateSortInfoBanner();
+            }
+
+            if (showSeries) {
+                renderSortSeriesList();
+            }
+        }
+
+        function switchAppTab(tab) {
+            setStoredActiveTab(tab);
+            applyActiveTabUI(tab);
+        }
+
+        // Parses $mmmka+s output, one character per line in the form
+        // "Name - Series 1,234 ka". Lines that don't match this shape
+        // (blank lines, dividers, etc.) are skipped.
+        function parseSortInputText(text) {
+            const lines = text.split('\n');
+            const entries = [];
+
+            lines.forEach(function (rawLine) {
+                const line = rawLine.trim();
+                if (!line) return;
+
+                const match = line.match(/^(.+?)\s+-\s+(.+?)\s+([\d,]+)\s*ka$/i);
+                if (!match) return;
+
+                entries.push({
+                    name: match[1].trim(),
+                    series: match[2].trim(),
+                    kakera: match[3].replace(/,/g, '')
+                });
+            });
+
+            return entries;
+        }
+
+        // Builds a lookup of the collection's Notes-tab data (from $mmsaty),
+        // keyed by several signals so a character can still be found even if
+        // it was renamed with Mudae's $alias between when the Notes tab was
+        // parsed and when $mmmka+s was pasted here:
+        //   1. series + name (most precise, when the name hasn't changed)
+        //   2. series + kakera value - a bot-wide stat unaffected by alias,
+        //      so it survives a rename as long as it's unique within the
+        //      series (duplicate values within a series are marked
+        //      ambiguous below and skipped rather than guessed at)
+        //   3. name alone - last-resort fallback across series
+        function buildNotesLookupFromSeriesData(seriesData) {
+            const bySeriesName = new Map();
+            const bySeriesKakera = new Map();
+            const byName = new Map();
+
+            for (const seriesName in seriesData) {
+                seriesData[seriesName].characters.forEach(function (char) {
+                    const seriesKey = normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(char.name);
+                    const nameKey = normalizeMatchPart(char.name);
+                    const entry = { seriesName: seriesName, char: char };
+
+                    if (!bySeriesName.has(seriesKey)) bySeriesName.set(seriesKey, entry);
+                    if (!byName.has(nameKey)) byName.set(nameKey, entry);
+
+                    const kakeraValue = parseInt(char.kakera) || 0;
+                    if (kakeraValue > 0) {
+                        const kakeraKey = normalizeMatchPart(seriesName) + '::' + kakeraValue;
+                        if (bySeriesKakera.has(kakeraKey)) {
+                            bySeriesKakera.set(kakeraKey, null);
+                        } else {
+                            bySeriesKakera.set(kakeraKey, entry);
+                        }
+                    }
+                });
+            }
+
+            return { bySeriesName: bySeriesName, bySeriesKakera: bySeriesKakera, byName: byName };
+        }
+
+        function findNotesMatch(entry, lookup) {
+            const seriesKey = normalizeMatchPart(entry.series) + '::' + normalizeMatchPart(entry.name);
+            if (lookup.bySeriesName.has(seriesKey)) return lookup.bySeriesName.get(seriesKey);
+
+            const kakeraValue = parseInt(entry.kakera) || 0;
+            if (kakeraValue > 0) {
+                const kakeraKey = normalizeMatchPart(entry.series) + '::' + kakeraValue;
+                const kakeraMatch = lookup.bySeriesKakera.get(kakeraKey);
+                if (kakeraMatch) return kakeraMatch;
+            }
+
+            const nameKey = normalizeMatchPart(entry.name);
+            if (lookup.byName.has(nameKey)) return lookup.byName.get(nameKey);
+
+            return null;
+        }
+
+        function mergeSortEntryWithNotes(entry, lookup) {
+            const match = findNotesMatch(entry, lookup);
+            const char = match ? match.char : null;
+
+            return {
+                name: entry.name,
+                series: entry.series,
+                kakera: entry.kakera,
+                matched: !!char,
+                note: char ? (char.note || '') : '',
+                image: char ? (char.image || '') : '',
+                color: char ? (char.color || '') : '',
+                keys: char ? (char.keys || '') : '',
+                owner: char ? (char.owner || '') : '',
+                mudaeTags: char && char.mudaeTags ? char.mudaeTags.slice() : [],
+                isDisabled: char ? !!char.isDisabled : false,
+                globalRank: char ? (char.globalRank || '') : ''
+            };
+        }
+
+        function parseSortInput() {
+            const textField = document.getElementById('sortInput');
+            const text = textField ? textField.value : '';
+
+            const entries = parseSortInputText(text);
+            if (entries.length === 0) {
+                showMessage('No characters recognized. Make sure you pasted the $mmmka+s output.', 'error');
+                return;
+            }
+
+            const lookup = buildNotesLookupFromSeriesData(AppState.seriesData);
+            AppState.sortData = entries.map(function (entry) { return mergeSortEntryWithNotes(entry, lookup); });
+            AppState.sortRawInput = text;
+            selectedSortEntries.clear();
+            lastSortClickIndex = null;
+
+            renderSortCharacterList();
+            updateSortInfoBanner();
+            saveToLocalStorage();
+
+            showMessage(`Parsed ${AppState.sortData.length} character(s) for sorting.`, 'success');
+        }
+
+        function clearSortData() {
+            AppState.sortData = [];
+            AppState.sortRawInput = '';
+            selectedSortEntries.clear();
+            lastSortClickIndex = null;
+
+            const textField = document.getElementById('sortInput');
+            if (textField) textField.value = '';
+
+            const output = document.getElementById('characterOrderCommandOutput');
+            if (output) output.innerHTML = '';
+
+            renderSortCharacterList();
+            updateSortInfoBanner();
+            saveToLocalStorage();
+        }
+
+        function updateSortInfoBanner() {
+            const banner = document.getElementById('sortDataInfoBanner');
+            if (!banner) return;
+
+            if (!AppState.sortData || AppState.sortData.length === 0) {
+                banner.style.display = 'none';
+                return;
+            }
+
+            const total = AppState.sortData.length;
+            const matchedCount = AppState.sortData.filter(function (e) { return e.matched; }).length;
+
+            if (matchedCount === total) {
+                banner.style.display = 'none';
+                return;
+            }
+
+            banner.style.display = 'block';
+            if (matchedCount === 0) {
+                banner.innerHTML = 'No notes, images, or colors found for these characters yet. Parse this collection on the <strong>Notes</strong> tab with <code>$mmsaty+ri-c+x+ko</code> to pull that extra info in here automatically.';
+            } else {
+                banner.innerHTML = `${total - matchedCount} of ${total} character(s) are missing notes/images/colors. Parse this collection on the <strong>Notes</strong> tab with <code>$mmsaty+ri-c+x+ko</code> to fill in the rest.`;
+            }
+        }
+
+        // ===================== Generic multi-select dropdown =====================
+        // A small checkbox-list popover used for any "pick one or more of these
+        // names" filter. Each user registers a config keyed by the wrapper
+        // element's id; the config supplies where to read/write the selection
+        // so the widget itself holds no state of its own.
+        const msFilterRegistry = {};
+
+        function registerMsFilter(wrapId, config) {
+            msFilterRegistry[wrapId] = config;
+        }
+
+        function closeAllMsPanels(exceptWrapId) {
+            Object.keys(msFilterRegistry).forEach(function (wrapId) {
+                if (wrapId === exceptWrapId) return;
+                const cfg = msFilterRegistry[wrapId];
+                const panel = document.getElementById(cfg.panelId);
+                if (panel) panel.style.display = 'none';
+                const toggle = document.getElementById(cfg.toggleId);
+                if (toggle) toggle.classList.remove('active');
+            });
+        }
+
+        function toggleMsPanel(wrapId) {
+            const cfg = msFilterRegistry[wrapId];
+            const panel = cfg && document.getElementById(cfg.panelId);
+            const toggle = cfg && document.getElementById(cfg.toggleId);
+            if (!cfg || !panel) return;
+
+            const opening = panel.style.display === 'none';
+            closeAllMsPanels(wrapId);
+            panel.style.display = opening ? 'block' : 'none';
+            if (toggle) toggle.classList.toggle('active', opening);
+
+            if (opening) {
+                const searchInput = panel.querySelector('.ms-filter-search');
+                if (searchInput) searchInput.value = '';
+                renderMsOptions(wrapId);
+                if (searchInput) searchInput.focus();
+            }
+        }
+
+        function renderMsOptions(wrapId) {
+            const cfg = msFilterRegistry[wrapId];
+            if (!cfg) return;
+            const optionsContainer = document.getElementById(cfg.optionsId);
+            const panel = document.getElementById(cfg.panelId);
+            if (!optionsContainer) return;
+
+            const searchInput = panel ? panel.querySelector('.ms-filter-search') : null;
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+            const allOptions = cfg.getAllOptions();
+            const selected = cfg.getSelected();
+            const filtered = query
+                ? allOptions.filter(function (name) { return name.toLowerCase().includes(query); })
+                : allOptions;
+
+            optionsContainer.innerHTML = '';
+            if (filtered.length === 0) {
+                optionsContainer.innerHTML = '<div class="ms-filter-option-empty">No matches</div>';
+                return;
+            }
+
+            filtered.forEach(function (name) {
+                const label = document.createElement('label');
+                label.className = 'ms-filter-option';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = selected.has(name);
+                checkbox.addEventListener('change', function () {
+                    if (checkbox.checked) selected.add(name); else selected.delete(name);
+                    updateMsToggleLabel(wrapId);
+                    cfg.onChange();
+                });
+
+                const span = document.createElement('span');
+                span.textContent = name;
+
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                optionsContainer.appendChild(label);
+            });
+        }
+
+        function setAllMsOptions(wrapId, value) {
+            const cfg = msFilterRegistry[wrapId];
+            if (!cfg) return;
+            const panel = document.getElementById(cfg.panelId);
+            const searchInput = panel ? panel.querySelector('.ms-filter-search') : null;
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+            const allOptions = cfg.getAllOptions();
+            const targeted = query
+                ? allOptions.filter(function (name) { return name.toLowerCase().includes(query); })
+                : allOptions;
+
+            const selected = cfg.getSelected();
+            targeted.forEach(function (name) {
+                if (value) selected.add(name); else selected.delete(name);
+            });
+
+            updateMsToggleLabel(wrapId);
+            renderMsOptions(wrapId);
+            cfg.onChange();
+        }
+
+        function updateMsToggleLabel(wrapId) {
+            const cfg = msFilterRegistry[wrapId];
+            const toggle = cfg && document.getElementById(cfg.toggleId);
+            if (!cfg || !toggle) return;
+
+            const count = cfg.getSelected().size;
+            toggle.textContent = count === 0 ? cfg.emptyLabel : `${count} selected`;
+        }
+
+        function initMsFilters() {
+            registerMsFilter('sortSeriesFilterWrap', {
+                toggleId: 'sortSeriesFilterToggle',
+                panelId: 'sortSeriesFilterPanel',
+                optionsId: 'sortSeriesFilterOptions',
+                emptyLabel: 'All series',
+                getAllOptions: function () {
+                    return Array.from(new Set((AppState.sortData || []).map(function (e) { return e.series; })))
+                        .filter(Boolean)
+                        .sort(function (a, b) { return a.localeCompare(b); });
+                },
+                getSelected: function () { return sortFilterState.seriesSet; },
+                onChange: function () {
+                    lastSortClickIndex = null;
+                    renderSortCharacterList();
+                    saveMsFilterUi();
+                }
+            });
+
+            document.addEventListener('click', function (e) {
+                Object.keys(msFilterRegistry).forEach(function (wrapId) {
+                    const wrap = document.getElementById(wrapId);
+                    if (wrap && !wrap.contains(e.target)) {
+                        const cfg = msFilterRegistry[wrapId];
+                        const panel = document.getElementById(cfg.panelId);
+                        if (panel) panel.style.display = 'none';
+                        const toggle = document.getElementById(cfg.toggleId);
+                        if (toggle) toggle.classList.remove('active');
+                    }
+                });
+            });
+
+            updateMsToggleLabel('sortSeriesFilterWrap');
+        }
+
+        // The Sort tab's filters are per-session (not saved with the
+        // collection), so this only needs to refresh the toggle button label
+        // after a change - nothing persists across a reload.
+        function saveMsFilterUi() {
+            updateMsToggleLabel('sortSeriesFilterWrap');
+        }
+
+        let sortDragState = { listId: null, fromIndex: null };
+
+        // Selection is tracked by entry object reference rather than index, so
+        // it survives any amount of reordering. It's deliberately not saved to
+        // localStorage - a fresh load starts with nothing selected.
+        let selectedSortEntries = new Set();
+        let lastSortClickIndex = null;
+        const sortFilterState = { query: '', seriesSet: new Set() };
+
+        function getSortViewMode() {
+            if (AppState.ui.sortViewMode) return AppState.ui.sortViewMode;
+            return AppState.ui.sortCompactView ? 'compact' : 'detailed';
+        }
+
+        // True indices (positions in AppState.sortData) of the entries that
+        // currently pass the search/series filter. Everything else - drag,
+        // move-to-position, command generation - works off these true indices,
+        // so filtering never changes the underlying overall order. An empty
+        // seriesSet means no series filter is applied (matches everything).
+        function getVisibleSortIndices() {
+            const sortData = AppState.sortData || [];
+            const query = sortFilterState.query.trim().toLowerCase();
+            const seriesSet = sortFilterState.seriesSet;
+
+            const indices = [];
+            sortData.forEach(function (entry, index) {
+                if (seriesSet.size > 0 && !seriesSet.has(entry.series)) return;
+                if (query) {
+                    const haystack = `${entry.name} ${entry.series} ${entry.note || ''}`.toLowerCase();
+                    if (!haystack.includes(query)) return;
+                }
+                indices.push(index);
+            });
+            return indices;
+        }
+
+        function onSortFilterChange() {
+            const searchField = document.getElementById('sortSearchInput');
+            sortFilterState.query = searchField ? searchField.value : '';
+            lastSortClickIndex = null;
+            renderSortCharacterList();
+        }
+
+        function clearSortFilters() {
+            const searchField = document.getElementById('sortSearchInput');
+            if (searchField) searchField.value = '';
+            sortFilterState.query = '';
+            sortFilterState.seriesSet.clear();
+            updateMsToggleLabel('sortSeriesFilterWrap');
+            renderSortCharacterList();
+        }
+
+        function renderSortCharacterList() {
+            const container = document.getElementById('sortCharacterList');
+            const countBadge = document.getElementById('sortCharCount');
+            if (!container) return;
+
+            const mode = getSortViewMode();
+            container.classList.toggle('compact', mode === 'compact');
+            container.classList.toggle('grid', mode === 'grid');
+
+            ['detailed', 'compact', 'grid'].forEach(function (m) {
+                const btn = document.getElementById(`sort-view-${m}-btn`);
+                if (btn) btn.classList.toggle('active', mode === m);
+            });
+
+            const searchField = document.getElementById('sortSearchInput');
+            if (searchField && searchField.value !== sortFilterState.query) searchField.value = sortFilterState.query;
+            updateMsToggleLabel('sortSeriesFilterWrap');
+
+            container.innerHTML = '';
+
+            const sortData = AppState.sortData || [];
+
+            if (countBadge) countBadge.textContent = sortData.length ? `${sortData.length} characters` : '';
+
+            if (sortData.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No characters loaded yet. Paste your $mmmka+s output above and click Parse Sort Input.</p>';
+                updateSortSelectionUI(0);
+                return;
+            }
+
+            // Drop selections/filters for entries and series that no longer
+            // exist (e.g. after a re-parse).
+            const liveEntries = new Set(sortData);
+            Array.from(selectedSortEntries).forEach(function (entry) {
+                if (!liveEntries.has(entry)) selectedSortEntries.delete(entry);
+            });
+            const liveSeries = new Set(sortData.map(function (e) { return e.series; }));
+            Array.from(sortFilterState.seriesSet).forEach(function (name) {
+                if (!liveSeries.has(name)) sortFilterState.seriesSet.delete(name);
+            });
+
+            const visibleIndices = getVisibleSortIndices();
+            const filterNote = document.getElementById('sortFilterNote');
+            const filtering = sortFilterState.query.trim() || sortFilterState.seriesSet.size > 0;
+            if (filterNote) {
+                filterNote.textContent = filtering
+                    ? `Showing ${visibleIndices.length} of ${sortData.length} - positions shown are still the overall ones`
+                    : '';
+            }
+
+            if (visibleIndices.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No characters match the current search/filter.</p>';
+                updateSortSelectionUI(sortData.length);
+                return;
+            }
+
+            visibleIndices.forEach(function (index) {
+                const entry = sortData[index];
+                const item = document.createElement('div');
+                item.className = 'sort-character-item';
+                if (selectedSortEntries.has(entry)) item.classList.add('selected');
+                item.draggable = true;
+                item.dataset.index = index;
+
+                const thumb = entry.image
+                    ? `<img src="${escapeHTML(entry.image)}" alt="${escapeHTML(entry.name)}" loading="lazy" onerror="handleImageError(this)">`
+                    : `<div class="sort-item-thumb-placeholder">No Image</div>`;
+
+                const colorDot = entry.color ? `<span class="sort-color-dot" style="background: ${escapeHTML(entry.color)};"></span>` : '';
+                const noteIcon = entry.note ? `<span class="sort-note-icon" title="${escapeHTML(entry.note)}">📝</span>` : '';
+                const noteHtml = entry.note ? `<div class="sort-item-note">${escapeHTML(entry.note)}</div>` : '';
+                const kakeraDisplay = entry.kakera ? Number(entry.kakera).toLocaleString('en-US') : '?';
+
+                item.innerHTML = `
+                    <div class="sort-drag-handle">⠿</div>
+                    <div class="sort-select-box" title="Click the card to select">✔</div>
+                    <div class="sort-item-rank" title="Click to type an exact position">${index + 1}</div>
+                    <div class="sort-item-thumb">${thumb}</div>
+                    <div class="sort-item-info">
+                        <div class="sort-item-name">${colorDot}${escapeHTML(entry.name)}${noteIcon}</div>
+                        <div class="sort-item-series">${escapeHTML(entry.series)}</div>
+                        ${noteHtml}
+                    </div>
+                    <div class="sort-item-kakera">${kakeraDisplay} ka</div>
+                `;
+
+                const rankBadge = item.querySelector('.sort-item-rank');
+                rankBadge.addEventListener('click', function (e) {
+                    handleSortRankBadgeClick(e, index);
+                });
+
+                item.addEventListener('click', function (e) {
+                    if (e.target.closest('.sort-item-rank') || e.target.closest('.sort-drag-handle')) return;
+                    handleSortItemClick(e, index, visibleIndices);
+                });
+
+                item.addEventListener('dragstart', handleSortCharDragStart);
+                item.addEventListener('dragover', handleSortCharDragOver);
+                item.addEventListener('dragleave', handleSortCharDragLeave);
+                item.addEventListener('drop', handleSortCharDrop);
+                item.addEventListener('dragend', handleSortDragEnd);
+
+                container.appendChild(item);
+            });
+
+            updateSortSelectionUI(sortData.length);
+        }
+
+        function updateSortSelectionUI(total) {
+            const bar = document.getElementById('sortSelectionBar');
+            const count = document.getElementById('sortSelectionCount');
+            const hint = document.getElementById('sortSelectionHint');
+            const posInput = document.getElementById('sortMoveToPosition');
+            if (!bar) return;
+
+            const selectedCount = selectedSortEntries.size;
+            bar.style.display = selectedCount > 0 ? 'flex' : 'none';
+            if (count) count.textContent = `${selectedCount} selected`;
+            if (posInput) posInput.max = total || 1;
+            if (hint) {
+                hint.textContent = selectedCount > 0
+                    ? 'Selected characters move together, keeping their relative order.'
+                    : '';
+            }
+        }
+
+        // Click toggles selection; shift-click selects the range between the
+        // last clicked card and this one (within whatever is currently shown).
+        function handleSortItemClick(e, index, visibleIndices) {
+            const sortData = AppState.sortData || [];
+            const entry = sortData[index];
+            if (!entry) return;
+
+            if (e.shiftKey && lastSortClickIndex !== null) {
+                const fromPos = visibleIndices.indexOf(lastSortClickIndex);
+                const toPos = visibleIndices.indexOf(index);
+                if (fromPos !== -1 && toPos !== -1) {
+                    const start = Math.min(fromPos, toPos);
+                    const end = Math.max(fromPos, toPos);
+                    for (let i = start; i <= end; i++) {
+                        selectedSortEntries.add(sortData[visibleIndices[i]]);
+                    }
+                    renderSortCharacterList();
+                    return;
+                }
+            }
+
+            if (selectedSortEntries.has(entry)) {
+                selectedSortEntries.delete(entry);
+            } else {
+                selectedSortEntries.add(entry);
+            }
+            lastSortClickIndex = index;
+            renderSortCharacterList();
+        }
+
+        function selectAllShownSortEntries() {
+            const sortData = AppState.sortData || [];
+            getVisibleSortIndices().forEach(function (i) { selectedSortEntries.add(sortData[i]); });
+            renderSortCharacterList();
+        }
+
+        function clearSortSelection() {
+            selectedSortEntries.clear();
+            lastSortClickIndex = null;
+            renderSortCharacterList();
+        }
+
+        // Returns the currently selected entries in their present overall order.
+        function getSelectedSortEntriesInOrder() {
+            return (AppState.sortData || []).filter(function (entry) { return selectedSortEntries.has(entry); });
+        }
+
+        // Pulls `entries` out of the list and reinserts them (keeping their
+        // relative order) so the first one lands at `targetIndex` in the
+        // resulting list.
+        function moveSortEntriesToIndex(entries, targetIndex) {
+            const sortData = AppState.sortData || [];
+            if (!entries.length) return;
+
+            const moving = new Set(entries);
+            const removedBefore = sortData.filter(function (entry, i) {
+                return moving.has(entry) && i < targetIndex;
+            }).length;
+
+            const remaining = sortData.filter(function (entry) { return !moving.has(entry); });
+            const insertAt = Math.min(Math.max(targetIndex - removedBefore, 0), remaining.length);
+
+            remaining.splice(insertAt, 0, ...entries);
+            AppState.sortData = remaining;
+
+            renderSortCharacterList();
+            saveToLocalStorage();
+        }
+
+        function moveSortSelectionToEdge(edge) {
+            const entries = getSelectedSortEntriesInOrder();
+            if (!entries.length) return;
+            moveSortEntriesToIndex(entries, edge === 'top' ? 0 : (AppState.sortData || []).length);
+        }
+
+        function moveSortSelectionToTypedPosition() {
+            const input = document.getElementById('sortMoveToPosition');
+            const entries = getSelectedSortEntriesInOrder();
+            if (!input || !entries.length) return;
+
+            const total = (AppState.sortData || []).length;
+            const raw = parseInt(input.value, 10);
+            if (isNaN(raw)) {
+                showMessage('Type a position number first.', 'error');
+                return;
+            }
+
+            moveSortEntriesToIndex(entries, Math.min(Math.max(raw, 1), total) - 1);
+        }
+
+        function setSortViewMode(mode) {
+            AppState.ui.sortViewMode = mode;
+            AppState.ui.sortCompactView = (mode === 'compact');
+            renderSortCharacterList();
+            saveToLocalStorage();
+        }
+
+        // Lets a character jump straight to an exact position by typing a
+        // number, instead of having to drag it across a long, scrolling list.
+        function handleSortRankBadgeClick(e, index) {
+            e.stopPropagation();
+            const badge = e.currentTarget;
+            const total = AppState.sortData.length;
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'sort-rank-input';
+            input.value = index + 1;
+            input.min = 1;
+            input.max = total;
+
+            let committed = false;
+
+            function commit() {
+                if (committed) return;
+                committed = true;
+
+                const raw = parseInt(input.value, 10);
+                const targetPos = isNaN(raw) ? (index + 1) : Math.min(Math.max(raw, 1), total);
+                const toIndex = targetPos - 1;
+
+                if (index !== toIndex) {
+                    const [moved] = AppState.sortData.splice(index, 1);
+                    AppState.sortData.splice(toIndex, 0, moved);
+                    saveToLocalStorage();
+                }
+
+                renderSortCharacterList();
+            }
+
+            input.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter') {
+                    ev.preventDefault();
+                    commit();
+                } else if (ev.key === 'Escape') {
+                    committed = true;
+                    renderSortCharacterList();
+                }
+            });
+            input.addEventListener('blur', commit);
+            input.addEventListener('click', function (ev) { ev.stopPropagation(); });
+            input.addEventListener('dragstart', function (ev) { ev.preventDefault(); ev.stopPropagation(); });
+
+            badge.replaceWith(input);
+            input.focus();
+            input.select();
+        }
+
+        function handleSortCharDragStart(e) {
+            sortDragState = { listId: 'characters', fromIndex: parseInt(e.currentTarget.dataset.index, 10) };
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleSortCharDragOver(e) {
+            if (sortDragState.listId !== 'characters') return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleSortCharDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleSortCharDrop(e) {
+            if (sortDragState.listId !== 'characters') return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('drag-over');
+
+            const toIndex = parseInt(e.currentTarget.dataset.index, 10);
+            const fromIndex = sortDragState.fromIndex;
+            if (fromIndex === null || fromIndex === toIndex) return;
+
+            const sortData = AppState.sortData || [];
+            const dragged = sortData[fromIndex];
+            const target = sortData[toIndex];
+            if (!dragged || !target) return;
+
+            // Dragging a selected card carries the whole selection along;
+            // dragging an unselected one moves just that card.
+            const entries = selectedSortEntries.has(dragged)
+                ? getSelectedSortEntriesInOrder()
+                : [dragged];
+            if (entries.includes(target)) return;
+
+            // Land after the drop target when coming from above it, before it
+            // when coming from below - the usual drag-and-drop feel.
+            const movingFromAbove = entries.some(function (entry) {
+                return sortData.indexOf(entry) < toIndex;
+            });
+            moveSortEntriesToIndex(entries, movingFromAbove ? toIndex + 1 : toIndex);
+        }
+
+        function handleSortDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(function (el) { el.classList.remove('drag-over'); });
+            sortDragState = { listId: null, fromIndex: null };
+        }
+
+        // Keeps AppState.seriesOrder in sync with the collection's actual
+        // series: preserves the user's existing manual order for series that
+        // are still present, drops series that no longer exist, and appends
+        // any new series (alphabetically) at the end.
+        function getSyncedSeriesOrder() {
+            const currentSeries = Object.keys(AppState.seriesData);
+            let order = Array.isArray(AppState.seriesOrder) ? AppState.seriesOrder.slice() : [];
+
+            order = order.filter(function (name) { return currentSeries.includes(name); });
+
+            const existingSet = new Set(order);
+            const newOnes = currentSeries
+                .filter(function (name) { return !existingSet.has(name); })
+                .sort(function (a, b) { return a.localeCompare(b); });
+
+            return order.concat(newOnes);
+        }
+
+        // Picks the image of whichever character in the series has the
+        // highest kakera value, so the series' "cover" is its most valuable
+        // character - falling back to any character with an image if none
+        // have a kakera value on record.
+        const seriesRepImageCache = {};
+
+        function getSeriesRepresentativeImage(seriesName) {
+            if (seriesRepImageCache[seriesName] !== undefined) return seriesRepImageCache[seriesName];
+
+            const series = AppState.seriesData[seriesName];
+            const characters = series && series.characters ? series.characters : [];
+
+            let best = null;
+            let bestKakera = -1;
+            characters.forEach(function (char) {
+                if (!char.image) return;
+                const kakera = parseInt(char.kakera) || 0;
+                if (kakera > bestKakera) {
+                    bestKakera = kakera;
+                    best = char;
+                }
+            });
+
+            const image = best ? best.image : '';
+            seriesRepImageCache[seriesName] = image;
+            return image;
+        }
+
+        const seriesOrderFilterState = { query: '' };
+
+        // Series are unique strings, so selection is just a Set of names -
+        // no need for object-reference tracking like the character list.
+        // Per-session only, same as the character selection.
+        let selectedSeriesEntries = new Set();
+        let lastSeriesClickIndex = null;
+
+        function getVisibleSeriesOrderIndices() {
+            const order = AppState.seriesOrder || [];
+            const query = seriesOrderFilterState.query.trim().toLowerCase();
+            if (!query) return order.map(function (_, i) { return i; });
+
+            const indices = [];
+            order.forEach(function (seriesName, index) {
+                if (seriesName.toLowerCase().includes(query)) indices.push(index);
+            });
+            return indices;
+        }
+
+        function onSeriesFilterChange() {
+            const field = document.getElementById('seriesSearchInput');
+            seriesOrderFilterState.query = field ? field.value : '';
+            renderSortSeriesList();
+        }
+
+        function clearSeriesFilter() {
+            const field = document.getElementById('seriesSearchInput');
+            if (field) field.value = '';
+            seriesOrderFilterState.query = '';
+            renderSortSeriesList();
+        }
+
+        function getSeriesViewMode() {
+            return AppState.ui.seriesViewMode || 'list';
+        }
+
+        function setSeriesViewMode(mode) {
+            AppState.ui.seriesViewMode = mode;
+            renderSortSeriesList();
+            saveToLocalStorage();
+        }
+
+        function renderSortSeriesList() {
+            const container = document.getElementById('sortSeriesList');
+            const countBadge = document.getElementById('sortSeriesCount');
+            if (!container) return;
+
+            AppState.seriesOrder = getSyncedSeriesOrder();
+            // Cleared on every render rather than kept across collection
+            // switches/re-parses, since it's cheap and staleness would show
+            // the wrong "highest kakera" character's art.
+            for (const key in seriesRepImageCache) delete seriesRepImageCache[key];
+
+            const mode = getSeriesViewMode();
+            container.classList.toggle('grid', mode === 'grid');
+            ['list', 'grid'].forEach(function (m) {
+                const btn = document.getElementById(`series-view-${m}-btn`);
+                if (btn) btn.classList.toggle('active', mode === m);
+            });
+
+            const searchField = document.getElementById('seriesSearchInput');
+            if (searchField && searchField.value !== seriesOrderFilterState.query) searchField.value = seriesOrderFilterState.query;
+
+            container.innerHTML = '';
+
+            if (countBadge) countBadge.textContent = AppState.seriesOrder.length ? `${AppState.seriesOrder.length} series` : '';
+
+            if (AppState.seriesOrder.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No series found. Parse a collection on the Notes tab first.</p>';
+                return;
+            }
+
+            const visibleIndices = getVisibleSeriesOrderIndices();
+            const filterNote = document.getElementById('seriesFilterNote');
+            if (filterNote) {
+                filterNote.textContent = seriesOrderFilterState.query.trim()
+                    ? `Showing ${visibleIndices.length} of ${AppState.seriesOrder.length} - positions shown are still the overall ones`
+                    : '';
+            }
+
+            if (visibleIndices.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No series match the current search.</p>';
+                updateSeriesSelectionUI(AppState.seriesOrder.length);
+                return;
+            }
+
+            // Drop selections for series that no longer exist (e.g. after
+            // re-parsing the Notes tab).
+            const liveSeries = new Set(AppState.seriesOrder);
+            Array.from(selectedSeriesEntries).forEach(function (name) {
+                if (!liveSeries.has(name)) selectedSeriesEntries.delete(name);
+            });
+
+            visibleIndices.forEach(function (index) {
+                const seriesName = AppState.seriesOrder[index];
+                const series = AppState.seriesData[seriesName];
+                const count = series ? series.characters.length : 0;
+                const image = getSeriesRepresentativeImage(seriesName);
+
+                const item = document.createElement('div');
+                item.className = 'sort-series-item';
+                if (selectedSeriesEntries.has(seriesName)) item.classList.add('selected');
+                item.draggable = true;
+                item.dataset.index = index;
+
+                const thumb = image
+                    ? `<img src="${escapeHTML(image)}" alt="${escapeHTML(seriesName)}" loading="lazy" onerror="handleImageError(this)">`
+                    : `<div class="sort-item-thumb-placeholder">No Image</div>`;
+
+                item.innerHTML = `
+                    <div class="sort-drag-handle">⠿</div>
+                    <div class="sort-select-box" title="Click the card to select">✔</div>
+                    <div class="sort-item-rank">${index + 1}</div>
+                    <div class="sort-item-thumb">${thumb}</div>
+                    <div class="sort-series-name">${escapeHTML(seriesName)}</div>
+                    <div class="sort-series-count">${count} char${count === 1 ? '' : 's'}</div>
+                `;
+
+                item.addEventListener('click', function (e) {
+                    if (e.target.closest('.sort-drag-handle')) return;
+                    handleSeriesItemClick(e, index, visibleIndices);
+                });
+
+                item.addEventListener('dragstart', handleSortSeriesDragStart);
+                item.addEventListener('dragover', handleSortSeriesDragOver);
+                item.addEventListener('dragleave', handleSortCharDragLeave);
+                item.addEventListener('drop', handleSortSeriesDrop);
+                item.addEventListener('dragend', handleSortDragEnd);
+
+                container.appendChild(item);
+            });
+
+            updateSeriesSelectionUI(AppState.seriesOrder.length);
+        }
+
+        function updateSeriesSelectionUI(total) {
+            const bar = document.getElementById('seriesSelectionBar');
+            const count = document.getElementById('seriesSelectionCount');
+            const posInput = document.getElementById('seriesMoveToPosition');
+            if (!bar) return;
+
+            const selectedCount = selectedSeriesEntries.size;
+            bar.style.display = selectedCount > 0 ? 'flex' : 'none';
+            if (count) count.textContent = `${selectedCount} selected`;
+            if (posInput) posInput.max = total || 1;
+        }
+
+        // Click toggles selection; shift-click selects the range between the
+        // last clicked series and this one (within whatever is currently shown).
+        function handleSeriesItemClick(e, index, visibleIndices) {
+            const order = AppState.seriesOrder || [];
+            const seriesName = order[index];
+            if (!seriesName) return;
+
+            if (e.shiftKey && lastSeriesClickIndex !== null) {
+                const fromPos = visibleIndices.indexOf(lastSeriesClickIndex);
+                const toPos = visibleIndices.indexOf(index);
+                if (fromPos !== -1 && toPos !== -1) {
+                    const start = Math.min(fromPos, toPos);
+                    const end = Math.max(fromPos, toPos);
+                    for (let i = start; i <= end; i++) {
+                        selectedSeriesEntries.add(order[visibleIndices[i]]);
+                    }
+                    renderSortSeriesList();
+                    return;
+                }
+            }
+
+            if (selectedSeriesEntries.has(seriesName)) {
+                selectedSeriesEntries.delete(seriesName);
+            } else {
+                selectedSeriesEntries.add(seriesName);
+            }
+            lastSeriesClickIndex = index;
+            renderSortSeriesList();
+        }
+
+        function selectAllShownSeries() {
+            const order = AppState.seriesOrder || [];
+            getVisibleSeriesOrderIndices().forEach(function (i) { selectedSeriesEntries.add(order[i]); });
+            renderSortSeriesList();
+        }
+
+        function clearSeriesSelection() {
+            selectedSeriesEntries.clear();
+            lastSeriesClickIndex = null;
+            renderSortSeriesList();
+        }
+
+        // Returns the currently selected series names in their present order.
+        function getSelectedSeriesInOrder() {
+            return (AppState.seriesOrder || []).filter(function (name) { return selectedSeriesEntries.has(name); });
+        }
+
+        // Same "pull out, reinsert as a block" approach as the character
+        // list's moveSortEntriesToIndex.
+        function moveSeriesEntriesToIndex(names, targetIndex) {
+            const order = AppState.seriesOrder || [];
+            if (!names.length) return;
+
+            const moving = new Set(names);
+            const removedBefore = order.filter(function (name, i) {
+                return moving.has(name) && i < targetIndex;
+            }).length;
+
+            const remaining = order.filter(function (name) { return !moving.has(name); });
+            const insertAt = Math.min(Math.max(targetIndex - removedBefore, 0), remaining.length);
+
+            remaining.splice(insertAt, 0, ...names);
+            AppState.seriesOrder = remaining;
+
+            renderSortSeriesList();
+            saveToLocalStorage();
+        }
+
+        function moveSeriesSelectionToEdge(edge) {
+            const names = getSelectedSeriesInOrder();
+            if (!names.length) return;
+            moveSeriesEntriesToIndex(names, edge === 'top' ? 0 : (AppState.seriesOrder || []).length);
+        }
+
+        function moveSeriesSelectionToTypedPosition() {
+            const input = document.getElementById('seriesMoveToPosition');
+            const names = getSelectedSeriesInOrder();
+            if (!input || !names.length) return;
+
+            const total = (AppState.seriesOrder || []).length;
+            const raw = parseInt(input.value, 10);
+            if (isNaN(raw)) {
+                showMessage('Type a position number first.', 'error');
+                return;
+            }
+
+            moveSeriesEntriesToIndex(names, Math.min(Math.max(raw, 1), total) - 1);
+        }
+
+        function handleSortSeriesDragStart(e) {
+            sortDragState = { listId: 'series', fromIndex: parseInt(e.currentTarget.dataset.index, 10) };
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleSortSeriesDragOver(e) {
+            if (sortDragState.listId !== 'series') return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleSortSeriesDrop(e) {
+            if (sortDragState.listId !== 'series') return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('drag-over');
+
+            const toIndex = parseInt(e.currentTarget.dataset.index, 10);
+            const fromIndex = sortDragState.fromIndex;
+            if (fromIndex === null || fromIndex === toIndex) return;
+
+            const order = AppState.seriesOrder || [];
+            const dragged = order[fromIndex];
+            const target = order[toIndex];
+            if (!dragged || !target) return;
+
+            // Dragging a selected series carries the whole selection along;
+            // dragging an unselected one moves just that series.
+            const names = selectedSeriesEntries.has(dragged)
+                ? getSelectedSeriesInOrder()
+                : [dragged];
+            if (names.includes(target)) return;
+
+            const movingFromAbove = names.some(function (name) {
+                return order.indexOf(name) < toIndex;
+            });
+            moveSeriesEntriesToIndex(names, movingFromAbove ? toIndex + 1 : toIndex);
+        }
+
+        function generateSeriesOrderCommand() {
+            const order = getSyncedSeriesOrder();
+            AppState.seriesOrder = order;
+
+            const output = document.getElementById('seriesOrderCommandOutput');
+            if (!output) return;
+
+            if (order.length === 0) {
+                showMessage('No series to include - parse a collection on the Notes tab first.', 'error');
+                output.innerHTML = '';
+                return;
+            }
+
+            const prefix = '$smseries ';
+            const parts = [];
+            let current = '';
+
+            order.forEach(function (seriesName) {
+                const separator = current ? '$' : '';
+                const potential = current + separator + seriesName;
+
+                if ((prefix.length + potential.length) > 1990) {
+                    parts.push(prefix + current);
+                    current = seriesName;
+                } else {
+                    current = potential;
+                }
+            });
+            if (current) parts.push(prefix + current);
+
+            output.innerHTML = `
+ <div class="commands-section">
+  <h2>Series Order Command${parts.length > 1 ? 's' : ''}</h2>
+ </div>`;
+            const container = output.querySelector('.commands-section');
+
+            parts.forEach(function (command, idx) {
+                const commandItem = document.createElement('div');
+                commandItem.className = 'command-item';
+
+                let headerText = `${order.length} series`;
+                if (parts.length > 1) headerText += ` (Part ${idx + 1}/${parts.length})`;
+
+                commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${escapeHTML(headerText)}</div>
+      </div>
+      <div class="command-text">${escapeHTML(command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+     `;
+                container.appendChild(commandItem);
+            });
+
+            saveToLocalStorage();
+        }
+
+        // Builds $sm / $smp commands for the character order, in the same
+        // format Mudae expects: the first command starts with "$sm", every
+        // command after that starts with "$smp" (append/continue), and names
+        // are joined with " $ " (space-dollar-space). Each command is kept
+        // under Discord's 2000-character message limit.
+        function buildCharacterOrderCommands(names) {
+            const DISCORD_LIMIT = 2000;
+            const SAFE_LIMIT = 1990;
+            const parts = [];
+            let currentNames = [];
+            let currentPrefix = '$sm ';
+
+            function partLength(namesArr, prefix) {
+                return prefix.length + namesArr.join(' $ ').length;
+            }
+
+            names.forEach(function (name) {
+                const testNames = currentNames.concat([name]);
+                if (currentNames.length > 0 && partLength(testNames, currentPrefix) > SAFE_LIMIT) {
+                    parts.push(currentPrefix + currentNames.join(' $ '));
+                    currentPrefix = '$smp ';
+                    currentNames = [name];
+                } else {
+                    currentNames = testNames;
+                }
+            });
+
+            if (currentNames.length > 0) {
+                parts.push(currentPrefix + currentNames.join(' $ '));
+            }
+
+            return parts;
+        }
+
+        function generateCharacterOrderCommand() {
+            const sortData = AppState.sortData || [];
+            const output = document.getElementById('characterOrderCommandOutput');
+            if (!output) return;
+
+            if (sortData.length === 0) {
+                showMessage('No characters to include - paste and parse your $mmmka+s output first.', 'error');
+                output.innerHTML = '';
+                return;
+            }
+
+            const names = sortData.map(function (entry) { return entry.name; });
+            const parts = buildCharacterOrderCommands(names);
+            const totalChars = parts.reduce(function (sum, p) { return sum + p.length; }, 0);
+            const overLimit = parts.some(function (p) { return p.length > 2000; });
+
+            output.innerHTML = `
+ <div class="commands-section">
+  <h2>Character Order Command${parts.length > 1 ? 's' : ''}</h2>
+  <p class="sort-hint" style="margin-top: -4px;">${names.length.toLocaleString('en-US')} characters, ${totalChars.toLocaleString('en-US')} total chars across ${parts.length} command${parts.length > 1 ? 's' : ''}${parts.length > 1 ? ' - run them in order' : ''}. Discord's limit is 2,000 characters per message.${overLimit ? ' <span class="sort-limit-warning">⚠ One or more commands are still over the limit.</span>' : ''}</p>
+ </div>`;
+            const container = output.querySelector('.commands-section');
+
+            parts.forEach(function (command, idx) {
+                const commandItem = document.createElement('div');
+                commandItem.className = 'command-item';
+
+                const commandLabel = idx === 0 ? '$sm' : '$smp';
+                let headerText = `Command ${idx + 1} of ${parts.length} (${commandLabel})`;
+                headerText += command.length > 2000 ? ` - ${command.length} chars (over limit)` : ` - ${command.length} chars`;
+
+                commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${escapeHTML(headerText)}</div>
+      </div>
+      <div class="command-text">${escapeHTML(command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+     `;
+                container.appendChild(commandItem);
+            });
+
+            saveToLocalStorage();
+        }
+
+        // $smpos starts a sort at a specific position: the first name is a
+        // reference character that stays put, and every name after it is
+        // placed directly after that reference. That makes it the cheap way to
+        // apply a handful of moves without re-sending the whole collection.
+        // Splitting for Discord's message limit is safe here because each
+        // follow-up command can just use the last placed character as its new
+        // reference.
+        function buildSmposCommands(refName, names) {
+            const SAFE_LIMIT = 1990;
+            const commands = [];
+            let currentRef = refName;
+            let currentNames = [];
+
+            function render(ref, namesArr) {
+                return '$smpos ' + [ref].concat(namesArr).join(' $ ');
+            }
+
+            names.forEach(function (name) {
+                if (currentNames.length > 0 && render(currentRef, currentNames.concat([name])).length > SAFE_LIMIT) {
+                    commands.push(render(currentRef, currentNames));
+                    currentRef = currentNames[currentNames.length - 1];
+                    currentNames = [name];
+                } else {
+                    currentNames.push(name);
+                }
+            });
+
+            if (currentNames.length > 0) commands.push(render(currentRef, currentNames));
+            return commands;
+        }
+
+        // Groups the selected characters into runs that are contiguous in the
+        // new overall order, then emits one $smpos block per run (anchored on
+        // whatever character now sits just before it). A run that starts at the
+        // very top has nothing to anchor to, so it falls back to $sm.
+        function generateSmposCommand() {
+            const sortData = AppState.sortData || [];
+            const output = document.getElementById('characterOrderCommandOutput');
+            if (!output) return;
+
+            if (sortData.length === 0) {
+                showMessage('No characters loaded - paste and parse your $mmmka+s output first.', 'error');
+                return;
+            }
+
+            const selectedIndices = [];
+            sortData.forEach(function (entry, index) {
+                if (selectedSortEntries.has(entry)) selectedIndices.push(index);
+            });
+
+            if (selectedIndices.length === 0) {
+                showMessage('Select the characters you moved first - click their cards, then generate.', 'error');
+                return;
+            }
+
+            const runs = [];
+            selectedIndices.forEach(function (index) {
+                const lastRun = runs[runs.length - 1];
+                if (lastRun && index === lastRun[lastRun.length - 1] + 1) {
+                    lastRun.push(index);
+                } else {
+                    runs.push([index]);
+                }
+            });
+
+            const blocks = [];
+            runs.forEach(function (run) {
+                const names = run.map(function (i) { return sortData[i].name; });
+                const startIndex = run[0];
+
+                if (startIndex === 0) {
+                    blocks.push({
+                        label: `Position 1-${run.length} (top of the list)`,
+                        note: 'This run starts at the very top, so there is no character to anchor to - $sm sorts from position 1 instead.',
+                        commands: buildCharacterOrderCommands(names)
+                    });
+                } else {
+                    const refName = sortData[startIndex - 1].name;
+                    blocks.push({
+                        label: `After "${refName}" - position ${startIndex + 1}${run.length > 1 ? `-${startIndex + run.length}` : ''}`,
+                        note: '',
+                        commands: buildSmposCommands(refName, names)
+                    });
+                }
+            });
+
+            const totalCommands = blocks.reduce(function (sum, b) { return sum + b.commands.length; }, 0);
+
+            output.innerHTML = `
+ <div class="commands-section">
+  <h2>$smpos Command${totalCommands > 1 ? 's' : ''}</h2>
+  <p class="sort-hint" style="margin-top: -4px;">${selectedIndices.length} selected character${selectedIndices.length === 1 ? '' : 's'} in ${runs.length} group${runs.length === 1 ? '' : 's'}, ${totalCommands} command${totalCommands === 1 ? '' : 's'}. Run them in order - each one places its characters right after the reference character named first.</p>
+ </div>`;
+            const container = output.querySelector('.commands-section');
+
+            blocks.forEach(function (block) {
+                block.commands.forEach(function (command, idx) {
+                    const commandItem = document.createElement('div');
+                    commandItem.className = 'command-item';
+
+                    let headerText = block.label;
+                    if (block.commands.length > 1) headerText += ` (Part ${idx + 1}/${block.commands.length})`;
+                    headerText += ` - ${command.length} chars`;
+
+                    commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${escapeHTML(headerText)}</div>
+      </div>
+      ${block.note && idx === 0 ? `<p class="sort-hint">${escapeHTML(block.note)}</p>` : ''}
+      <div class="command-text">${escapeHTML(command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+     `;
+                    container.appendChild(commandItem);
+                });
+            });
+
+            output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function saveToLocalStorage() {
             try {
                 const meta = ensureCollectionsMeta();
-                localStorage.setItem(collectionStateKey(meta.activeId), JSON.stringify(AppState));
+                const json = JSON.stringify(AppState);
+
+                // Undo history is captured here rather than at each call site:
+                // whatever was the last-saved state becomes an undo point the
+                // moment it's about to be superseded by this (different) one.
+                // Restores (undo/redo) go through this same function with
+                // isRestoringState set, so they persist without creating more
+                // history or clobbering the stacks they're reading from.
+                if (!isRestoringState && lastSavedStateJSON !== null && lastSavedStateJSON !== json) {
+                    undoStack.push(lastSavedStateJSON);
+                    if (undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
+                    redoStack = [];
+                    updateUndoRedoButtons();
+                }
+                if (!isRestoringState) lastSavedStateJSON = json;
+
+                localStorage.setItem(collectionStateKey(meta.activeId), json);
             } catch (e) {
                 console.error('Failed to save to localStorage:', e);
             }
@@ -3489,53 +6125,196 @@ ${rouletteBarHTML}
                     displayQuickNotes();
                 }
 
-                const inputField = document.getElementById('input');
-                if (inputField) inputField.value = AppState.rawInput || '';
+                // Backfill defaults for fields that may be missing from
+                // collections saved before the Sort tab existed.
+                if (!AppState.sortData) AppState.sortData = [];
+                if (typeof AppState.sortRawInput !== 'string') AppState.sortRawInput = '';
+                if (!AppState.seriesOrder) AppState.seriesOrder = [];
+                if (typeof AppState.ui.sortCompactView !== 'boolean') AppState.ui.sortCompactView = false;
+                if (!AppState.ui.sortViewMode) AppState.ui.sortViewMode = AppState.ui.sortCompactView ? 'compact' : 'detailed';
+                if (!AppState.ui.seriesViewMode) AppState.ui.seriesViewMode = 'list';
 
-                document.querySelectorAll('[id^="group-"][id$="-btn"]').forEach(btn => btn.classList.remove('active'));
-                const activeGroupBtn = document.getElementById(`group-${AppState.ui.grouping}-btn`);
-                if (activeGroupBtn) activeGroupBtn.classList.add('active');
-                document.getElementById('kakera-range-container').style.display = AppState.ui.grouping === 'kakera' ? 'flex' : 'none';
-                document.getElementById('keys-range-container').style.display = AppState.ui.grouping === 'keys' ? 'flex' : 'none';
+                // Selection and search/filter are per-session, so a collection
+                // switch or reload always starts from a clean slate.
+                selectedSortEntries.clear();
+                lastSortClickIndex = null;
+                sortFilterState.query = '';
+                sortFilterState.seriesSet.clear();
+                const sortSearchField = document.getElementById('sortSearchInput');
+                if (sortSearchField) sortSearchField.value = '';
+                seriesOrderFilterState.query = '';
+                const seriesSearchField = document.getElementById('seriesSearchInput');
+                if (seriesSearchField) seriesSearchField.value = '';
+                selectedSeriesEntries.clear();
+                lastSeriesClickIndex = null;
+                notesSearchQuery = '';
+                const notesSearchField = document.getElementById('notesSearchInput');
+                if (notesSearchField) notesSearchField.value = '';
 
-                document.querySelectorAll('#sort-alpha-btn, #sort-count-btn').forEach(btn => btn.classList.remove('active'));
-                const activeSortBtn = document.getElementById(`sort-${AppState.ui.sortMethod}-btn`);
-                if (activeSortBtn) activeSortBtn.classList.add('active');
+                syncUIFromAppState();
+                applyActiveTabUI(getStoredActiveTab());
 
-                document.getElementById('ranking-on-btn').classList.toggle('active', AppState.ui.rankingEnabled);
-                document.getElementById('ranking-off-btn').classList.toggle('active', !AppState.ui.rankingEnabled);
-
-                for (let i = 1; i <= 4; i++) {
-                    const btn = document.getElementById(`grid-btn-${i}`);
-                    if (btn) btn.classList.remove('active');
-                }
-                const activeColBtn = document.getElementById(`grid-btn-${AppState.ui.preferredColumns}`);
-                if (activeColBtn) activeColBtn.classList.add('active');
-                const grid = document.getElementById('seriesGrid');
-                if (grid) grid.style.gridTemplateColumns = `repeat(${AppState.ui.preferredColumns}, minmax(300px, 1fr))`;
-
-                document.getElementById('deselected-show-btn').classList.toggle('active', AppState.ui.showDeselected);
-                document.getElementById('deselected-hide-btn').classList.toggle('active', !AppState.ui.showDeselected);
-                document.getElementById('disabled-icon-show-btn').classList.toggle('active', AppState.ui.showDisabledIcon);
-                document.getElementById('disabled-icon-hide-btn').classList.toggle('active', !AppState.ui.showDisabledIcon);
-                document.querySelector('.container').classList.toggle('hide-disabled-emoji', !AppState.ui.showDisabledIcon);
-
-                document.getElementById('fit-on-btn').classList.toggle('active', AppState.ui.fitToScreen);
-                document.getElementById('fit-off-btn').classList.toggle('active', !AppState.ui.fitToScreen);
-                document.body.classList.toggle('fit-width', AppState.ui.fitToScreen);
-
-                if (Object.keys(AppState.seriesData).length > 0) {
-                    displaySeries();
-                    updateStats();
-                    document.getElementById('generateBtn').disabled = false;
-                    document.getElementById('generateColorBtn').disabled = false;
-                    document.getElementById('generateImgurBtn').disabled = false;
-                    document.getElementById('playerStatsBtn').disabled = false;
-                }
+                lastSavedStateJSON = JSON.stringify(AppState);
+                undoStack = [];
+                redoStack = [];
+                updateUndoRedoButtons();
             } catch (e) {
                 console.error('Failed to load from localStorage:', e);
             }
         }
+
+        // Re-renders every part of the page that reflects AppState - the
+        // options-panel button states, the character/series grids, the Sort
+        // tab, and the Series Order tab. Shared between the initial load and
+        // undo/redo, since both need the whole page back in sync with a
+        // (possibly very different) AppState.
+        function syncUIFromAppState() {
+            const inputField = document.getElementById('input');
+            if (inputField) inputField.value = AppState.rawInput || '';
+
+            document.querySelectorAll('[id^="group-"][id$="-btn"]').forEach(btn => btn.classList.remove('active'));
+            const activeGroupBtn = document.getElementById(`group-${AppState.ui.grouping}-btn`);
+            if (activeGroupBtn) activeGroupBtn.classList.add('active');
+            document.getElementById('kakera-range-container').style.display = AppState.ui.grouping === 'kakera' ? 'flex' : 'none';
+            document.getElementById('keys-range-container').style.display = AppState.ui.grouping === 'keys' ? 'flex' : 'none';
+
+            document.querySelectorAll('#sort-alpha-btn, #sort-count-btn').forEach(btn => btn.classList.remove('active'));
+            const activeSortBtn = document.getElementById(`sort-${AppState.ui.sortMethod}-btn`);
+            if (activeSortBtn) activeSortBtn.classList.add('active');
+
+            document.getElementById('ranking-on-btn').classList.toggle('active', AppState.ui.rankingEnabled);
+            document.getElementById('ranking-off-btn').classList.toggle('active', !AppState.ui.rankingEnabled);
+
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`grid-btn-${i}`);
+                if (btn) btn.classList.remove('active');
+            }
+            const activeColBtn = document.getElementById(`grid-btn-${AppState.ui.preferredColumns}`);
+            if (activeColBtn) activeColBtn.classList.add('active');
+            const grid = document.getElementById('seriesGrid');
+            if (grid) grid.style.gridTemplateColumns = `repeat(${AppState.ui.preferredColumns}, minmax(300px, 1fr))`;
+
+            document.getElementById('deselected-show-btn').classList.toggle('active', AppState.ui.showDeselected);
+            document.getElementById('deselected-hide-btn').classList.toggle('active', !AppState.ui.showDeselected);
+            document.getElementById('disabled-icon-show-btn').classList.toggle('active', AppState.ui.showDisabledIcon);
+            document.getElementById('disabled-icon-hide-btn').classList.toggle('active', !AppState.ui.showDisabledIcon);
+            document.querySelector('.container').classList.toggle('hide-disabled-emoji', !AppState.ui.showDisabledIcon);
+
+            document.getElementById('fit-on-btn').classList.toggle('active', AppState.ui.fitToScreen);
+            document.getElementById('fit-off-btn').classList.toggle('active', !AppState.ui.fitToScreen);
+            document.body.classList.toggle('fit-width', AppState.ui.fitToScreen);
+
+            displayQuickNotes();
+
+            const hasSeriesData = Object.keys(AppState.seriesData).length > 0;
+            if (hasSeriesData) {
+                displaySeries();
+                updateStats();
+            } else {
+                document.getElementById('seriesGrid').innerHTML = '';
+                document.getElementById('stats').innerHTML = '';
+            }
+            document.getElementById('generateBtn').disabled = !hasSeriesData;
+            document.getElementById('generateColorBtn').disabled = !hasSeriesData;
+            document.getElementById('generateImgurBtn').disabled = !hasSeriesData;
+            document.getElementById('playerStatsBtn').disabled = !hasSeriesData;
+
+            const sortInputField = document.getElementById('sortInput');
+            if (sortInputField) sortInputField.value = AppState.sortRawInput || '';
+            renderSortCharacterList();
+            updateSortInfoBanner();
+            renderSortSeriesList();
+        }
+
+        // ===================== Undo / Redo =====================
+        // Every mutating action in the app already ends by calling
+        // saveToLocalStorage(), so that's the one choke point where an undo
+        // snapshot can be captured automatically instead of having to thread
+        // "record history" calls through every button handler. History is
+        // kept as JSON strings of the whole AppState (cheap to produce, since
+        // saveToLocalStorage was already serializing AppState anyway) and
+        // lives only in memory for this page session - it does not persist
+        // across a reload.
+        const MAX_UNDO_STEPS = 40;
+        let undoStack = [];
+        let redoStack = [];
+        let lastSavedStateJSON = null;
+        let isRestoringState = false;
+
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+            if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+            if (redoBtn) redoBtn.disabled = redoStack.length === 0;
+        }
+
+        function restoreAppStateFromJSON(json) {
+            const parsed = JSON.parse(json);
+            Object.keys(AppState).forEach(function (key) { delete AppState[key]; });
+            Object.assign(AppState, parsed);
+        }
+
+        function undoLastAction() {
+            if (undoStack.length === 0) return;
+
+            const previousJSON = undoStack.pop();
+            redoStack.push(lastSavedStateJSON);
+            if (redoStack.length > MAX_UNDO_STEPS) redoStack.shift();
+
+            isRestoringState = true;
+            restoreAppStateFromJSON(previousJSON);
+            syncUIFromAppState();
+            saveToLocalStorage();
+            isRestoringState = false;
+
+            lastSavedStateJSON = previousJSON;
+            updateUndoRedoButtons();
+            showMessage('Undid last change.', 'success');
+        }
+
+        function redoLastAction() {
+            if (redoStack.length === 0) return;
+
+            const nextJSON = redoStack.pop();
+            undoStack.push(lastSavedStateJSON);
+            if (undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
+
+            isRestoringState = true;
+            restoreAppStateFromJSON(nextJSON);
+            syncUIFromAppState();
+            saveToLocalStorage();
+            isRestoringState = false;
+
+            lastSavedStateJSON = nextJSON;
+            updateUndoRedoButtons();
+            showMessage('Redid change.', 'success');
+        }
+
+        // Ctrl/Cmd+Z to undo, Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z to redo - but not
+        // while focus is in a text field, so a text box's own native undo
+        // (e.g. while editing a note or the paste-input textarea) still works
+        // as expected instead of being hijacked by the app-wide history.
+        document.addEventListener('keydown', function (e) {
+            if (!(e.ctrlKey || e.metaKey)) return;
+
+            const target = e.target;
+            const isEditable = target && (
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.isContentEditable
+            );
+            if (isEditable) return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undoLastAction();
+            } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+                e.preventDefault();
+                redoLastAction();
+            }
+        });
+
         function showPlayerStats() {
             const playerStats = {};
             const defaultOwner = "No Owner";
@@ -3699,6 +6478,14 @@ ${rouletteBarHTML}
             const demoText = inputField.getAttribute('placeholder');
             inputField.value = demoText;
         }
+
+        // Run after every function/const/let above is declared - some of
+        // these (loadFromLocalStorage, initMsFilters) reference `let`/`const`
+        // bindings declared further down the file, which are in their
+        // temporal dead zone until this point in the script's execution.
+        initQuickNotes();
+        loadFromLocalStorage();
+        initMsFilters();
     </script>
 </body>
 
