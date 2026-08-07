@@ -6652,6 +6652,56 @@ ${rouletteBarHTML}
         // not covered (e.g. truncated out for length) keeps its existing
         // relative position, appended after the confirmed ones, rather than
         // being guessed at.
+        // AppState.sortData is a separate flat character list (built from a
+        // distinct $mmmka+s import) that drives the Sort tab's grid and its
+        // own $sm/$smpos generation - reordering AppState.seriesData alone
+        // (as the series/note confirm actions do) never touched it, so the
+        // Sort tab kept showing a stale order until the user re-parsed or
+        // manually dragged things around. This rebuilds sortData's order to
+        // match the current seriesData order, relocating each existing
+        // entry (keeping its already-merged kakera/note/image/etc) rather
+        // than rebuilding it from scratch. Entries that never matched a
+        // Notes-tab character in the first place keep their old relative
+        // position, appended after everything that did.
+        function resyncSortDataToSeriesOrder() {
+            if (!AppState.sortData || AppState.sortData.length === 0) return;
+
+            const bySeriesName = new Map();
+            const byName = new Map();
+            AppState.sortData.forEach(function (entry) {
+                const seriesKey = normalizeMatchPart(entry.series) + '::' + normalizeMatchPart(entry.name);
+                if (!bySeriesName.has(seriesKey)) bySeriesName.set(seriesKey, entry);
+                const nameKey = normalizeMatchPart(entry.name);
+                if (!byName.has(nameKey)) byName.set(nameKey, entry);
+            });
+
+            const newOrder = [];
+            const used = new Set();
+
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const seriesKey = normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(char.name);
+                    let entry = bySeriesName.get(seriesKey);
+                    if (!entry) entry = byName.get(normalizeMatchPart(char.name));
+                    if (!entry || used.has(entry)) return;
+                    used.add(entry);
+                    newOrder.push(entry);
+                });
+            }
+
+            AppState.sortData.forEach(function (entry) {
+                if (!used.has(entry)) newOrder.push(entry);
+            });
+
+            AppState.sortData = newOrder;
+
+            const sortPanel = document.getElementById('sortTabPanel');
+            if (sortPanel && sortPanel.style.display !== 'none') {
+                renderSortCharacterList();
+                updateSortInfoBanner();
+            }
+        }
+
         function confirmSeriesOrderApplied() {
             const order = lastSeriesOrderConfirmOrder || getSyncedSeriesOrder();
             const reordered = {};
@@ -6662,6 +6712,7 @@ ${rouletteBarHTML}
                 if (!(name in reordered)) reordered[name] = AppState.seriesData[name];
             }
             AppState.seriesData = reordered;
+            resyncSortDataToSeriesOrder();
 
             displaySeries();
             updateStats();
@@ -6985,6 +7036,8 @@ ${rouletteBarHTML}
                 });
                 series.characters = withIndex.map(function (x) { return x.c; });
             }
+
+            resyncSortDataToSeriesOrder();
 
             displaySeries();
             updateStats();
@@ -7924,7 +7977,8 @@ ${rouletteBarHTML}
                     { type: 'fix', text: '<code>$smseries</code> generation for large collections now sends one single, complete command instead of multiple commands that looked valid but actually overwrote each other - Mudae has no confirmed way to append/insert/continue a series sort across messages. You\'ll get a clear over-the-character-limit warning instead.' },
                     { type: 'fix', text: 'Editing a note or rank and pressing Enter could occasionally throw an error and leave the editor stuck open, caused by a rare double-save race between the Enter key and the input losing focus.' },
                     { type: 'fix', text: 'Adding a character to a series you already had (via + Add New Characters) used to show up as a second, duplicate series block at the bottom of the input box instead of grouped with the rest of that series - and within a series, newly-added characters now slot in by global rank (lower # first) instead of always landing last regardless of rank.' },
-                    { type: 'fix', text: 'The "confirm order applied" button was hidden for any command over 2,000 characters, even ones comfortably under Discord Nitro\'s 4,000 char limit that could plausibly have actually been run.' }
+                    { type: 'fix', text: 'The "confirm order applied" button was hidden for any command over 2,000 characters, even ones comfortably under Discord Nitro\'s 4,000 char limit that could plausibly have actually been run.' },
+                    { type: 'fix', text: 'Confirming a series or note order applied only reordered the Notes tab\'s data, leaving the Sort tab\'s own list/grid (and its $sm/$smpos command) showing the old order until you manually re-dragged things.' }
                 ]
             }
         ];
