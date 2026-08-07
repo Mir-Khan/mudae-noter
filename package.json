@@ -1,0 +1,12 @@
+{
+  "name": "mudae-noter",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A simple web-based tool to view and note your Mudae collection.",
+  "scripts": {
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.47.0"
+  }
+}

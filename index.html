@@ -1228,6 +1228,104 @@
             padding-right: 4px;
         }
 
+        .color-picker-layout {
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+
+        .color-wheel-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+
+        .color-wheel-canvas {
+            border-radius: 50%;
+            cursor: crosshair;
+            touch-action: none;
+            box-shadow: 0 0 0 4px #13131a, 0 0 0 5px #2a2a3a;
+        }
+
+        .color-lightness-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 220px;
+        }
+
+        .color-lightness-row label {
+            font-size: 0.8em;
+            color: #9ca3af;
+            flex-shrink: 0;
+        }
+
+        .color-lightness-row input[type="range"] {
+            flex: 1;
+        }
+
+        .color-picker-controls {
+            flex: 1;
+            min-width: 240px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .color-preview-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .color-preview-swatch {
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
+            border: 1px solid #2a2a3a;
+            flex-shrink: 0;
+        }
+
+        .color-hex-text-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #2a2a3a;
+            background: #13131a;
+            color: #e5e7eb;
+            border-radius: 6px;
+            font-size: 1em;
+            text-transform: uppercase;
+        }
+
+        .color-selected-list {
+            margin-top: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.85em;
+            color: #d1d5db;
+        }
+
+        .color-selected-list .color-selected-series {
+            color: #a78bfa;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .color-selected-list .color-selected-series:first-child {
+            margin-top: 0;
+        }
+
+        .color-selected-list p {
+            margin: 2px 0 2px 10px;
+        }
+
         .sort-character-item,
         .sort-series-item {
             display: flex;
@@ -1830,6 +1928,210 @@
         .floating-undo-bar .btn:disabled {
             opacity: 0.5;
         }
+
+        .changelog-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 5, 8, 0.75);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .changelog-modal {
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 560px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .changelog-modal h2 {
+            margin: 0 0 4px;
+            color: #a78bfa;
+        }
+
+        .changelog-body {
+            margin: 16px 0 20px;
+        }
+
+        .changelog-entry {
+            margin-bottom: 18px;
+        }
+
+        .changelog-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .changelog-entry-date {
+            color: #9ca3af;
+            font-size: 0.8em;
+            margin-bottom: 8px;
+        }
+
+        .changelog-entry ul {
+            margin: 0;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .changelog-entry li {
+            color: #d1d5db;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .changelog-fixes-toggle {
+            background: none;
+            border: none;
+            color: #a78bfa;
+            font-size: 0.8em;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 10px;
+            text-decoration: underline;
+        }
+
+        .changelog-fixes-toggle:hover {
+            color: #c4b5fd;
+        }
+
+        .changelog-fixes-list {
+            margin-top: 8px !important;
+        }
+
+        .add-chars-command {
+            background: #0a0a0f;
+            border: 1px solid #7c3aed;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-family: monospace;
+            color: #a78bfa;
+            font-size: 0.95em;
+            margin: 10px 0;
+            user-select: all;
+        }
+
+        .add-chars-textarea {
+            width: 100%;
+            min-height: 160px;
+            box-sizing: border-box;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            color: #e5e7eb;
+            padding: 10px 12px;
+            font-family: monospace;
+            font-size: 0.85em;
+            resize: vertical;
+            margin-top: 8px;
+        }
+
+        .add-chars-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .confirm-applied-btn {
+            margin-left: 8px;
+            background: transparent;
+            border: 1px solid #22c55e;
+            color: #4ade80;
+        }
+
+        .confirm-applied-btn:hover {
+            background: rgba(34, 197, 94, 0.12);
+        }
+
+        .confirm-applied-btn.confirm-applied-done {
+            opacity: 0.7;
+            cursor: default;
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .wishlist-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
+        }
+
+        .wishlist-card {
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .wishlist-card-name {
+            font-weight: 700;
+            color: #e5e7eb;
+            margin-bottom: 4px;
+        }
+
+        .wishlist-card-count {
+            color: #9ca3af;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+        }
+
+        .wishlist-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .wishlist-compare-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .wishlist-compare-row select {
+            flex: 1;
+            min-width: 160px;
+            padding: 8px 10px;
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            border-radius: 6px;
+        }
+
+        .wishlist-overlap-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 14px;
+        }
+
+        .wishlist-overlap-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+
+        .wishlist-overlap-name {
+            flex: 1;
+            color: #e5e7eb;
+        }
+
+        .wishlist-marker {
+            font-size: 0.85em;
+        }
     </style>
 </head>
 
@@ -1841,6 +2143,10 @@
             <button type="button" id="tab-sort-btn" class="app-tab" onclick="switchAppTab('sort')">🔀 Sort</button>
             <button type="button" id="tab-series-btn" class="app-tab" onclick="switchAppTab('series')">📚 Series
                 Order</button>
+            <button type="button" id="tab-colors-btn" class="app-tab" onclick="switchAppTab('colors')">🎨
+                Colors</button>
+            <button type="button" id="tab-wishlists-btn" class="app-tab" onclick="switchAppTab('wishlists')">🌟
+                Wishlists</button>
         </div>
 
         <div class="header-row">
@@ -1942,6 +2248,39 @@
                     Discord-limit-safe command.
                 </p>
             </div>
+            <div class="instructions-list" id="colorsInstructions" style="display: none;">
+                <p class="instruction-item">
+                    <strong>Pick:</strong> Drag inside the wheel to set hue/saturation, and the slider below it for
+                    lightness - or just type a hex code.
+                </p>
+                <p class="instruction-item">
+                    <strong>Apply:</strong> Applies to characters across your <b>whole collection</b> (not just one
+                    series/group) - choose <b>All</b> or just your currently <b>Selected</b> (non-deselected)
+                    characters from the Notes tab.
+                </p>
+                <p class="instruction-item">
+                    <strong>Save:</strong> Click <b>Save to Quick Notes</b> to keep a color for fast copy-paste later.
+                </p>
+            </div>
+            <div class="instructions-list" id="wishlistsInstructions" style="display: none;">
+                <p class="instruction-item">
+                    <strong>Get a wishlist:</strong> Run <code>$wishlist</code> in Discord (yours, or ask someone
+                    else to run theirs and paste it to you) and copy the resulting list of names.
+                </p>
+                <p class="instruction-item">
+                    <strong>Save:</strong> Click <b>+ Add Wishlist</b>, give it a name (e.g. the player's username),
+                    and paste the list in - one character per line.
+                </p>
+                <p class="instruction-item">
+                    <strong>Markers:</strong> A trailing <span class="instruction-badge">⭐</span> means a starwish
+                    (top priority); a trailing <span class="instruction-badge">✅</span> means already claimed.
+                    Both are kept and shown wherever that character appears.
+                </p>
+                <p class="instruction-item">
+                    <strong>Compare:</strong> Pick any two saved wishlists to see exactly which characters overlap
+                    between them.
+                </p>
+            </div>
         </div>
 
         <div class="collections-bar">
@@ -2010,6 +2349,8 @@
                     </div>
                     <div class="main-buttons">
                         <button onclick="parseInput()" class="btn btn-primary">Parse Input</button>
+                        <button onclick="openAddCharactersModal()" class="btn btn-primary" title="Add just your newest characters without re-pasting your whole collection">+
+                            Add New Characters</button>
                         <button onclick="clearAll()" class="btn btn-primary">Clear All</button>
 
                         <button onclick="generateNoteCommands()" id="generateBtn" class="btn btn-primary" disabled>
@@ -2204,6 +2545,23 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="control-group" id="note-order-section">
+                        <h3>Sort by Notes <span style="font-weight: 400; color: #9ca3af; font-size: 0.8em;">($smnote)</span></h3>
+                        <p class="sort-hint" style="margin: 0 0 10px;">Drag your notes into the priority order you
+                            want your harem sorted by, then generate a <code>$smnote</code> command. Only notes
+                            currently used on at least one character are listed.</p>
+                        <div class="sort-toolbar" style="margin-bottom: 10px;">
+                            <input type="text" id="noteOrderSearchInput" placeholder="Search notes..."
+                                oninput="onNoteOrderFilterChange()">
+                            <button type="button" class="btn btn-sm" onclick="clearNoteOrderFilter()">Reset
+                                Filter</button>
+                        </div>
+                        <div id="noteOrderList" class="sort-series-list-wide" style="max-height: 320px;"></div>
+                        <button onclick="generateNoteOrderCommand()" class="btn btn-primary"
+                            style="margin-top: 12px; width: 100%;">Generate $smnote Command</button>
+                        <div id="noteOrderCommandOutput"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2337,6 +2695,70 @@
             <div id="seriesOrderCommandOutput"></div>
         </div>
 
+        <div id="colorsTabPanel" style="display: none;">
+            <div id="colorsMessage"></div>
+            <h2>Color Picker</h2>
+            <p class="sort-hint">Pick a color visually, then apply it straight to characters' hex colors across your
+                collection.</p>
+
+            <div class="color-picker-layout">
+                <div class="color-wheel-block">
+                    <canvas id="colorWheelCanvas" width="220" height="220" class="color-wheel-canvas"></canvas>
+                    <div class="color-lightness-row">
+                        <label for="colorLightnessSlider">Lightness</label>
+                        <input type="range" id="colorLightnessSlider" min="0" max="100" value="50">
+                    </div>
+                </div>
+                <div class="color-picker-controls">
+                    <div class="color-preview-row">
+                        <div id="colorPreviewSwatch" class="color-preview-swatch"></div>
+                        <input type="text" id="colorHexInput" class="color-hex-text-input" placeholder="#RRGGBB"
+                            maxlength="7">
+                    </div>
+                    <div class="control-group" style="margin-top: 4px;">
+                        <h3>Apply To</h3>
+                        <div class="button-group">
+                            <button onclick="applyPickedColor('all')" class="btn btn-primary">All
+                                Characters</button>
+                            <button onclick="applyPickedColor('selected')" class="btn btn-secondary">Selected
+                                Only</button>
+                            <button onclick="toggleColorSelectedList()" id="colorSelectedToggleBtn"
+                                class="btn btn-sm">Show Selected</button>
+                        </div>
+                        <div id="colorSelectedSummary" class="sort-filter-note"></div>
+                        <div id="colorSelectedList" class="color-selected-list" style="display: none;"></div>
+                        <div id="colorApplyCount" class="sort-filter-note"></div>
+                    </div>
+                    <div class="control-group">
+                        <button onclick="saveColorToQuickNotes()" class="btn btn-sm" style="width: 100%;">Save to
+                            Quick Notes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="wishlistsTabPanel" style="display: none;">
+            <div id="wishlistsMessage"></div>
+            <h2>Wishlists</h2>
+            <p class="sort-hint">Save your own wishlist and your friends' to check for overlaps - handy for trades
+                or spotting who else wants what you've got.</p>
+
+            <button onclick="openWishlistModal()" class="btn btn-primary" style="margin: 10px 0 20px;">+ Add
+                Wishlist</button>
+
+            <div id="wishlistsList" class="wishlist-cards"></div>
+
+            <div class="control-group" style="margin-top: 24px;">
+                <h3>Compare Two Wishlists</h3>
+                <div class="wishlist-compare-row">
+                    <select id="wishlistCompareA"></select>
+                    <span style="color: #9ca3af;">vs</span>
+                    <select id="wishlistCompareB"></select>
+                    <button onclick="compareWishlists()" class="btn btn-primary">Compare Wishlists</button>
+                </div>
+                <div id="wishlistCompareResult"></div>
+            </div>
+        </div>
 
         <div class="footer">
             <div class="footer-contact">
@@ -2376,6 +2798,54 @@
             title="Redo (Ctrl+Y)">↷ Redo</button>
     </div>
 
+    <div id="changelogOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2 id="changelogTitle">What's New</h2>
+            <div id="changelogBody" class="changelog-body"></div>
+            <button onclick="dismissChangelog()" class="btn btn-primary" style="width: 100%;">Got it</button>
+        </div>
+    </div>
+
+    <div id="addCharactersOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2>Add New Characters</h2>
+            <p class="sort-hint" style="margin-top: 4px;">Got new characters since your last import? Run this in
+                Discord:</p>
+            <div class="add-chars-command">$mmsaty+ri-c+x+kon</div>
+            <p class="sort-hint">That's your usual import flags plus <code>n</code>, Mudae's "not noted" filter -
+                it DMs you <strong>only the characters you haven't noted yet</strong>, so you don't have to re-paste
+                your whole collection every time you get someone new.</p>
+            <p class="sort-hint">Paste <em>just that DM's contents</em> below - characters already in your
+                collection are skipped automatically, so it's safe even if it overlaps with what you've already
+                added.</p>
+            <textarea id="addCharsInput" class="add-chars-textarea"
+                placeholder="Paste the $mmsaty+ri-c+x+kon output here&#10;=========================================&#10;&#10;Dungeon Meshi - 36/40&#10;#1,683 - Izutsumi  💞 => arczeus · ($wa) · :chaoskey:  (15) (#000000) 1,171 ka - https://mudae.net/uploads/3371494/ZiG_9A_~g4z9cdzar27.gif"></textarea>
+            <div id="addCharactersModalMessage"></div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeAddCharactersModal()" class="btn">Cancel</button>
+                <button onclick="submitAddCharactersModal()" class="btn btn-primary">Add Characters</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="wishlistModalOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2 id="wishlistModalTitle">Add Wishlist</h2>
+            <p class="sort-hint" style="margin-top: 4px;">Run <code>$wishlist</code> in Discord and paste the
+                resulting list below - one character per line. A trailing <code>⭐</code> (starwish) or
+                <code>✅</code> (already claimed) is recognized automatically.</p>
+            <input type="text" id="wishlistNameInput" class="color-hex-text-input" style="text-transform: none; margin-bottom: 10px;"
+                placeholder="Whose wishlist is this? (e.g. a username)">
+            <textarea id="wishlistTextInput" class="add-chars-textarea"
+                placeholder="Portgas D. Ace ⭐&#10;Lightning&#10;Aerith Gainsborough&#10;Jin Sakai"></textarea>
+            <div id="wishlistModalMessage"></div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeWishlistModal()" class="btn">Cancel</button>
+                <button onclick="submitWishlistModal()" class="btn btn-primary">Save Wishlist</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const COLLECTIONS_META_KEY = 'mudaeCollectionsMeta';
         const LEGACY_STATE_KEY = 'mudaeAppState';
@@ -2388,6 +2858,7 @@
             sortData: [],
             sortRawInput: '',
             seriesOrder: [],
+            noteOrder: [],
             ui: {
                 grouping: 'series',
                 sortMethod: 'count',
@@ -2607,7 +3078,18 @@
                 input.focus();
                 input.select();
 
+                // Guards against a real re-entrancy trap: removing the
+                // focused `input` from the DOM (below) can synchronously
+                // fire its own 'blur' event mid-removeChild, re-invoking
+                // this same handler before the first call has returned -
+                // the second removeChild then throws (the node's already
+                // detached). One-shot flag makes this safe regardless of
+                // whether Enter, blur, or both end up triggering it.
+                let alreadyClosed = false;
                 const saveAndClose = () => {
+                    if (alreadyClosed) return;
+                    alreadyClosed = true;
+
                     const newValue = input.value;
                     let needsFullRender = false;
 
@@ -2636,6 +3118,8 @@
 
                     if (needsFullRender) {
                         displaySeries();
+                    } else if (action === 'edit-note') {
+                        renderNoteOrderList();
                     }
                 };
                 input.onblur = saveAndClose;
@@ -2749,6 +3233,10 @@
                     } else {
                         const charList = groupCard.querySelector('.characters-list');
                         charList.innerHTML = getGroupChars().map(char => createCharacterCardHTML(char)).join('');
+                        // displaySeries() (above) already refreshes the Note
+                        // Order list itself - only needed here since this
+                        // branch skips that full re-render.
+                        if (isNote) renderNoteOrderList();
                     }
                     break;
                 }
@@ -2776,15 +3264,12 @@
             }
         });
 
-        function parseInput() {
-            const input = document.getElementById('input').value.trim();
-
-            if (!input.trim()) {
-                return;
-            }
-
-            AppState.rawInput = input;
-            AppState.seriesData = {};
+        // Parses raw $mmsaty+ri-c+x+ko-style pasted text into a
+        // seriesData-shaped object ({ [seriesName]: { total, owned,
+        // characters, note } }), without touching AppState - shared by the
+        // full-replace Parse Input and the incremental Add New Characters.
+        function parseCollectionText(input) {
+            const seriesData = {};
             const lines = input.split('\n');
             let currentSeries = null;
 
@@ -2795,7 +3280,7 @@
                 const seriesMatch = line.match(/^(.+?)\s*-\s*(\d+)\/(\d+)$/);
                 if (seriesMatch) {
                     currentSeries = seriesMatch[1].trim();
-                    AppState.seriesData[currentSeries] = {
+                    seriesData[currentSeries] = {
                         total: parseInt(seriesMatch[3]),
                         owned: parseInt(seriesMatch[2]),
                         characters: [],
@@ -2880,7 +3365,7 @@
                             cleanName = namePart;
                         }
 
-                        AppState.seriesData[currentSeries].characters.push({
+                        seriesData[currentSeries].characters.push({
                             name: cleanName,
                             displayName: cleanName,
                             image: imageUrl,
@@ -2899,11 +3384,141 @@
                 }
             }
 
-            if (Object.keys(AppState.seriesData).length === 0) {
+            return seriesData;
+        }
+
+        function parseInput() {
+            const input = document.getElementById('input').value.trim();
+            if (!input) return;
+
+            const parsed = parseCollectionText(input);
+            if (Object.keys(parsed).length === 0) {
                 showMessage('Parsing failed. Please ensure your input format is correct and contains at least one series.', 'error');
                 return;
             }
 
+            AppState.rawInput = input;
+            AppState.seriesData = parsed;
+
+            refreshAfterCollectionChange();
+            saveToLocalStorage();
+        }
+
+        // Inverse of parseCollectionText(): rebuilds the same textual format
+        // Mudae's import commands produce from AppState.seriesData itself,
+        // grouped by series and, within each series, sorted by global rank
+        // (lower # = better = listed first, matching Mudae's own convention)
+        // rather than raw array order - otherwise a newly-merged character
+        // just lands at the end of the array regardless of its actual rank.
+        // Used to refresh the main input box after a merge, instead of just
+        // tacking the newly-pasted snippet onto the end - which used to
+        // leave characters added to an already-existing series sitting in
+        // a second, duplicate "SeriesName - X/Y" block at the bottom
+        // instead of grouped with the rest of that series.
+        function serializeSeriesDataToText(seriesData) {
+            const blocks = [];
+
+            for (const seriesName in seriesData) {
+                const series = seriesData[seriesName];
+                const lines = [`${seriesName} - ${series.owned}/${series.total}`];
+
+                const sortedCharacters = series.characters.slice().sort(function (a, b) {
+                    const rankA = parseInt(a.globalRank) || Infinity;
+                    const rankB = parseInt(b.globalRank) || Infinity;
+                    return rankA - rankB;
+                });
+
+                sortedCharacters.forEach(function (char) {
+                    const rankPrefix = char.globalRank ? `#${Number(char.globalRank).toLocaleString('en-US')} - ` : '';
+                    const disabledSuffix = char.isDisabled ? ' 🚫' : '';
+                    const ownerPart = char.owner ? `  💞 => ${char.owner}` : '';
+                    const notePart = char.note ? ` | ${char.note}` : '';
+                    const tagsPart = (char.mudaeTags && char.mudaeTags.length)
+                        ? `(${char.mudaeTags.map(function (t) { return '$' + t; }).join(', ')}) · `
+                        : '';
+                    const keysPart = char.keys ? `(${char.keys})` : '';
+                    const colorPart = char.color ? `(${char.color})` : '';
+                    const kakeraPart = char.kakera ? Number(char.kakera).toLocaleString('en-US') : '0';
+
+                    lines.push(
+                        `${rankPrefix}${char.name}${disabledSuffix}${ownerPart}${notePart} · ${tagsPart}:key: ${keysPart}${colorPart} ${kakeraPart} ka - ${char.image || ''}`
+                    );
+                });
+
+                blocks.push(lines.join('\n'));
+            }
+
+            return blocks.join('\n\n');
+        }
+
+        // Merges freshly-pasted characters into the existing collection
+        // instead of replacing it - meant for pasting the output of a
+        // smaller incremental $mm...n command (Mudae's "not noted" flag),
+        // so newly-claimed characters can be added without re-pasting and
+        // re-parsing the entire harem. Characters already present (matched
+        // by series + name) are left completely untouched - their note,
+        // color, rank, and exclusion state are never overwritten - since a
+        // re-run of the same "not noted" command could plausibly include a
+        // character you've already imported but not yet noted.
+        // Pure data operation - no DOM/state-array side effects beyond
+        // AppState.seriesData itself - so it's usable from any UI entry point.
+        function mergeCharactersIntoCollection(input) {
+            const parsed = parseCollectionText(input);
+            if (Object.keys(parsed).length === 0) {
+                return { ok: false, error: 'Parsing failed. Please ensure your input format is correct and contains at least one series.' };
+            }
+
+            let addedCount = 0;
+
+            for (const seriesName in parsed) {
+                const incomingSeries = parsed[seriesName];
+
+                if (!AppState.seriesData[seriesName]) {
+                    AppState.seriesData[seriesName] = {
+                        total: incomingSeries.total,
+                        owned: 0,
+                        characters: [],
+                        note: ''
+                    };
+                }
+
+                const existingSeries = AppState.seriesData[seriesName];
+                const existingNames = new Set(existingSeries.characters.map(function (c) { return c.name.toLowerCase(); }));
+
+                incomingSeries.characters.forEach(function (char) {
+                    if (existingNames.has(char.name.toLowerCase())) return;
+
+                    // Inserted by global rank (lower # = better = earlier)
+                    // rather than appended to the end - Mudae's own full
+                    // exports are already rank-ordered (the "r" flag), so
+                    // this keeps a newly-added character in the same
+                    // position it would have held in a fresh full import,
+                    // instead of always landing last regardless of rank.
+                    const charRank = parseInt(char.globalRank) || Infinity;
+                    const insertAt = existingSeries.characters.findIndex(function (existing) {
+                        return (parseInt(existing.globalRank) || Infinity) > charRank;
+                    });
+                    if (insertAt === -1) existingSeries.characters.push(char);
+                    else existingSeries.characters.splice(insertAt, 0, char);
+
+                    existingNames.add(char.name.toLowerCase());
+                    addedCount++;
+                });
+
+                existingSeries.total = incomingSeries.total;
+                existingSeries.owned = existingSeries.characters.length;
+            }
+
+            if (addedCount === 0) {
+                return { ok: false, error: 'No new characters found - everything in that paste is already in your collection.' };
+            }
+
+            return { ok: true, addedCount };
+        }
+
+        // Shared cleanup after either parseInput() or a successful merge:
+        // refresh derived UI state and enable the command-generation buttons.
+        function refreshAfterCollectionChange() {
             populateOwnerFilter();
             displaySeries();
             updateStats();
@@ -2911,7 +3526,52 @@
             document.getElementById('generateColorBtn').disabled = false;
             document.getElementById('generateImgurBtn').disabled = false;
             document.getElementById('playerStatsBtn').disabled = false;
+        }
+
+        function openAddCharactersModal() {
+            const overlay = document.getElementById('addCharactersOverlay');
+            const textarea = document.getElementById('addCharsInput');
+            const message = document.getElementById('addCharactersModalMessage');
+            if (!overlay) return;
+            if (textarea) textarea.value = '';
+            if (message) message.innerHTML = '';
+            overlay.style.display = 'flex';
+            if (textarea) textarea.focus();
+        }
+
+        function closeAddCharactersModal() {
+            const overlay = document.getElementById('addCharactersOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function submitAddCharactersModal() {
+            const textarea = document.getElementById('addCharsInput');
+            const message = document.getElementById('addCharactersModalMessage');
+            const input = textarea ? textarea.value.trim() : '';
+
+            if (!input) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the command\'s output first.</p>';
+                return;
+            }
+
+            const result = mergeCharactersIntoCollection(input);
+            if (!result.ok) {
+                if (message) message.innerHTML = `<p class="error-message">${escapeHTML(result.error)}</p>`;
+                return;
+            }
+
+            // Rebuilt from the merged data itself (not the raw pasted text),
+            // so newly-added characters show up grouped with their series
+            // in the right place instead of tacked onto the end as a
+            // duplicate series block.
+            AppState.rawInput = serializeSeriesDataToText(AppState.seriesData);
+            const mainInput = document.getElementById('input');
+            if (mainInput) mainInput.value = AppState.rawInput;
+
+            refreshAfterCollectionChange();
             saveToLocalStorage();
+            closeAddCharactersModal();
+            showMessage(`Added ${result.addedCount} new character${result.addedCount === 1 ? '' : 's'}.`, 'success');
         }
 
         // Per-session only, like the Sort/Series Order tabs' search - not part
@@ -3208,9 +3868,17 @@ ${rouletteBarHTML}
                 }
 
                 if (AppState.ui.rankingEnabled && data.characters.every(c => (c.rank === 0 || !c.rank))) {
-                    data.characters.forEach((char, index) => char.rank = index + 1);
+                    // Persist the auto-assigned rank back onto the real character objects
+                    // (data.characters here are throwaway copies) so this order survives
+                    // the next re-render instead of being silently re-derived from scratch
+                    // every time (e.g. after applying a note elsewhere triggers displaySeries()).
+                    data.characters.forEach((char, index) => {
+                        char.rank = index + 1;
+                        const originalChar = AppState.seriesData[char.originalSeries]?.characters[char.originalIndex];
+                        if (originalChar) originalChar.rank = index + 1;
+                    });
                 }
-                
+
                 data.characters.sort((a, b) => (a.rank || 999999) - (b.rank || 999999));
 
                 const charactersHTML = data.characters.map(char => createCharacterCardHTML(char)).join('');
@@ -3279,6 +3947,8 @@ ${rouletteBarHTML}
             } else if (groupCount > 1 && grid.style.gridTemplateColumns.includes('repeat(1,')) {
                 changeGridColumns(AppState.ui.preferredColumns);
             }
+
+            renderNoteOrderList();
         }
 
         function toggleCharacter(seriesName, charIdx) {
@@ -3751,6 +4421,23 @@ ${rouletteBarHTML}
             });
         }
 
+        // Shared "✓ Ran this in Discord" confirm button used by the
+        // $smseries / $smnote / full-$sm order generators. Clicking it locks
+        // the just-generated order in as the app's new baseline (see each
+        // confirm*Applied function for what that means for that command)
+        // and then disables itself so it can't be double-applied by accident.
+        function buildConfirmAppliedHTML(fnName, label) {
+            return `<button type="button" class="btn btn-sm confirm-applied-btn" onclick="handleConfirmAppliedClick(this, '${fnName}')">✓ ${escapeHTML(label)}</button>`;
+        }
+
+        function handleConfirmAppliedClick(btn, fnName) {
+            if (typeof window[fnName] !== 'function') return;
+            window[fnName]();
+            btn.textContent = '✓ Order updated';
+            btn.disabled = true;
+            btn.classList.add('confirm-applied-done');
+        }
+
         function clearAll() {
             AppState.seriesData = {};
             AppState.rawInput = '';
@@ -3806,7 +4493,7 @@ ${rouletteBarHTML}
             const imgurFilter = document.getElementById('filter-imgur').value;
 
             for (const seriesName in AppState.seriesData) {
-                AppState.seriesData[seriesName].characters.forEach((char) => {
+                AppState.seriesData[seriesName].characters.forEach((char, charIndex) => {
                     const charKakera = parseInt(char.kakera) || 0;
                     const charKeys = parseInt(char.keys) || 0;
 
@@ -3869,9 +4556,11 @@ ${rouletteBarHTML}
 
                     const matchesFilter = matchesKakera && matchesKeys && matchesGender && matchesRoulette && matchesOwner && matchesImgur;
 
-                    if (!matchesFilter) {
-                        char.excluded = true;
-                    }
+                    // Re-derive from the pre-filter baseline every time so re-applying
+                    // (e.g. loosening min/max keys) can un-hide characters again, while
+                    // still respecting exclusions the user made manually before filtering.
+                    const baselineExcluded = !!AppState.preFilterCharacterStates[seriesName][charIndex];
+                    char.excluded = baselineExcluded || !matchesFilter;
                 });
             }
 
@@ -3948,11 +4637,17 @@ ${rouletteBarHTML}
             // feedback would be rendered into a hidden panel.
             const sortPanel = document.getElementById('sortTabPanel');
             const seriesPanel = document.getElementById('seriesOrderTabPanel');
+            const colorsPanel = document.getElementById('colorsTabPanel');
+            const wishlistsPanel = document.getElementById('wishlistsTabPanel');
             let messageDiv;
             if (sortPanel && sortPanel.style.display !== 'none') {
                 messageDiv = document.getElementById('sortMessage');
             } else if (seriesPanel && seriesPanel.style.display !== 'none') {
                 messageDiv = document.getElementById('seriesMessage');
+            } else if (colorsPanel && colorsPanel.style.display !== 'none') {
+                messageDiv = document.getElementById('colorsMessage');
+            } else if (wishlistsPanel && wishlistsPanel.style.display !== 'none') {
+                messageDiv = document.getElementById('wishlistsMessage');
             }
             if (!messageDiv) messageDiv = document.getElementById('message');
             messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
@@ -4331,6 +5026,7 @@ ${rouletteBarHTML}
                 sortData: [],
                 sortRawInput: '',
                 seriesOrder: [],
+                noteOrder: [],
                 ui: {
                     grouping: 'series',
                     sortMethod: 'count',
@@ -4771,26 +5467,40 @@ ${rouletteBarHTML}
             const notesPanel = document.getElementById('notesTabPanel');
             const sortPanel = document.getElementById('sortTabPanel');
             const seriesPanel = document.getElementById('seriesOrderTabPanel');
+            const colorsPanel = document.getElementById('colorsTabPanel');
+            const wishlistsPanel = document.getElementById('wishlistsTabPanel');
             const notesBtn = document.getElementById('tab-notes-btn');
             const sortBtn = document.getElementById('tab-sort-btn');
             const seriesBtn = document.getElementById('tab-series-btn');
+            const colorsBtn = document.getElementById('tab-colors-btn');
+            const wishlistsBtn = document.getElementById('tab-wishlists-btn');
             const notesInstructions = document.getElementById('notesInstructions');
             const sortInstructions = document.getElementById('sortInstructions');
             const seriesInstructions = document.getElementById('seriesInstructions');
+            const colorsInstructions = document.getElementById('colorsInstructions');
+            const wishlistsInstructions = document.getElementById('wishlistsInstructions');
 
             const showSort = tab === 'sort';
             const showSeries = tab === 'series';
-            const showNotes = !showSort && !showSeries;
+            const showColors = tab === 'colors';
+            const showWishlists = tab === 'wishlists';
+            const showNotes = !showSort && !showSeries && !showColors && !showWishlists;
 
             if (notesPanel) notesPanel.style.display = showNotes ? '' : 'none';
             if (sortPanel) sortPanel.style.display = showSort ? '' : 'none';
             if (seriesPanel) seriesPanel.style.display = showSeries ? '' : 'none';
+            if (colorsPanel) colorsPanel.style.display = showColors ? '' : 'none';
+            if (wishlistsPanel) wishlistsPanel.style.display = showWishlists ? '' : 'none';
             if (notesBtn) notesBtn.classList.toggle('active', showNotes);
             if (sortBtn) sortBtn.classList.toggle('active', showSort);
             if (seriesBtn) seriesBtn.classList.toggle('active', showSeries);
+            if (colorsBtn) colorsBtn.classList.toggle('active', showColors);
+            if (wishlistsBtn) wishlistsBtn.classList.toggle('active', showWishlists);
             if (notesInstructions) notesInstructions.style.display = showNotes ? '' : 'none';
             if (sortInstructions) sortInstructions.style.display = showSort ? '' : 'none';
             if (seriesInstructions) seriesInstructions.style.display = showSeries ? '' : 'none';
+            if (colorsInstructions) colorsInstructions.style.display = showColors ? '' : 'none';
+            if (wishlistsInstructions) wishlistsInstructions.style.display = showWishlists ? '' : 'none';
 
             if (showSort) {
                 const sortInputField = document.getElementById('sortInput');
@@ -4801,6 +5511,15 @@ ${rouletteBarHTML}
 
             if (showSeries) {
                 renderSortSeriesList();
+            }
+
+            if (showColors) {
+                initColorPicker();
+            }
+
+            if (showWishlists) {
+                renderWishlistsList();
+                populateWishlistCompareSelects();
             }
         }
 
@@ -5835,6 +6554,40 @@ ${rouletteBarHTML}
             moveSeriesEntriesToIndex(names, movingFromAbove ? toIndex + 1 : toIndex);
         }
 
+        // $smseries has no confirmed append (+) or position-insert (>) mode,
+        // and no multi-message continuation either - it only ever takes the
+        // complete final order in a single command. So unlike $sm/$smp (whose
+        // continuation IS confirmed working), this can't be split across
+        // messages: it's one command with everything, or nothing.
+        // Discord's hard cap is 4,000 chars for Nitro users; this leaves a
+        // small buffer under that for the command prefix/separators.
+        const NITRO_SAFE_LIMIT = 3990;
+
+        // Builds a "prefix a$b$c..." command truncated to the largest whole
+        // number of entries that fit within safeLimit - used when even
+        // Nitro's limit can't fit everything, since these $sm-family
+        // commands must be sent as a single message with no way to continue
+        // a cut-off one later. Whatever doesn't fit is reported as excluded
+        // rather than silently dropped.
+        function buildTruncatedJoinedCommand(prefix, entries, safeLimit) {
+            let current = '';
+            const included = [];
+            for (const entry of entries) {
+                const separator = current ? '$' : '';
+                const potential = current + separator + entry;
+                if (prefix.length + potential.length > safeLimit) break;
+                current = potential;
+                included.push(entry);
+            }
+            return { command: prefix + current, included: included, excluded: entries.slice(included.length) };
+        }
+
+        // Tracks exactly which series the most recently generated command
+        // actually covers (the full order, or - if truncated - just the
+        // portion that fit), so "confirm applied" only reorders what was
+        // really sent to Discord.
+        let lastSeriesOrderConfirmOrder = null;
+
         function generateSeriesOrderCommand() {
             const order = getSyncedSeriesOrder();
             AppState.seriesOrder = order;
@@ -5849,46 +6602,394 @@ ${rouletteBarHTML}
             }
 
             const prefix = '$smseries ';
-            const parts = [];
-            let current = '';
+            const fullCommand = prefix + order.join('$');
+            const overNonNitroLimit = fullCommand.length > 2000;
+            const overNitroLimit = fullCommand.length > 4000;
 
-            order.forEach(function (seriesName) {
-                const separator = current ? '$' : '';
-                const potential = current + separator + seriesName;
+            let command = fullCommand;
+            let confirmOrder = order;
+            let limitWarning = '';
+            let countLabel = `${order.length} series`;
 
-                if ((prefix.length + potential.length) > 1990) {
-                    parts.push(prefix + current);
-                    current = seriesName;
-                } else {
-                    current = potential;
-                }
-            });
-            if (current) parts.push(prefix + current);
+            if (overNitroLimit) {
+                const truncated = buildTruncatedJoinedCommand(prefix, order, NITRO_SAFE_LIMIT);
+                command = truncated.command;
+                confirmOrder = truncated.included;
+                countLabel = `${truncated.included.length} of ${order.length} series`;
+                limitWarning = `<p class="sort-limit-warning" style="margin-top: -4px;">&#9888; Your full order is ${fullCommand.length.toLocaleString('en-US')} characters - too long even for Discord Nitro's 4,000 char limit, and $smseries can't be split across messages. The command below only covers the first ${truncated.included.length} of ${order.length} series (as many as fit) - the remaining ${truncated.excluded.length} are left in their current order and need to be sorted separately, e.g. through <b>Sort by Notes</b> on the Notes tab, or by moving them one at a time.</p>`;
+            } else if (overNonNitroLimit) {
+                limitWarning = `<p class="sort-limit-warning" style="margin-top: -4px;">&#9888; ${command.length.toLocaleString('en-US')} characters - over Discord's 2,000 char limit. $smseries doesn't support appending, inserting, or continuing across multiple messages, so you'll need Discord Nitro (4,000 char limit) to send this as one message.</p>`;
+            }
+
+            lastSeriesOrderConfirmOrder = confirmOrder;
 
             output.innerHTML = `
  <div class="commands-section">
-  <h2>Series Order Command${parts.length > 1 ? 's' : ''}</h2>
+  <h2>Series Order Command</h2>
+  ${limitWarning}
  </div>`;
             const container = output.querySelector('.commands-section');
 
-            parts.forEach(function (command, idx) {
-                const commandItem = document.createElement('div');
-                commandItem.className = 'command-item';
-
-                let headerText = `${order.length} series`;
-                if (parts.length > 1) headerText += ` (Part ${idx + 1}/${parts.length})`;
-
-                commandItem.innerHTML = `
+            const commandItem = document.createElement('div');
+            commandItem.className = 'command-item';
+            commandItem.innerHTML = `
       <div class="command-header">
-       <div class="command-series">${escapeHTML(headerText)}</div>
+       <div class="command-series">${countLabel} - ${command.length.toLocaleString('en-US')} chars</div>
       </div>
       <div class="command-text">${escapeHTML(command)}</div>
       <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+      ${buildConfirmAppliedHTML('confirmSeriesOrderApplied', overNonNitroLimit ? 'Ran this in Discord (needs Nitro) - update series order' : 'Ran this in Discord - update series order')}
      `;
-                container.appendChild(commandItem);
-            });
+            container.appendChild(commandItem);
 
             saveToLocalStorage();
+        }
+
+        // Applies whatever the most recently generated $smseries command
+        // actually covered (see lastSeriesOrderConfirmOrder) as the new
+        // baseline: rebuilds AppState.seriesData with its keys in that
+        // order (JS objects preserve string-key insertion order) - anything
+        // not covered (e.g. truncated out for length) keeps its existing
+        // relative position, appended after the confirmed ones, rather than
+        // being guessed at.
+        function confirmSeriesOrderApplied() {
+            const order = lastSeriesOrderConfirmOrder || getSyncedSeriesOrder();
+            const reordered = {};
+            order.forEach(function (name) {
+                if (AppState.seriesData[name]) reordered[name] = AppState.seriesData[name];
+            });
+            for (const name in AppState.seriesData) {
+                if (!(name in reordered)) reordered[name] = AppState.seriesData[name];
+            }
+            AppState.seriesData = reordered;
+
+            displaySeries();
+            updateStats();
+            saveToLocalStorage();
+            showMessage('Series order applied - this is now the app\'s baseline order.', 'success');
+        }
+
+        // ===================== Note Order (Notes tab) =====================
+        // Same drag-to-reorder pattern as the Series Order tab, but for the
+        // distinct note values used anywhere in the collection, so the user
+        // can generate a "$sm note <note1> $ <note2> ..." command without
+        // leaving the Notes tab.
+        const noteOrderFilterState = { query: '' };
+        let selectedNoteEntries = new Set();
+        let lastNoteClickIndex = null;
+
+        // Keeps AppState.noteOrder in sync with the notes actually present:
+        // preserves existing manual order for notes still in use, drops
+        // notes no longer used by any character, and appends any new ones
+        // (alphabetically) at the end. Blank notes are excluded - there's
+        // nothing meaningful to sort a "no note" bucket by in Mudae.
+        function getSyncedNoteOrder() {
+            const liveNotes = new Set();
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const note = (char.note || '').trim();
+                    if (note) liveNotes.add(note);
+                });
+            }
+
+            let order = Array.isArray(AppState.noteOrder) ? AppState.noteOrder.slice() : [];
+            order = order.filter(function (note) { return liveNotes.has(note); });
+
+            const existingSet = new Set(order);
+            const newOnes = Array.from(liveNotes)
+                .filter(function (note) { return !existingSet.has(note); })
+                .sort(function (a, b) { return a.localeCompare(b); });
+
+            return order.concat(newOnes);
+        }
+
+        function countCharactersWithNote(note) {
+            let count = 0;
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    if ((char.note || '').trim() === note) count++;
+                });
+            }
+            return count;
+        }
+
+        function getVisibleNoteOrderIndices() {
+            const order = AppState.noteOrder || [];
+            const query = noteOrderFilterState.query.trim().toLowerCase();
+            if (!query) return order.map(function (_, i) { return i; });
+
+            const indices = [];
+            order.forEach(function (note, index) {
+                if (note.toLowerCase().includes(query)) indices.push(index);
+            });
+            return indices;
+        }
+
+        function onNoteOrderFilterChange() {
+            const field = document.getElementById('noteOrderSearchInput');
+            noteOrderFilterState.query = field ? field.value : '';
+            renderNoteOrderList();
+        }
+
+        function clearNoteOrderFilter() {
+            const field = document.getElementById('noteOrderSearchInput');
+            if (field) field.value = '';
+            noteOrderFilterState.query = '';
+            renderNoteOrderList();
+        }
+
+        function renderNoteOrderList() {
+            const container = document.getElementById('noteOrderList');
+            if (!container) return;
+
+            AppState.noteOrder = getSyncedNoteOrder();
+
+            const searchField = document.getElementById('noteOrderSearchInput');
+            if (searchField && searchField.value !== noteOrderFilterState.query) searchField.value = noteOrderFilterState.query;
+
+            container.innerHTML = '';
+
+            if (AppState.noteOrder.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No notes yet - add notes to characters on this tab first.</p>';
+                return;
+            }
+
+            const visibleIndices = getVisibleNoteOrderIndices();
+            if (visibleIndices.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No notes match the current search.</p>';
+                return;
+            }
+
+            const liveNotes = new Set(AppState.noteOrder);
+            Array.from(selectedNoteEntries).forEach(function (note) {
+                if (!liveNotes.has(note)) selectedNoteEntries.delete(note);
+            });
+
+            visibleIndices.forEach(function (index) {
+                const note = AppState.noteOrder[index];
+                const count = countCharactersWithNote(note);
+
+                const item = document.createElement('div');
+                item.className = 'sort-series-item';
+                if (selectedNoteEntries.has(note)) item.classList.add('selected');
+                item.draggable = true;
+                item.dataset.index = index;
+
+                item.innerHTML = `
+                    <div class="sort-drag-handle">⠿</div>
+                    <div class="sort-select-box" title="Click the card to select">✔</div>
+                    <div class="sort-item-rank">${index + 1}</div>
+                    <div class="sort-series-name">${escapeHTML(note)}</div>
+                    <div class="sort-series-count">${count} char${count === 1 ? '' : 's'}</div>
+                `;
+
+                item.addEventListener('click', function (e) {
+                    if (e.target.closest('.sort-drag-handle')) return;
+                    handleNoteItemClick(e, index, visibleIndices);
+                });
+
+                item.addEventListener('dragstart', handleSortNoteDragStart);
+                item.addEventListener('dragover', handleSortNoteDragOver);
+                item.addEventListener('dragleave', handleSortCharDragLeave);
+                item.addEventListener('drop', handleSortNoteDrop);
+                item.addEventListener('dragend', handleSortDragEnd);
+
+                container.appendChild(item);
+            });
+        }
+
+        function handleNoteItemClick(e, index, visibleIndices) {
+            const order = AppState.noteOrder || [];
+            const note = order[index];
+            if (!note) return;
+
+            if (e.shiftKey && lastNoteClickIndex !== null) {
+                const fromPos = visibleIndices.indexOf(lastNoteClickIndex);
+                const toPos = visibleIndices.indexOf(index);
+                if (fromPos !== -1 && toPos !== -1) {
+                    const start = Math.min(fromPos, toPos);
+                    const end = Math.max(fromPos, toPos);
+                    for (let i = start; i <= end; i++) {
+                        selectedNoteEntries.add(order[visibleIndices[i]]);
+                    }
+                    renderNoteOrderList();
+                    return;
+                }
+            }
+
+            if (selectedNoteEntries.has(note)) {
+                selectedNoteEntries.delete(note);
+            } else {
+                selectedNoteEntries.add(note);
+            }
+            lastNoteClickIndex = index;
+            renderNoteOrderList();
+        }
+
+        function getSelectedNotesInOrder() {
+            return (AppState.noteOrder || []).filter(function (note) { return selectedNoteEntries.has(note); });
+        }
+
+        function moveNoteEntriesToIndex(notes, targetIndex) {
+            const order = AppState.noteOrder || [];
+            if (!notes.length) return;
+
+            const moving = new Set(notes);
+            const removedBefore = order.filter(function (note, i) {
+                return moving.has(note) && i < targetIndex;
+            }).length;
+
+            const remaining = order.filter(function (note) { return !moving.has(note); });
+            const insertAt = Math.min(Math.max(targetIndex - removedBefore, 0), remaining.length);
+
+            remaining.splice(insertAt, 0, ...notes);
+            AppState.noteOrder = remaining;
+
+            renderNoteOrderList();
+            saveToLocalStorage();
+        }
+
+        function handleSortNoteDragStart(e) {
+            sortDragState = { listId: 'note', fromIndex: parseInt(e.currentTarget.dataset.index, 10) };
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleSortNoteDragOver(e) {
+            if (sortDragState.listId !== 'note') return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleSortNoteDrop(e) {
+            if (sortDragState.listId !== 'note') return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('drag-over');
+
+            const toIndex = parseInt(e.currentTarget.dataset.index, 10);
+            const fromIndex = sortDragState.fromIndex;
+            if (fromIndex === null || fromIndex === toIndex) return;
+
+            const order = AppState.noteOrder || [];
+            const dragged = order[fromIndex];
+            const target = order[toIndex];
+            if (!dragged || !target) return;
+
+            const notes = selectedNoteEntries.has(dragged)
+                ? getSelectedNotesInOrder()
+                : [dragged];
+            if (notes.includes(target)) return;
+
+            const movingFromAbove = notes.some(function (note) {
+                return order.indexOf(note) < toIndex;
+            });
+            moveNoteEntriesToIndex(notes, movingFromAbove ? toIndex + 1 : toIndex);
+        }
+
+        // Same lesson as $smseries above: Mudae's "sort by note" command has
+        // no confirmed append/insert/continuation mode, so this is one
+        // single command with the complete order, not a splittable one.
+        // The prefix itself is also unverified for notes specifically -
+        // $smseries turned out to be one word despite docs suggesting
+        // "$sm series" with a space, so this uses the same one-word pattern
+        // ($smnote) as the best guess. Test it in Discord before relying on it.
+        // Same tracking as lastSeriesOrderConfirmOrder above - which notes
+        // the most recently generated command actually covers.
+        let lastNoteOrderConfirmOrder = null;
+
+        function generateNoteOrderCommand() {
+            const order = getSyncedNoteOrder();
+            AppState.noteOrder = order;
+
+            const output = document.getElementById('noteOrderCommandOutput');
+            if (!output) return;
+
+            if (order.length === 0) {
+                showMessage('No notes to include - add notes to characters on this tab first.', 'error');
+                output.innerHTML = '';
+                return;
+            }
+
+            const prefix = '$smnote ';
+            const fullCommand = prefix + order.join('$');
+            const overNonNitroLimit = fullCommand.length > 2000;
+            const overNitroLimit = fullCommand.length > 4000;
+
+            let command = fullCommand;
+            let confirmOrder = order;
+            let limitWarning = '';
+            let countLabel = `${order.length} notes`;
+
+            if (overNitroLimit) {
+                const truncated = buildTruncatedJoinedCommand(prefix, order, NITRO_SAFE_LIMIT);
+                command = truncated.command;
+                confirmOrder = truncated.included;
+                countLabel = `${truncated.included.length} of ${order.length} notes`;
+                limitWarning = `<p class="sort-limit-warning" style="margin-top: -4px;">&#9888; Your full order is ${fullCommand.length.toLocaleString('en-US')} characters - too long even for Discord Nitro's 4,000 char limit, and this command can't be split across messages. The command below only covers the first ${truncated.included.length} of ${order.length} notes (as many as fit) - the remaining ${truncated.excluded.length} are left in their current order and need to be sorted separately, e.g. through <b>Series Order</b>, or by moving characters one at a time.</p>`;
+            } else if (overNonNitroLimit) {
+                limitWarning = `<p class="sort-limit-warning" style="margin-top: -4px;">&#9888; ${command.length.toLocaleString('en-US')} characters - over Discord's 2,000 char limit. There's no confirmed way to split this across messages - you'll need Discord Nitro (4,000 char limit) to send this as one message.</p>`;
+            }
+
+            lastNoteOrderConfirmOrder = confirmOrder;
+
+            output.innerHTML = `
+ <div class="commands-section">
+  <h2>Note Order Command</h2>
+  <p class="sort-hint" style="margin-top: -4px;">Unverified command name/syntax - please confirm <code>$smnote</code> actually works in Discord before relying on it (same caveat as $smseries).</p>
+  ${limitWarning}
+ </div>`;
+            const container = output.querySelector('.commands-section');
+
+            const commandItem = document.createElement('div');
+            commandItem.className = 'command-item';
+            commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${countLabel} - ${command.length.toLocaleString('en-US')} chars</div>
+      </div>
+      <div class="command-text">${escapeHTML(command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+      ${buildConfirmAppliedHTML('confirmNoteOrderApplied', overNonNitroLimit ? 'Ran this in Discord (needs Nitro) - update order' : 'Ran this in Discord - update order')}
+     `;
+            container.appendChild(commandItem);
+
+            saveToLocalStorage();
+        }
+
+        // Applies whatever the most recently generated $smnote command
+        // actually covered (see lastNoteOrderConfirmOrder) as the new
+        // baseline: within each series, reorders characters by where their
+        // note falls in that priority list (characters with no note, a
+        // note not covered, or a note that got truncated out, keep their
+        // existing relative order and fall after every matched note-group)
+        // - a stable sort, so nothing outside the command gets shuffled
+        // around for no reason.
+        function confirmNoteOrderApplied() {
+            const order = lastNoteOrderConfirmOrder || getSyncedNoteOrder();
+            if (order.length === 0) return;
+
+            const priority = new Map();
+            order.forEach(function (note, idx) { priority.set(note, idx); });
+
+            for (const seriesName in AppState.seriesData) {
+                const series = AppState.seriesData[seriesName];
+                const withIndex = series.characters.map(function (c, i) { return { c: c, i: i }; });
+                withIndex.sort(function (a, b) {
+                    const noteA = (a.c.note || '').trim();
+                    const noteB = (b.c.note || '').trim();
+                    const pa = priority.has(noteA) ? priority.get(noteA) : Infinity;
+                    const pb = priority.has(noteB) ? priority.get(noteB) : Infinity;
+                    if (pa !== pb) return pa - pb;
+                    return a.i - b.i;
+                });
+                series.characters = withIndex.map(function (x) { return x.c; });
+            }
+
+            displaySeries();
+            updateStats();
+            saveToLocalStorage();
+            showMessage('Note order applied - this is now the app\'s baseline order.', 'success');
         }
 
         // Builds $sm / $smp commands for the character order, in the same
@@ -5966,7 +7067,54 @@ ${rouletteBarHTML}
                 container.appendChild(commandItem);
             });
 
+            if (!overLimit) {
+                const confirmWrap = document.createElement('div');
+                confirmWrap.style.marginTop = '10px';
+                confirmWrap.innerHTML = (parts.length > 1
+                    ? `<p class="sort-hint" style="margin: 0 0 6px;">Only confirm once you've run all ${parts.length} commands above, in order.</p>`
+                    : '') + buildConfirmAppliedHTML('confirmCharacterOrderApplied', 'Ran this in Discord - update order');
+                container.appendChild(confirmWrap);
+            }
+
             saveToLocalStorage();
+        }
+
+        // Applies the just-generated $sm/$smp character order as the new
+        // baseline: reuses the same series+name / series+kakera / name
+        // matching the Sort tab already relies on (survives $alias renames)
+        // to link each sortData entry back to its real character, then
+        // reorders every series' characters array to match. Anything that
+        // couldn't be matched (e.g. filtered out of the $mmmka+s import)
+        // is left in its existing relative position, appended after the
+        // matched ones, rather than guessed at.
+        function confirmCharacterOrderApplied() {
+            const sortData = AppState.sortData || [];
+            if (sortData.length === 0) return;
+
+            const lookup = buildNotesLookupFromSeriesData(AppState.seriesData);
+            const orderedBySeries = {};
+            const usedChars = new Set();
+
+            sortData.forEach(function (entry) {
+                const match = findNotesMatch(entry, lookup);
+                if (!match || usedChars.has(match.char)) return;
+                usedChars.add(match.char);
+                if (!orderedBySeries[match.seriesName]) orderedBySeries[match.seriesName] = [];
+                orderedBySeries[match.seriesName].push(match.char);
+            });
+
+            for (const seriesName in AppState.seriesData) {
+                const series = AppState.seriesData[seriesName];
+                const matched = orderedBySeries[seriesName] || [];
+                const matchedSet = new Set(matched);
+                const leftover = series.characters.filter(function (c) { return !matchedSet.has(c); });
+                series.characters = matched.concat(leftover);
+            }
+
+            displaySeries();
+            updateStats();
+            saveToLocalStorage();
+            showMessage('Character order applied - this is now the app\'s baseline order.', 'success');
         }
 
         // $smpos starts a sort at a specific position: the first name is a
@@ -6130,6 +7278,7 @@ ${rouletteBarHTML}
                 if (!AppState.sortData) AppState.sortData = [];
                 if (typeof AppState.sortRawInput !== 'string') AppState.sortRawInput = '';
                 if (!AppState.seriesOrder) AppState.seriesOrder = [];
+                if (!AppState.noteOrder) AppState.noteOrder = [];
                 if (typeof AppState.ui.sortCompactView !== 'boolean') AppState.ui.sortCompactView = false;
                 if (!AppState.ui.sortViewMode) AppState.ui.sortViewMode = AppState.ui.sortCompactView ? 'compact' : 'detailed';
                 if (!AppState.ui.seriesViewMode) AppState.ui.seriesViewMode = 'list';
@@ -6147,6 +7296,11 @@ ${rouletteBarHTML}
                 if (seriesSearchField) seriesSearchField.value = '';
                 selectedSeriesEntries.clear();
                 lastSeriesClickIndex = null;
+                noteOrderFilterState.query = '';
+                const noteOrderSearchField = document.getElementById('noteOrderSearchInput');
+                if (noteOrderSearchField) noteOrderSearchField.value = '';
+                selectedNoteEntries.clear();
+                lastNoteClickIndex = null;
                 notesSearchQuery = '';
                 const notesSearchField = document.getElementById('notesSearchInput');
                 if (notesSearchField) notesSearchField.value = '';
@@ -6479,6 +7633,604 @@ ${rouletteBarHTML}
             inputField.value = demoText;
         }
 
+        // ===================== Colors tab: color wheel picker =====================
+        const colorPickerState = { h: 260, s: 70, l: 55, ready: false };
+
+        function hslToHex(h, s, l) {
+            s /= 100; l /= 100;
+            const k = n => (n + h / 30) % 12;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            const toHex = v => Math.round(v * 255).toString(16).padStart(2, '0');
+            return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+        }
+
+        function hexToHsl(hex) {
+            const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+            if (!m) return null;
+            let full = m[1].length === 3 ? m[1].split('').map(c => c + c).join('') : m[1];
+            const r = parseInt(full.slice(0, 2), 16) / 255;
+            const g = parseInt(full.slice(2, 4), 16) / 255;
+            const b = parseInt(full.slice(4, 6), 16) / 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    default: h = (r - g) / d + 4;
+                }
+                h *= 60;
+            }
+            return { h, s: s * 100, l: l * 100 };
+        }
+
+        function drawColorWheel() {
+            const canvas = document.getElementById('colorWheelCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const radius = size / 2;
+            const image = ctx.createImageData(size, size);
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const dx = x - radius;
+                    const dy = y - radius;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const idx = (y * size + x) * 4;
+                    if (dist > radius) continue;
+
+                    let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    if (angle < 0) angle += 360;
+                    const sat = Math.min(100, (dist / radius) * 100);
+
+                    const hex = hslToHex(angle, sat, 50);
+                    image.data[idx] = parseInt(hex.slice(1, 3), 16);
+                    image.data[idx + 1] = parseInt(hex.slice(3, 5), 16);
+                    image.data[idx + 2] = parseInt(hex.slice(5, 7), 16);
+                    image.data[idx + 3] = 255;
+                }
+            }
+            ctx.putImageData(image, 0, 0);
+            drawColorWheelMarker();
+        }
+
+        function drawColorWheelMarker() {
+            const canvas = document.getElementById('colorWheelCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const radius = size / 2;
+
+            // Re-draw from the cached base wheel would be ideal, but redrawing
+            // the whole wheel per marker move is cheap enough at this size and
+            // keeps this function simple - no separate canvas layer needed.
+            const angleRad = colorPickerState.h * Math.PI / 180;
+            const dist = (colorPickerState.s / 100) * radius;
+            const markerX = radius + Math.cos(angleRad) * dist;
+            const markerY = radius + Math.sin(angleRad) * dist;
+
+            ctx.beginPath();
+            ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function updateColorPickerDisplay() {
+            const hex = hslToHex(colorPickerState.h, colorPickerState.s, colorPickerState.l);
+            const swatch = document.getElementById('colorPreviewSwatch');
+            const hexInput = document.getElementById('colorHexInput');
+            const slider = document.getElementById('colorLightnessSlider');
+            if (swatch) swatch.style.background = hex;
+            if (hexInput && document.activeElement !== hexInput) hexInput.value = hex;
+            if (slider && document.activeElement !== slider) slider.value = Math.round(colorPickerState.l);
+            return hex;
+        }
+
+        function setColorFromWheelEvent(e) {
+            const canvas = document.getElementById('colorWheelCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const point = e.touches ? e.touches[0] : e;
+            const x = (point.clientX - rect.left) * scaleX;
+            const y = (point.clientY - rect.top) * scaleY;
+
+            const radius = canvas.width / 2;
+            const dx = x - radius;
+            const dy = y - radius;
+            const dist = Math.min(radius, Math.sqrt(dx * dx + dy * dy));
+
+            let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            if (angle < 0) angle += 360;
+
+            colorPickerState.h = angle;
+            colorPickerState.s = Math.min(100, (dist / radius) * 100);
+
+            drawColorWheel();
+            updateColorPickerDisplay();
+        }
+
+        // "Selected" here means the same thing it means on the Notes tab -
+        // characters that haven't been deselected/disabled (char.excluded is
+        // false) - so this surfaces exactly who "Selected Only" would hit,
+        // since that state isn't otherwise visible from the Colors tab.
+        let colorSelectedListVisible = false;
+
+        function getCurrentlySelectedCharacters() {
+            const result = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    if (!char.excluded) result.push({ name: char.name, series: seriesName });
+                });
+            }
+            return result;
+        }
+
+        function refreshColorSelectedSummary() {
+            const summary = document.getElementById('colorSelectedSummary');
+            const list = document.getElementById('colorSelectedList');
+            if (!summary || !list) return;
+
+            const selected = getCurrentlySelectedCharacters();
+            summary.textContent = Object.keys(AppState.seriesData).length === 0
+                ? ''
+                : `"Selected Only" currently covers ${selected.length} character${selected.length === 1 ? '' : 's'} (deselect/disable characters on the Notes tab to change this).`;
+
+            if (selected.length === 0) {
+                list.innerHTML = '<p class="sort-empty-hint" style="margin: 0;">No characters currently selected.</p>';
+                return;
+            }
+
+            const bySeries = {};
+            selected.forEach(function (c) {
+                if (!bySeries[c.series]) bySeries[c.series] = [];
+                bySeries[c.series].push(c.name);
+            });
+
+            list.innerHTML = Object.keys(bySeries).sort(function (a, b) { return a.localeCompare(b); }).map(function (seriesName) {
+                const names = bySeries[seriesName].map(function (n) { return `<p>${escapeHTML(n)}</p>`; }).join('');
+                return `<div class="color-selected-series">${escapeHTML(seriesName)}</div>${names}`;
+            }).join('');
+        }
+
+        function toggleColorSelectedList() {
+            const list = document.getElementById('colorSelectedList');
+            const btn = document.getElementById('colorSelectedToggleBtn');
+            if (!list) return;
+            colorSelectedListVisible = !colorSelectedListVisible;
+            list.style.display = colorSelectedListVisible ? '' : 'none';
+            if (btn) btn.textContent = colorSelectedListVisible ? 'Hide Selected' : 'Show Selected';
+            if (colorSelectedListVisible) refreshColorSelectedSummary();
+        }
+
+        function initColorPicker() {
+            const canvas = document.getElementById('colorWheelCanvas');
+            const slider = document.getElementById('colorLightnessSlider');
+            const hexInput = document.getElementById('colorHexInput');
+            if (!canvas) return;
+
+            drawColorWheel();
+            updateColorPickerDisplay();
+            refreshColorSelectedSummary();
+
+            if (colorPickerState.ready) return;
+            colorPickerState.ready = true;
+
+            let dragging = false;
+            canvas.addEventListener('pointerdown', function (e) {
+                dragging = true;
+                setColorFromWheelEvent(e);
+            });
+            window.addEventListener('pointermove', function (e) {
+                if (dragging) setColorFromWheelEvent(e);
+            });
+            window.addEventListener('pointerup', function () { dragging = false; });
+
+            if (slider) {
+                slider.addEventListener('input', function () {
+                    colorPickerState.l = parseInt(slider.value, 10);
+                    updateColorPickerDisplay();
+                });
+            }
+
+            if (hexInput) {
+                hexInput.addEventListener('input', function () {
+                    const hsl = hexToHsl(hexInput.value);
+                    if (!hsl) return;
+                    colorPickerState.h = hsl.h;
+                    colorPickerState.s = hsl.s;
+                    colorPickerState.l = hsl.l;
+                    drawColorWheel();
+                    updateColorPickerDisplay();
+                });
+            }
+        }
+
+        // Applies the currently picked color to every character's hex color
+        // across the whole collection (not scoped to one series/group), same
+        // as the bulk-color group tool but collection-wide.
+        function applyPickedColor(target) {
+            if (Object.keys(AppState.seriesData).length === 0) {
+                showMessage('No collection parsed yet - head to the Notes tab first.', 'error');
+                return;
+            }
+
+            const hex = updateColorPickerDisplay();
+            let count = 0;
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const applies = (target === 'all') || (target === 'selected' && !char.excluded);
+                    if (applies) {
+                        char.color = hex;
+                        count++;
+                    }
+                });
+            }
+
+            const countDiv = document.getElementById('colorApplyCount');
+            if (countDiv) countDiv.textContent = `Applied ${hex} to ${count} character${count === 1 ? '' : 's'}.`;
+            showMessage(`Applied ${hex} to ${count} character${count === 1 ? '' : 's'}.`, 'success');
+
+            if (AppState.ui.grouping === 'color') {
+                displaySeries();
+            }
+            updateStats();
+            saveToLocalStorage();
+        }
+
+        function saveColorToQuickNotes() {
+            const hex = updateColorPickerDisplay();
+            if (AppState.quickNotes.indexOf(hex) === -1) {
+                AppState.quickNotes.push(hex);
+                displayQuickNotes();
+                saveToLocalStorage();
+            }
+            showMessage(`Saved ${hex} to Quick Notes.`, 'success');
+        }
+
+        // ===================== "What's New" changelog popup =====================
+        // Newest entry first. Bump CHANGELOG_VERSION whenever a new entry is
+        // added - that's what triggers the popup for anyone who last saw an
+        // older version (tracked in localStorage, not per-collection state).
+        // Each item is tagged 'feature' or 'fix' - fixes are noise to most
+        // users (nothing they need to act on), so they're collapsed behind a
+        // "Show N bug fixes" toggle instead of shown by default.
+        const CHANGELOG_VERSION = '2026-08-07';
+        const CHANGELOG = [
+            {
+                version: '2026-08-07',
+                date: 'August 7, 2026',
+                items: [
+                    { type: 'feature', text: 'New <b>Colors tab</b>: pick a color visually with a color wheel + lightness slider (or type a hex directly), then apply it to all characters or just your currently selected ones - with a "Show Selected" list so you can see exactly who that\'ll affect first.' },
+                    { type: 'feature', text: 'New <b>Sort by Notes</b> section on the Notes tab: drag your notes into a priority order and generate a <code>$smnote</code> command, without leaving the tab.' },
+                    { type: 'feature', text: 'New <b>+ Add New Characters</b> popup: walks you through running <code>$mmsaty+ri-c+x+kon</code> (your usual import flags plus <code>n</code> for "not noted") to DM yourself just your newest un-noted characters, then merges them into your existing collection from a dedicated paste box instead of re-pasting and re-parsing everything from scratch.' },
+                    { type: 'feature', text: 'New <b>confirm order applied</b> button on the $sm / $smseries / $smnote command outputs: after running the command in Discord, click it to lock that order in as the app\'s new baseline, so later sorting/exports build on the real current order instead of the stale one from your last full import.' },
+                    { type: 'feature', text: 'If your <code>$smseries</code>/<code>$smnote</code> order is too long even for Discord Nitro\'s 4,000 char limit, the command is now cut off at the last series/note that fits (instead of just refusing), with a clear note on how many were left out and where to sort the rest manually - and you can still confirm the partial order that was actually sent.' },
+                    { type: 'feature', text: 'New <b>Wishlists</b> tab: save your own and your friends\' <code>$wishlist</code> output, then compare any two to see exactly which characters overlap - handy for trades or spotting who else wants what you\'ve got. A trailing <code>⭐</code> (starwish) or <code>✅</code> (already claimed) is recognized and shown in the results.' },
+                    { type: 'fix', text: 'The Min/Max Keys (and other) filters could get characters stuck hidden - re-applying a looser filter now correctly un-hides matching characters again.' },
+                    { type: 'fix', text: 'Custom ranking order inside a note group could silently reset (e.g. after applying a note elsewhere) - it\'s now saved as soon as it\'s assigned.' },
+                    { type: 'fix', text: '<code>$smseries</code> generation for large collections now sends one single, complete command instead of multiple commands that looked valid but actually overwrote each other - Mudae has no confirmed way to append/insert/continue a series sort across messages. You\'ll get a clear over-the-character-limit warning instead.' },
+                    { type: 'fix', text: 'Editing a note or rank and pressing Enter could occasionally throw an error and leave the editor stuck open, caused by a rare double-save race between the Enter key and the input losing focus.' },
+                    { type: 'fix', text: 'Adding a character to a series you already had (via + Add New Characters) used to show up as a second, duplicate series block at the bottom of the input box instead of grouped with the rest of that series - and within a series, newly-added characters now slot in by global rank (lower # first) instead of always landing last regardless of rank.' },
+                    { type: 'fix', text: 'The "confirm order applied" button was hidden for any command over 2,000 characters, even ones comfortably under Discord Nitro\'s 4,000 char limit that could plausibly have actually been run.' }
+                ]
+            }
+        ];
+
+        function showChangelogIfNeeded() {
+            const overlay = document.getElementById('changelogOverlay');
+            const body = document.getElementById('changelogBody');
+            if (!overlay || !body) return;
+
+            let seenVersion = null;
+            try { seenVersion = localStorage.getItem('mudaeChangelogSeenVersion'); } catch (e) { }
+            if (seenVersion === CHANGELOG_VERSION) return;
+
+            const unseenEntries = seenVersion
+                ? CHANGELOG.filter(function (entry) { return entry.version > seenVersion; })
+                : [CHANGELOG[0]];
+            const entriesToShow = unseenEntries.length ? unseenEntries : [CHANGELOG[0]];
+
+            body.innerHTML = entriesToShow.map(function (entry) {
+                const features = entry.items.filter(function (item) { return item.type !== 'fix'; });
+                const fixes = entry.items.filter(function (item) { return item.type === 'fix'; });
+
+                const featuresHTML = features.length
+                    ? `<ul>${features.map(function (item) { return `<li>${item.text}</li>`; }).join('')}</ul>`
+                    : '';
+
+                const fixesHTML = fixes.length
+                    ? `<button type="button" class="changelog-fixes-toggle" onclick="toggleChangelogFixes(this)">Show ${fixes.length} bug fix${fixes.length === 1 ? '' : 'es'}</button>
+                       <ul class="changelog-fixes-list" style="display: none;">${fixes.map(function (item) { return `<li>${item.text}</li>`; }).join('')}</ul>`
+                    : '';
+
+                return `<div class="changelog-entry"><div class="changelog-entry-date">${escapeHTML(entry.date)}</div>${featuresHTML}${fixesHTML}</div>`;
+            }).join('');
+
+            overlay.style.display = 'flex';
+        }
+
+        function toggleChangelogFixes(btn) {
+            const list = btn.nextElementSibling;
+            if (!list) return;
+            const nowVisible = list.style.display === 'none';
+            list.style.display = nowVisible ? '' : 'none';
+            const count = list.querySelectorAll('li').length;
+            btn.textContent = nowVisible
+                ? `Hide bug fix${count === 1 ? '' : 'es'}`
+                : `Show ${count} bug fix${count === 1 ? '' : 'es'}`;
+        }
+
+        function dismissChangelog() {
+            const overlay = document.getElementById('changelogOverlay');
+            if (overlay) overlay.style.display = 'none';
+            try { localStorage.setItem('mudaeChangelogSeenVersion', CHANGELOG_VERSION); } catch (e) { }
+        }
+
+        // ===================== Wishlists (standalone tab) =====================
+        // Stored independently of AppState/collections (own localStorage key)
+        // since a wishlist represents a Discord user's wishes, not something
+        // scoped to one particular collection import - useful to keep around
+        // and compare no matter which collection you're currently viewing.
+        const WISHLISTS_STORAGE_KEY = 'mudaeWishlists';
+        let WishlistState = { entries: {}, order: [] };
+        let wishlistEditingId = null;
+
+        function loadWishlists() {
+            try {
+                const raw = localStorage.getItem(WISHLISTS_STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    WishlistState = {
+                        entries: parsed.entries || {},
+                        order: Array.isArray(parsed.order) ? parsed.order : Object.keys(parsed.entries || {})
+                    };
+                }
+            } catch (e) {
+                console.error('Failed to load wishlists:', e);
+            }
+        }
+
+        function saveWishlists() {
+            try {
+                localStorage.setItem(WISHLISTS_STORAGE_KEY, JSON.stringify(WishlistState));
+            } catch (e) {
+                console.error('Failed to save wishlists:', e);
+            }
+        }
+
+        // A trailing star (starwish - top priority) or check mark (already
+        // claimed) is real signal from Mudae's own $wishlist output, not
+        // decoration - both are recognized regardless of order and kept
+        // alongside the plain name rather than stripped.
+        function parseWishlistText(text) {
+            const characters = [];
+            text.split('\n').forEach(function (rawLine) {
+                let line = rawLine.trim();
+                if (!line) return;
+
+                let isStarWish = false;
+                let isClaimed = false;
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    const starMatch = line.match(/\s*⭐\s*$/);
+                    if (starMatch) {
+                        isStarWish = true;
+                        line = line.slice(0, starMatch.index).trim();
+                        changed = true;
+                        continue;
+                    }
+                    const claimedMatch = line.match(/\s*✅\s*$/);
+                    if (claimedMatch) {
+                        isClaimed = true;
+                        line = line.slice(0, claimedMatch.index).trim();
+                        changed = true;
+                    }
+                }
+
+                if (line) characters.push({ name: line, isStarWish: isStarWish, isClaimed: isClaimed });
+            });
+            return characters;
+        }
+
+        function normalizeWishName(name) {
+            return name.trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function generateWishlistId() {
+            return 'wl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function openWishlistModal(editId) {
+            const overlay = document.getElementById('wishlistModalOverlay');
+            const title = document.getElementById('wishlistModalTitle');
+            const nameField = document.getElementById('wishlistNameInput');
+            const textField = document.getElementById('wishlistTextInput');
+            const message = document.getElementById('wishlistModalMessage');
+            if (!overlay) return;
+
+            wishlistEditingId = editId || null;
+            const existing = editId ? WishlistState.entries[editId] : null;
+
+            if (title) title.textContent = existing ? 'Edit Wishlist' : 'Add Wishlist';
+            if (nameField) nameField.value = existing ? existing.name : '';
+            if (textField) {
+                textField.value = existing
+                    ? existing.characters.map(function (c) {
+                        return c.name + (c.isStarWish ? ' ⭐' : '') + (c.isClaimed ? ' ✅' : '');
+                    }).join('\n')
+                    : '';
+            }
+            if (message) message.innerHTML = '';
+
+            overlay.style.display = 'flex';
+            if (nameField) nameField.focus();
+        }
+
+        function closeWishlistModal() {
+            const overlay = document.getElementById('wishlistModalOverlay');
+            if (overlay) overlay.style.display = 'none';
+            wishlistEditingId = null;
+        }
+
+        function submitWishlistModal() {
+            const nameField = document.getElementById('wishlistNameInput');
+            const textField = document.getElementById('wishlistTextInput');
+            const message = document.getElementById('wishlistModalMessage');
+
+            const name = nameField ? nameField.value.trim() : '';
+            const text = textField ? textField.value.trim() : '';
+
+            if (!name) {
+                if (message) message.innerHTML = '<p class="error-message">Give this wishlist a name first.</p>';
+                return;
+            }
+            if (!text) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the wishlist\'s characters first.</p>';
+                return;
+            }
+
+            const characters = parseWishlistText(text);
+            if (characters.length === 0) {
+                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any character names in that text.</p>';
+                return;
+            }
+
+            const id = wishlistEditingId || generateWishlistId();
+            WishlistState.entries[id] = { id: id, name: name, characters: characters, updatedAt: Date.now() };
+            if (!WishlistState.order.includes(id)) WishlistState.order.push(id);
+
+            saveWishlists();
+            closeWishlistModal();
+            renderWishlistsList();
+            populateWishlistCompareSelects();
+            showMessage(`Saved "${name}"'s wishlist (${characters.length} character${characters.length === 1 ? '' : 's'}).`, 'success');
+        }
+
+        function deleteWishlist(id) {
+            const entry = WishlistState.entries[id];
+            if (!entry) return;
+            delete WishlistState.entries[id];
+            WishlistState.order = WishlistState.order.filter(function (x) { return x !== id; });
+            saveWishlists();
+            renderWishlistsList();
+            populateWishlistCompareSelects();
+            showMessage(`Deleted "${entry.name}"'s wishlist.`, 'success');
+        }
+
+        function renderWishlistsList() {
+            const container = document.getElementById('wishlistsList');
+            if (!container) return;
+
+            if (WishlistState.order.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No wishlists saved yet - click + Add Wishlist to save your own or a friend\'s.</p>';
+                return;
+            }
+
+            container.innerHTML = WishlistState.order.map(function (id) {
+                const entry = WishlistState.entries[id];
+                if (!entry) return '';
+                const starCount = entry.characters.filter(function (c) { return c.isStarWish; }).length;
+                return `<div class="wishlist-card">
+            <div class="wishlist-card-name">${escapeHTML(entry.name)}</div>
+            <div class="wishlist-card-count">${entry.characters.length} character${entry.characters.length === 1 ? '' : 's'}${starCount ? ` - ${starCount} starwish${starCount === 1 ? '' : 'es'}` : ''}</div>
+            <div class="wishlist-card-actions">
+                <button class="btn btn-sm" onclick="openWishlistModal('${id}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteWishlist('${id}')">Delete</button>
+            </div>
+        </div>`;
+            }).join('');
+        }
+
+        function populateWishlistCompareSelects() {
+            const selectA = document.getElementById('wishlistCompareA');
+            const selectB = document.getElementById('wishlistCompareB');
+            if (!selectA || !selectB) return;
+
+            const prevA = selectA.value;
+            const prevB = selectB.value;
+
+            const optionsHTML = '<option value="">Select a wishlist...</option>' + WishlistState.order.map(function (id) {
+                const entry = WishlistState.entries[id];
+                return entry ? `<option value="${id}">${escapeHTML(entry.name)}</option>` : '';
+            }).join('');
+
+            selectA.innerHTML = optionsHTML;
+            selectB.innerHTML = optionsHTML;
+
+            if (WishlistState.entries[prevA]) selectA.value = prevA;
+            if (WishlistState.entries[prevB]) selectB.value = prevB;
+        }
+
+        function compareWishlists() {
+            const selectA = document.getElementById('wishlistCompareA');
+            const selectB = document.getElementById('wishlistCompareB');
+            const result = document.getElementById('wishlistCompareResult');
+            if (!selectA || !selectB || !result) return;
+
+            const idA = selectA.value;
+            const idB = selectB.value;
+
+            if (!idA || !idB) {
+                result.innerHTML = '<p class="error-message">Pick two wishlists to compare.</p>';
+                return;
+            }
+            if (idA === idB) {
+                result.innerHTML = '<p class="error-message">Pick two different wishlists.</p>';
+                return;
+            }
+
+            const wlA = WishlistState.entries[idA];
+            const wlB = WishlistState.entries[idB];
+            if (!wlA || !wlB) return;
+
+            const mapB = new Map();
+            wlB.characters.forEach(function (c) { mapB.set(normalizeWishName(c.name), c); });
+
+            const overlap = [];
+            wlA.characters.forEach(function (charA) {
+                const key = normalizeWishName(charA.name);
+                if (mapB.has(key)) overlap.push({ a: charA, b: mapB.get(key) });
+            });
+
+            if (overlap.length === 0) {
+                result.innerHTML = `<p class="sort-empty-hint" style="margin-top: 14px;">No overlap between <b>${escapeHTML(wlA.name)}</b> and <b>${escapeHTML(wlB.name)}</b>.</p>`;
+                return;
+            }
+
+            const markerHTML = function (c, label) {
+                const bits = [];
+                if (c.isStarWish) bits.push(`<span class="wishlist-marker" title="Starwish (${label})">⭐</span>`);
+                if (c.isClaimed) bits.push(`<span class="wishlist-marker" title="Already claimed (${label})">✅</span>`);
+                return bits.join('');
+            };
+
+            const items = overlap.map(function (pair) {
+                return `<div class="wishlist-overlap-item">
+            <span class="wishlist-overlap-name">${escapeHTML(pair.a.name)}</span>
+            <span title="${escapeHTML(wlA.name)}">${markerHTML(pair.a, escapeHTML(wlA.name))}</span>
+            <span title="${escapeHTML(wlB.name)}">${markerHTML(pair.b, escapeHTML(wlB.name))}</span>
+        </div>`;
+            }).join('');
+
+            result.innerHTML = `<p class="sort-hint" style="margin-top: 14px;">${overlap.length} character${overlap.length === 1 ? '' : 's'} on both <b>${escapeHTML(wlA.name)}</b>'s and <b>${escapeHTML(wlB.name)}</b>'s wishlist:</p>
+        <div class="wishlist-overlap-list">${items}</div>`;
+        }
+
         // Run after every function/const/let above is declared - some of
         // these (loadFromLocalStorage, initMsFilters) reference `let`/`const`
         // bindings declared further down the file, which are in their
@@ -6486,6 +8238,8 @@ ${rouletteBarHTML}
         initQuickNotes();
         loadFromLocalStorage();
         initMsFilters();
+        showChangelogIfNeeded();
+        loadWishlists();
     </script>
 </body>
 

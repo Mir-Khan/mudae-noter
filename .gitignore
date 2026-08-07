@@ -1,2 +1,4 @@
 *.txt
 ranker.html
+node_modules/
+tests/screenshots/
