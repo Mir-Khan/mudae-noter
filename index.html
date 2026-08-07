@@ -333,6 +333,19 @@
             border-color: #7c3aed;
         }
 
+        .notes-top-search-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 18px;
+        }
+
+        .notes-top-search-bar #notesSearchNoteTop {
+            flex-basis: 100%;
+            margin: 0;
+        }
+
         .hidden-char {
             display: none !important;
         }
@@ -1945,6 +1958,18 @@
             opacity: 0.5;
         }
 
+        /* Below ~1950px there's no longer room for the container, the gap,
+           and the 280px Quick Notes sidebar side by side with margin to
+           spare, so the sidebar's bottom-right corner (its "Add note" box)
+           ends up sitting right where this bar is fixed - move it to the
+           opposite corner so the two stop overlapping. */
+        @media (max-width: 1950px) {
+            .floating-undo-bar {
+                right: auto;
+                left: 24px;
+            }
+        }
+
         .changelog-overlay {
             position: fixed;
             inset: 0;
@@ -2556,7 +2581,7 @@
                         <h3>Search</h3>
                         <div class="button-group" style="flex-wrap: nowrap;">
                             <input type="text" id="notesSearchInput" placeholder="Search name, series, note, or owner..."
-                                oninput="onNotesSearchChange()" class="add-note-input" style="flex: 1;">
+                                oninput="onNotesSearchChange(this)" class="add-note-input" style="flex: 1;">
                             <button type="button" class="btn btn-sm" onclick="clearNotesSearch()">Reset</button>
                         </div>
                         <div id="notesSearchNote" class="sort-filter-note" style="margin-top: 6px;"></div>
@@ -2646,6 +2671,12 @@
         </div>
         <div id="message"></div>
         <div id="playerStatsSection" style="display: none;"></div>
+        <div class="notes-top-search-bar">
+            <input type="text" id="notesSearchInputTop" placeholder="Search name or series..."
+                oninput="onNotesSearchChange(this)" class="add-note-input" style="flex: 1;">
+            <button type="button" class="btn btn-sm" onclick="clearNotesSearch()">Reset</button>
+            <div id="notesSearchNoteTop" class="sort-filter-note"></div>
+        </div>
         <div id="seriesGrid" class="series-grid"></div>
         <div id="commands"></div>
         </div>
@@ -3196,6 +3227,7 @@
                         needsFullRender = true;
                     } else {
                         char.note = newValue.trim();
+                        syncSortDataForCharacter(series, char);
 
                         if (AppState.ui.grouping === 'note') {
                             needsFullRender = true;
@@ -3218,6 +3250,7 @@
                     } else if (action === 'edit-note') {
                         renderNoteOrderList();
                     }
+                    if (action === 'edit-note') refreshSortTabIfVisible();
                 };
                 input.onblur = saveAndClose;
                 input.onkeydown = (event) => { if (event.key === 'Enter') saveAndClose(); };
@@ -3320,6 +3353,7 @@
                             const originalChar = AppState.seriesData[char.originalSeries].characters[char.originalIndex];
                             if (isNote) originalChar.note = newValue;
                             else originalChar.color = newValue.trim();
+                            syncSortDataForCharacter(char.originalSeries, originalChar);
                         }
                     });
 
@@ -3335,6 +3369,7 @@
                         // branch skips that full re-render.
                         if (isNote) renderNoteOrderList();
                     }
+                    refreshSortTabIfVisible();
                     break;
                 }
             }
@@ -3643,11 +3678,46 @@
                 });
             });
 
+            refreshSortTabIfVisible();
+        }
+
+        function refreshSortTabIfVisible() {
             const sortPanel = document.getElementById('sortTabPanel');
             if (sortPanel && sortPanel.style.display !== 'none') {
                 renderSortCharacterList();
                 updateSortInfoBanner();
             }
+        }
+
+        // Edits made directly on the Notes tab (a single character's note,
+        // or a series group's "apply note to all/selected") write straight
+        // onto the AppState.seriesData character - unlike the confirm-based
+        // flows (Series/Note Order, Colors), there's no command round-trip
+        // to hang a resync off of, so the matching AppState.sortData entry
+        // (if the Sort tab has data) needs to be kept in sync here directly,
+        // or it silently keeps showing the old note/color/etc.
+        function syncSortDataForCharacter(seriesName, char) {
+            if (!AppState.sortData || AppState.sortData.length === 0) return null;
+
+            const seriesKey = normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(char.name);
+            let entry = AppState.sortData.find(function (e) {
+                return normalizeMatchPart(e.series) + '::' + normalizeMatchPart(e.name) === seriesKey;
+            });
+            if (!entry) {
+                entry = AppState.sortData.find(function (e) { return normalizeMatchPart(e.name) === normalizeMatchPart(char.name); });
+            }
+            if (!entry) return null;
+
+            entry.matched = true;
+            entry.note = char.note || '';
+            entry.image = char.image || '';
+            entry.color = char.color || '';
+            entry.keys = char.keys || '';
+            entry.owner = char.owner || '';
+            entry.mudaeTags = char.mudaeTags ? char.mudaeTags.slice() : [];
+            entry.isDisabled = !!char.isDisabled;
+            entry.globalRank = char.globalRank || '';
+            return entry;
         }
 
         // Shared cleanup after either parseInput() or a successful merge:
@@ -3725,38 +3795,49 @@
             return !hiddenByExclusion && characterMatchesNotesSearch(char);
         }
 
-        function onNotesSearchChange() {
-            const field = document.getElementById('notesSearchInput');
-            notesSearchQuery = field ? field.value.trim().toLowerCase() : '';
+        // Two search boxes share this one query: the original one buried in
+        // the Options panel, and a second one right above the character
+        // grid itself (added since, on a large harem, scrolling all the way
+        // back up to Options just to search is the same "hard to get back
+        // to a control" problem the sticky tab bar solves). Whichever one
+        // the user types into, both stay in sync.
+        function onNotesSearchChange(sourceField) {
+            const value = sourceField ? sourceField.value : '';
+            notesSearchQuery = value.trim().toLowerCase();
+            ['notesSearchInput', 'notesSearchInputTop'].forEach(function (id) {
+                const field = document.getElementById(id);
+                if (field && field !== sourceField) field.value = value;
+            });
             displaySeries();
         }
 
         function clearNotesSearch() {
-            const field = document.getElementById('notesSearchInput');
-            if (field) field.value = '';
+            ['notesSearchInput', 'notesSearchInputTop'].forEach(function (id) {
+                const field = document.getElementById(id);
+                if (field) field.value = '';
+            });
             notesSearchQuery = '';
             displaySeries();
         }
 
         function updateNotesSearchNote() {
-            const note = document.getElementById('notesSearchNote');
-            if (!note) return;
-
-            if (!notesSearchQuery) {
-                note.textContent = '';
-                return;
-            }
-
             let total = 0;
             let matched = 0;
-            for (const seriesName in AppState.seriesData) {
-                AppState.seriesData[seriesName].characters.forEach(function (char) {
-                    total++;
-                    const haystack = `${char.name} ${seriesName} ${char.note || ''} ${char.owner || ''}`.toLowerCase();
-                    if (haystack.includes(notesSearchQuery)) matched++;
-                });
+            if (notesSearchQuery) {
+                for (const seriesName in AppState.seriesData) {
+                    AppState.seriesData[seriesName].characters.forEach(function (char) {
+                        total++;
+                        const haystack = `${char.name} ${seriesName} ${char.note || ''} ${char.owner || ''}`.toLowerCase();
+                        if (haystack.includes(notesSearchQuery)) matched++;
+                    });
+                }
             }
-            note.textContent = `Showing ${matched} of ${total} characters matching search`;
+
+            const text = notesSearchQuery ? `Showing ${matched} of ${total} characters matching search` : '';
+            ['notesSearchNote', 'notesSearchNoteTop'].forEach(function (id) {
+                const note = document.getElementById(id);
+                if (note) note.textContent = text;
+            });
         }
 
         function createCharacterCardHTML(char) {

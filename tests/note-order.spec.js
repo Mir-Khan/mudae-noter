@@ -3,6 +3,85 @@ const { loadDemoCollection } = require('./helpers');
 
 module.exports = [
     {
+        // Regression test for a real report: editing a single character's
+        // note directly on the Notes tab updated AppState.seriesData but
+        // never touched the matching AppState.sortData entry, so the Sort
+        // tab kept showing the character with its old (or no) note.
+        name: 'editing a single character\'s note also updates its AppState.sortData entry',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const sortInputText = await page.evaluate(() => {
+                const lines = [];
+                for (const seriesName in AppState.seriesData) {
+                    AppState.seriesData[seriesName].characters.forEach(c => {
+                        lines.push(`${c.name} - ${seriesName} ${c.kakera || 1} ka`);
+                    });
+                }
+                return lines.join('\n');
+            });
+            await page.click('#tab-sort-btn');
+            await page.waitForSelector('#sortInput');
+            await page.fill('#sortInput', sortInputText);
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForSelector('#sortCharacterList .sort-character-item');
+
+            await page.click('#tab-notes-btn');
+            const card = page.locator('.character-card').first();
+            const charName = await card.locator('.character-name').textContent();
+            await card.locator('[data-action="edit-note"]').click();
+            await page.keyboard.type('DirectlyEditedNote');
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(150);
+
+            const sortEntry = await page.evaluate((name) => {
+                return AppState.sortData.find(e => e.name === name.trim());
+            }, charName);
+            assert.ok(sortEntry, `expected to find a sortData entry for "${charName.trim()}"`);
+            assert.strictEqual(sortEntry.note, 'DirectlyEditedNote', `expected the sortData entry's note to reflect the edit, got: ${JSON.stringify(sortEntry)}`);
+        }
+    },
+    {
+        // Same bug, via the series group's bulk "Apply note" widget instead
+        // of a single-character edit.
+        name: 'applying a note to a whole series (bulk-note) also updates AppState.sortData for each character',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const sortInputText = await page.evaluate(() => {
+                const lines = [];
+                for (const seriesName in AppState.seriesData) {
+                    AppState.seriesData[seriesName].characters.forEach(c => {
+                        lines.push(`${c.name} - ${seriesName} ${c.kakera || 1} ka`);
+                    });
+                }
+                return lines.join('\n');
+            });
+            await page.click('#tab-sort-btn');
+            await page.waitForSelector('#sortInput');
+            await page.fill('#sortInput', sortInputText);
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForSelector('#sortCharacterList .sort-character-item');
+
+            await page.click('#tab-notes-btn');
+            const firstGroup = page.locator('.series-card').first();
+            const namesInGroup = await firstGroup.locator('.character-name').allTextContents();
+            await firstGroup.locator('.note-input').first().fill('BulkNoteSync');
+            await firstGroup.locator('[data-action="bulk-note"][data-target="all"]').click();
+            await page.waitForTimeout(150);
+
+            const sortNotes = await page.evaluate((names) => {
+                return names.map(n => {
+                    const entry = AppState.sortData.find(e => e.name === n.trim());
+                    return entry ? entry.note : null;
+                });
+            }, namesInGroup);
+            sortNotes.forEach((note, i) => {
+                assert.strictEqual(note, 'BulkNoteSync', `expected "${namesInGroup[i].trim()}"'s sortData note to be updated, got: ${note}`);
+            });
+        }
+    },
+    {
         name: 'notes applied to characters show up in the Sort by Notes list',
         async run(page) {
             await loadDemoCollection(page);
