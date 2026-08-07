@@ -6663,7 +6663,15 @@ ${rouletteBarHTML}
         // than rebuilding it from scratch. Entries that never matched a
         // Notes-tab character in the first place keep their old relative
         // position, appended after everything that did.
-        function resyncSortDataToSeriesOrder() {
+        // Shared by both resync paths below: given the TRUE intended flat
+        // character order (as a list of {series, char} pairs - which may
+        // interleave series, e.g. after a note-order confirm), relocates
+        // each existing AppState.sortData entry to match that order,
+        // keeping its already-merged kakera/note/image/etc rather than
+        // rebuilding it from scratch. Entries that never matched a
+        // Notes-tab character keep their old relative position, appended
+        // after everything that did.
+        function resyncSortDataToOrderedList(orderedList) {
             if (!AppState.sortData || AppState.sortData.length === 0) return;
 
             const bySeriesName = new Map();
@@ -6678,16 +6686,14 @@ ${rouletteBarHTML}
             const newOrder = [];
             const used = new Set();
 
-            for (const seriesName in AppState.seriesData) {
-                AppState.seriesData[seriesName].characters.forEach(function (char) {
-                    const seriesKey = normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(char.name);
-                    let entry = bySeriesName.get(seriesKey);
-                    if (!entry) entry = byName.get(normalizeMatchPart(char.name));
-                    if (!entry || used.has(entry)) return;
-                    used.add(entry);
-                    newOrder.push(entry);
-                });
-            }
+            orderedList.forEach(function (item) {
+                const seriesKey = normalizeMatchPart(item.series) + '::' + normalizeMatchPart(item.char.name);
+                let entry = bySeriesName.get(seriesKey);
+                if (!entry) entry = byName.get(normalizeMatchPart(item.char.name));
+                if (!entry || used.has(entry)) return;
+                used.add(entry);
+                newOrder.push(entry);
+            });
 
             AppState.sortData.forEach(function (entry) {
                 if (!used.has(entry)) newOrder.push(entry);
@@ -6695,11 +6701,37 @@ ${rouletteBarHTML}
 
             AppState.sortData = newOrder;
 
+            // If barely anything matched, the Sort tab's data is almost
+            // certainly a stale $mmmka+s paste from before the current
+            // collection (e.g. characters/names that no longer line up) -
+            // in that case this resync is effectively a no-op and the Sort
+            // tab will look untouched, silently. Flag it instead of leaving
+            // the user to wonder why nothing moved.
+            const matchRate = AppState.sortData.length > 0 ? used.size / AppState.sortData.length : 1;
+            if (used.size === 0 || matchRate < 0.5) {
+                showMessage(`Sort tab order applied, but only matched ${used.size} of ${AppState.sortData.length} characters to your current collection - it looks like the Sort tab has an outdated $mmmka+s paste. Re-paste and re-parse it on the Sort tab to keep it in sync.`, 'error');
+            }
+
             const sortPanel = document.getElementById('sortTabPanel');
             if (sortPanel && sortPanel.style.display !== 'none') {
                 renderSortCharacterList();
                 updateSortInfoBanner();
             }
+        }
+
+        // Series-block variant: valid after a series-order confirm, where
+        // $smseries genuinely moves whole series blocks around but leaves
+        // each series' internal character order untouched - so
+        // concatenating AppState.seriesData's series in their (already
+        // reordered) key order is the correct flat order.
+        function resyncSortDataToSeriesOrder() {
+            const orderedList = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    orderedList.push({ series: seriesName, char: char });
+                });
+            }
+            resyncSortDataToOrderedList(orderedList);
         }
 
         function confirmSeriesOrderApplied() {
@@ -7023,21 +7055,44 @@ ${rouletteBarHTML}
             const priority = new Map();
             order.forEach(function (note, idx) { priority.set(note, idx); });
 
-            for (const seriesName in AppState.seriesData) {
-                const series = AppState.seriesData[seriesName];
-                const withIndex = series.characters.map(function (c, i) { return { c: c, i: i }; });
-                withIndex.sort(function (a, b) {
-                    const noteA = (a.c.note || '').trim();
-                    const noteB = (b.c.note || '').trim();
-                    const pa = priority.has(noteA) ? priority.get(noteA) : Infinity;
-                    const pb = priority.has(noteB) ? priority.get(noteB) : Infinity;
-                    if (pa !== pb) return pa - pb;
-                    return a.i - b.i;
-                });
-                series.characters = withIndex.map(function (x) { return x.c; });
+            function compareByNotePriority(a, b) {
+                const noteA = (a.char.note || '').trim();
+                const noteB = (b.char.note || '').trim();
+                const pa = priority.has(noteA) ? priority.get(noteA) : Infinity;
+                const pb = priority.has(noteB) ? priority.get(noteB) : Infinity;
+                if (pa !== pb) return pa - pb;
+                return a.i - b.i;
             }
 
-            resyncSortDataToSeriesOrder();
+            // Real Mudae $smnote sorts the WHOLE roster together, interleaving
+            // characters across series (verified against an actual Discord
+            // result - e.g. a One Piece character can land directly next to a
+            // Dragon Ball one if their notes tie). AppState.seriesData can't
+            // represent that interleaving (it's nested by series), so build
+            // the true flat order separately for syncing AppState.sortData/the
+            // Sort tab, from the pre-sort baseline order.
+            const flatBaseline = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    flatBaseline.push({ series: seriesName, char: char, i: flatBaseline.length });
+                });
+            }
+            const flatSorted = flatBaseline.slice().sort(compareByNotePriority);
+
+            // Within each series block, though, a stable global sort filtered
+            // down to that series gives the exact same relative order as
+            // sorting the series alone - so this independent per-series sort
+            // (which also keeps a later series-order confirm's "series stay as
+            // blocks" model correct, e.g. Nico Robin staying on top of the One
+            // Piece block) stays equivalent to the true flat result.
+            for (const seriesName in AppState.seriesData) {
+                const series = AppState.seriesData[seriesName];
+                const withIndex = series.characters.map(function (c, i) { return { char: c, i: i }; });
+                withIndex.sort(compareByNotePriority);
+                series.characters = withIndex.map(function (x) { return x.char; });
+            }
+
+            resyncSortDataToOrderedList(flatSorted.map(function (item) { return { series: item.series, char: item.char }; }));
 
             displaySeries();
             updateStats();

@@ -227,5 +227,68 @@ module.exports = [
             const after = await page.evaluate(() => AppState.seriesData['Dungeon Meshi'].characters.map(c => c.name));
             assert.deepStrictEqual(after, before.slice().reverse(), `expected Dungeon Meshi's character order to be reversed to match sortData, got: ${JSON.stringify(after)}`);
         }
+    },
+    {
+        // Regression test for a real report: $smnote genuinely interleaves
+        // characters from different series (verified against an actual
+        // Discord result - e.g. a One Piece character can land right next
+        // to a Dungeon Meshi one if their notes tie), it does not just
+        // reorder within each series' own block. AppState.sortData - the
+        // flat list driving the Sort tab and its $sm/$smpos generation -
+        // needs to reflect that real interleaving, not series-block
+        // concatenation.
+        name: 'confirming a note order interleaves AppState.sortData across series, not just within each series block',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const sortInputText = await page.evaluate(() => {
+                const lines = [];
+                for (const seriesName in AppState.seriesData) {
+                    AppState.seriesData[seriesName].characters.forEach(c => {
+                        lines.push(`${c.name} - ${seriesName} ${c.kakera || 1} ka`);
+                    });
+                }
+                return lines.join('\n');
+            });
+
+            await page.click('#tab-sort-btn');
+            await page.waitForSelector('#sortInput');
+            await page.fill('#sortInput', sortInputText);
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForSelector('#sortCharacterList .sort-character-item');
+
+            // Give the SECOND character of two different, non-adjacent series
+            // the same high-priority note, so a correct interleave puts both
+            // at the very front (in their original relative order to each
+            // other), while the old series-block-concatenation bug would
+            // keep them separated by every other character in between.
+            const [firstSeries, secondSeries, firstName, secondName] = await page.evaluate(() => {
+                const names = Object.keys(AppState.seriesData).filter(s => AppState.seriesData[s].characters.length >= 2);
+                const a = names[0];
+                const b = names[names.length - 1];
+                return [a, b, AppState.seriesData[a].characters[1].name, AppState.seriesData[b].characters[1].name];
+            });
+            assert.notStrictEqual(firstSeries, secondSeries, 'expected at least two distinct series with 2+ characters in the demo collection');
+
+            await page.click('#tab-notes-btn');
+            for (const [seriesName, charName] of [[firstSeries, firstName], [secondSeries, secondName]]) {
+                const card = page.locator('.series-card').filter({ hasText: seriesName });
+                const charCard = card.locator('.character-card').filter({ hasText: charName });
+                await charCard.locator('[data-action="edit-note"]').click();
+                await page.keyboard.type('PriorityNote');
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(150);
+            }
+            await page.evaluate(() => { moveNoteEntriesToIndex(['PriorityNote'], 0); });
+
+            await page.click('button:has-text("Generate $smnote Command")');
+            await page.waitForTimeout(150);
+            await page.click('.confirm-applied-btn:has-text("Ran this in Discord")');
+            await page.waitForTimeout(150);
+
+            const firstTwoNames = await page.evaluate(() => AppState.sortData.slice(0, 2).map(e => e.name));
+            assert.deepStrictEqual(firstTwoNames.sort(), [firstName, secondName].sort(),
+                `expected the two priority-noted characters from different series to be interleaved at the front of AppState.sortData together, got: ${JSON.stringify(firstTwoNames)}`);
+        }
     }
 ];
