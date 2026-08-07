@@ -8768,11 +8768,22 @@ ${rouletteBarHTML}
         // these (loadFromLocalStorage, initMsFilters) reference `let`/`const`
         // bindings declared further down the file, which are in their
         // temporal dead zone until this point in the script's execution.
+        //
+        // loadWishlists() has to run before loadFromLocalStorage(): if the
+        // Wishlists tab was the last-active one (persisted across the
+        // location.reload() a collection switch does), loadFromLocalStorage()
+        // renders it immediately via applyActiveTabUI(getStoredActiveTab()) -
+        // if that happens before WishlistState is actually populated from its
+        // own storage key, it paints an empty list that never gets refreshed
+        // until some other action (e.g. saving a new wishlist) happens to
+        // re-render it, which then makes the real, already-loaded contents
+        // suddenly "reappear" - easy to misread as data loss/cross-collection
+        // bleeding when it was really just a stale, one-time-empty render.
         initQuickNotes();
+        loadWishlists();
         loadFromLocalStorage();
         initMsFilters();
         showChangelogIfNeeded();
-        loadWishlists();
     </script>
 </body>
 

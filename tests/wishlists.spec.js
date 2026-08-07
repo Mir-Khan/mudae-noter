@@ -198,6 +198,36 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: switching collections reloads
+        // the page and restores whichever tab was last active. If that tab
+        // is Wishlists, it used to render before WishlistState had actually
+        // been loaded from its storage key (loadFromLocalStorage ran before
+        // loadWishlists), painting an empty list that never refreshed on its
+        // own - only an unrelated action like saving a new wishlist would
+        // trigger a re-render and make the real (already-loaded) contents
+        // suddenly reappear, which looked like data loss / cross-collection
+        // bleeding.
+        name: 'the Wishlists tab shows its saved wishlists immediately on reload when it was the last-active tab, with no extra action needed',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-wishlists-btn');
+            await addWishlist(page, 'ReloadTest', 'Lightning\nJin Sakai');
+
+            // addWishlist leaves the Wishlists tab active - reloading now
+            // simulates switching collections (which does its own
+            // location.reload()) while Wishlists was the open tab.
+            await page.reload();
+            const gotIt = page.locator('#changelogOverlay button:has-text("Got it")');
+            if (await gotIt.isVisible().catch(() => false)) await gotIt.click();
+
+            // Deliberately NOT clicking the Wishlists tab button here - it
+            // should already be showing, restored as the active tab.
+            await page.waitForSelector('.wishlist-card', { timeout: 3000 });
+            const cardText = await page.locator('.wishlist-card').textContent();
+            assert.ok(cardText.includes('ReloadTest'), `expected the wishlist to render immediately on reload without any extra action, got: "${cardText}"`);
+        }
+    },
+    {
         name: 'wishlists tab is unaffected by which collection is loaded (Parse Input doesn\'t touch it)',
         async run(page) {
             await dismissChangelogIfPresent(page);
