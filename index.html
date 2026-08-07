@@ -2961,7 +2961,8 @@
             <h2 id="wishlistModalTitle">Add Wishlist</h2>
             <p class="sort-hint" style="margin-top: 4px;">Run <code>$wishlist</code> in Discord and paste the
                 resulting list below - one character per line. A trailing <code>⭐</code> (starwish) or
-                <code>✅</code> (already claimed) is recognized automatically.</p>
+                <code>✅</code> (already claimed) is recognized automatically; any <code>:kakera:</code> icon or
+                <code>+N%</code> kakera boost is dropped since it's not something worth keeping per character.</p>
             <input type="text" id="wishlistNameInput" class="color-hex-text-input" style="text-transform: none; margin-bottom: 10px;"
                 placeholder="Whose wishlist is this? (e.g. a username)">
             <textarea id="wishlistTextInput" class="add-chars-textarea"
@@ -8530,7 +8531,12 @@ ${rouletteBarHTML}
         // A trailing star (starwish - top priority) or check mark (already
         // claimed) is real signal from Mudae's own $wishlist output, not
         // decoration - both are recognized regardless of order and kept
-        // alongside the plain name rather than stripped.
+        // alongside the plain name rather than stripped. $wishlist can also
+        // tack on a ":kakera:" emoji code and/or a "+N%" kakera boost
+        // percentage (e.g. "Miku (Goku) ✅:kakera: +130%") - those are pure
+        // decoration with no signal worth keeping, so they're just dropped.
+        // All four can appear in any order/combination, so this strips
+        // whichever trailing one matches, repeatedly, until none do.
         function parseWishlistText(text) {
             const characters = [];
             text.split('\n').forEach(function (rawLine) {
@@ -8553,6 +8559,18 @@ ${rouletteBarHTML}
                     if (claimedMatch) {
                         isClaimed = true;
                         line = line.slice(0, claimedMatch.index).trim();
+                        changed = true;
+                        continue;
+                    }
+                    const kakeraMatch = line.match(/\s*:kakera:\s*$/i);
+                    if (kakeraMatch) {
+                        line = line.slice(0, kakeraMatch.index).trim();
+                        changed = true;
+                        continue;
+                    }
+                    const boostMatch = line.match(/\s*\+\d+%\s*$/);
+                    if (boostMatch) {
+                        line = line.slice(0, boostMatch.index).trim();
                         changed = true;
                     }
                 }

@@ -15,6 +15,30 @@ Jin Sakai ✅
 Satoru Gojo ⭐
 Someone Else Entirely`;
 
+// Regression test for a real report: real $wishlist output can tack on a
+// ":kakera:" emoji code and/or a "+N%" kakera boost percentage after the
+// star/checkmark markers, in varying order - none of that is a real name.
+const WISHLIST_WITH_KAKERA_DECORATION = `Master Chief ✅:kakera:
+Riza Hawkeye ✅ ⭐ +200%
+Ryland Grace ✅:kakera: +100%
+N ✅ ⭐:kakera: +100%
+Ginko ✅:kakera: +100%
+Jerma ✅:kakera:
+Kaguya Shinomiya ✅ ⭐ +100%
+Royal Bodyguard Carl ✅:kakera:
+Miku (Goku) ✅:kakera: +130%
+Princess Donut ✅:kakera:
+Marcille Donato ✅:kakera: +30%
+Noodle ✅:kakera:
+Tatsu ✅:kakera:
+Falin Touden ✅:kakera:
+Cynthia ✅:kakera:
+Kim Wexler ✅
+Yuru ✅:kakera:
+Lugia
+Ichika Nakano ✅:kakera:
+Shouta Aizawa ✅:kakera:`;
+
 async function addWishlist(page, name, text) {
     await page.click('button:has-text("+ Add Wishlist")');
     await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
@@ -37,6 +61,38 @@ module.exports = [
             const cardText = await card.textContent();
             assert.ok(cardText.includes('8 characters'), `expected 8 characters counted, got: "${cardText}"`);
             assert.ok(cardText.includes('1 starwish'), `expected 1 starwish counted, got: "${cardText}"`);
+        }
+    },
+    {
+        name: 'a ":kakera:" icon and "+N%" kakera boost after the markers are stripped, regardless of order, leaving just the name',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-wishlists-btn');
+            await addWishlist(page, 'Kakera', WISHLIST_WITH_KAKERA_DECORATION);
+
+            const names = await page.evaluate(() => {
+                const entry = Object.values(WishlistState.entries).find(e => e.name === 'Kakera');
+                return entry.characters.map(c => c.name);
+            });
+
+            assert.deepStrictEqual(names, [
+                'Master Chief', 'Riza Hawkeye', 'Ryland Grace', 'N', 'Ginko', 'Jerma', 'Kaguya Shinomiya',
+                'Royal Bodyguard Carl', 'Miku (Goku)', 'Princess Donut', 'Marcille Donato', 'Noodle', 'Tatsu',
+                'Falin Touden', 'Cynthia', 'Kim Wexler', 'Yuru', 'Lugia', 'Ichika Nakano', 'Shouta Aizawa'
+            ], `expected only plain names with kakera decoration stripped, got: ${JSON.stringify(names)}`);
+
+            const flags = await page.evaluate(() => {
+                const entry = Object.values(WishlistState.entries).find(e => e.name === 'Kakera');
+                const riza = entry.characters.find(c => c.name === 'Riza Hawkeye');
+                const n = entry.characters.find(c => c.name === 'N');
+                const kim = entry.characters.find(c => c.name === 'Kim Wexler');
+                const lugia = entry.characters.find(c => c.name === 'Lugia');
+                return { riza, n, kim, lugia };
+            });
+            assert.deepStrictEqual(flags.riza, { name: 'Riza Hawkeye', isStarWish: true, isClaimed: true });
+            assert.deepStrictEqual(flags.n, { name: 'N', isStarWish: true, isClaimed: true }, 'expected star+check to be recognized even when check comes before star and :kakera: follows');
+            assert.deepStrictEqual(flags.kim, { name: 'Kim Wexler', isStarWish: false, isClaimed: true });
+            assert.deepStrictEqual(flags.lugia, { name: 'Lugia', isStarWish: false, isClaimed: false });
         }
     },
     {
