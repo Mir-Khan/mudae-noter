@@ -2020,6 +2020,65 @@
             user-select: all;
         }
 
+        .sort-item-thumb-unmatched {
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .sort-item-thumb-unmatched .sort-item-link-hint {
+            display: block;
+            color: #a78bfa;
+            font-size: 0.75em;
+            text-decoration: underline;
+        }
+
+        .link-sort-entry-target {
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            color: #e5e7eb;
+        }
+
+        .link-sort-entry-results {
+            max-height: 320px;
+            overflow-y: auto;
+            margin-top: 10px;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+        }
+
+        .link-sort-entry-result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #1f1f2e;
+        }
+
+        .link-sort-entry-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .link-sort-entry-result-item:hover {
+            background: #1f1f2e;
+        }
+
+        .link-sort-entry-result-name {
+            color: #e5e7eb;
+            font-weight: 600;
+        }
+
+        .link-sort-entry-result-meta {
+            color: #9ca3af;
+            font-size: 0.8em;
+            white-space: nowrap;
+        }
+
         .add-chars-textarea {
             width: 100%;
             min-height: 160px;
@@ -2824,6 +2883,23 @@
             <div class="add-chars-modal-actions">
                 <button onclick="closeAddCharactersModal()" class="btn">Cancel</button>
                 <button onclick="submitAddCharactersModal()" class="btn btn-primary">Add Characters</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="linkSortEntryOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2>Link to a Character</h2>
+            <p class="sort-hint" style="margin-top: 4px;">This entry didn't automatically match a character on the
+                Notes tab - often because Mudae reported it under a different name (e.g. an evolved form) than what's
+                stored there. Pick the right character below to pull in its image, note, and color. This doesn't
+                rename the entry itself, so it still shows the name Mudae actually gave you.</p>
+            <div class="link-sort-entry-target" id="linkSortEntryTarget"></div>
+            <input type="text" id="linkSortEntrySearchInput" placeholder="Search name or series..."
+                oninput="onLinkSortEntrySearchChange()">
+            <div class="link-sort-entry-results" id="linkSortEntryResults"></div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeLinkSortEntryModal()" class="btn">Cancel</button>
             </div>
         </div>
     </div>
@@ -6007,7 +6083,9 @@ ${rouletteBarHTML}
 
                 const thumb = entry.image
                     ? `<img src="${escapeHTML(entry.image)}" alt="${escapeHTML(entry.name)}" loading="lazy" onerror="handleImageError(this)">`
-                    : `<div class="sort-item-thumb-placeholder">No Image</div>`;
+                    : (entry.matched
+                        ? `<div class="sort-item-thumb-placeholder">No Image</div>`
+                        : `<div class="sort-item-thumb-placeholder sort-item-thumb-unmatched" data-action="link-character" title="Not matched to a Notes-tab character - click to link one">Unmatched<span class="sort-item-link-hint">Click to link</span></div>`);
 
                 const colorDot = entry.color ? `<span class="sort-color-dot" style="background: ${escapeHTML(entry.color)};"></span>` : '';
                 const noteIcon = entry.note ? `<span class="sort-note-icon" title="${escapeHTML(entry.note)}">📝</span>` : '';
@@ -6034,6 +6112,10 @@ ${rouletteBarHTML}
 
                 item.addEventListener('click', function (e) {
                     if (e.target.closest('.sort-item-rank') || e.target.closest('.sort-drag-handle')) return;
+                    if (e.target.closest('[data-action="link-character"]')) {
+                        openLinkSortEntryModal(index);
+                        return;
+                    }
                     handleSortItemClick(e, index, visibleIndices);
                 });
 
@@ -6107,6 +6189,108 @@ ${rouletteBarHTML}
             selectedSortEntries.clear();
             lastSortClickIndex = null;
             renderSortCharacterList();
+        }
+
+        // ===================== Manual Sort-entry matching =====================
+        // Automatic matching (mergeSortEntryWithNotes/findNotesMatch) can fail
+        // even when the character really is the same one - e.g. Mudae's
+        // $mmmka+s output can report a Pokedex entry by its base-form name
+        // while the Notes-tab data (from $mmsaty) has the evolved form, and a
+        // kakera-based fallback match is deliberately skipped when that value
+        // isn't unique within the series. This lets the user manually point
+        // an unmatched entry at the correct Notes-tab character.
+        let linkSortEntryIndex = null;
+
+        function openLinkSortEntryModal(index) {
+            const entry = (AppState.sortData || [])[index];
+            if (!entry) return;
+
+            linkSortEntryIndex = index;
+
+            const target = document.getElementById('linkSortEntryTarget');
+            if (target) target.textContent = `${entry.name} - ${entry.series} (${entry.kakera || '?'} ka)`;
+
+            const searchField = document.getElementById('linkSortEntrySearchInput');
+            if (searchField) searchField.value = '';
+
+            const overlay = document.getElementById('linkSortEntryOverlay');
+            if (overlay) overlay.style.display = 'flex';
+
+            renderLinkSortEntryResults();
+            if (searchField) searchField.focus();
+        }
+
+        function closeLinkSortEntryModal() {
+            linkSortEntryIndex = null;
+            const overlay = document.getElementById('linkSortEntryOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function onLinkSortEntrySearchChange() {
+            renderLinkSortEntryResults();
+        }
+
+        function renderLinkSortEntryResults() {
+            const container = document.getElementById('linkSortEntryResults');
+            if (!container) return;
+
+            const query = (document.getElementById('linkSortEntrySearchInput') || {}).value || '';
+            const normalizedQuery = query.trim().toLowerCase();
+
+            const candidates = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const haystack = `${char.name} ${seriesName}`.toLowerCase();
+                    if (normalizedQuery && !haystack.includes(normalizedQuery)) return;
+                    candidates.push({ seriesName: seriesName, char: char });
+                });
+            }
+            candidates.sort(function (a, b) { return a.char.name.localeCompare(b.char.name); });
+
+            if (candidates.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No characters match that search.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            candidates.slice(0, 200).forEach(function (candidate) {
+                const item = document.createElement('div');
+                item.className = 'link-sort-entry-result-item';
+                item.innerHTML = `
+                    <span class="link-sort-entry-result-name">${escapeHTML(candidate.char.name)}</span>
+                    <span class="link-sort-entry-result-meta">${escapeHTML(candidate.seriesName)} - ${candidate.char.kakera ? Number(candidate.char.kakera).toLocaleString('en-US') : '?'} ka</span>
+                `;
+                item.addEventListener('click', function () {
+                    linkSortEntryToCharacter(candidate.seriesName, candidate.char);
+                });
+                container.appendChild(item);
+            });
+        }
+
+        // Pulls the linked character's note/image/color/etc into the sortData
+        // entry, but deliberately leaves entry.name/series/kakera untouched -
+        // those came straight from $mmmka+s and are what Mudae currently
+        // recognizes the character by for sorting purposes.
+        function linkSortEntryToCharacter(seriesName, char) {
+            if (linkSortEntryIndex === null) return;
+            const entry = (AppState.sortData || [])[linkSortEntryIndex];
+            if (!entry) return;
+
+            entry.matched = true;
+            entry.note = char.note || '';
+            entry.image = char.image || '';
+            entry.color = char.color || '';
+            entry.keys = char.keys || '';
+            entry.owner = char.owner || '';
+            entry.mudaeTags = char.mudaeTags ? char.mudaeTags.slice() : [];
+            entry.isDisabled = !!char.isDisabled;
+            entry.globalRank = char.globalRank || '';
+
+            closeLinkSortEntryModal();
+            renderSortCharacterList();
+            updateSortInfoBanner();
+            saveToLocalStorage();
+            showMessage(`Linked "${entry.name}" to "${char.name}" (${seriesName}).`, 'success');
         }
 
         // Returns the currently selected entries in their present overall order.
