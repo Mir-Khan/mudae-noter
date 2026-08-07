@@ -41,8 +41,13 @@
         .app-tabs {
             display: flex;
             gap: 6px;
-            margin-bottom: 20px;
+            margin: 0 -30px 20px;
+            padding: 10px 30px 0;
             border-bottom: 1px solid #2a2a3a;
+            background: #13131a;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .app-tab {
@@ -2772,8 +2777,9 @@
         <div id="colorsTabPanel" style="display: none;">
             <div id="colorsMessage"></div>
             <h2>Color Picker</h2>
-            <p class="sort-hint">Pick a color visually, then apply it straight to characters' hex colors across your
-                collection.</p>
+            <p class="sort-hint">Pick a color visually, then generate a <code>$ec</code> command to run in Discord -
+                once you've run it, click <b>confirm applied</b> to lock the new color in as the app's baseline
+                (this is what actually updates the character cards' outline and the parse-input text).</p>
 
             <div class="color-picker-layout">
                 <div class="color-wheel-block">
@@ -2790,18 +2796,18 @@
                             maxlength="7">
                     </div>
                     <div class="control-group" style="margin-top: 4px;">
-                        <h3>Apply To</h3>
+                        <h3>Generate $ec Command For</h3>
                         <div class="button-group">
-                            <button onclick="applyPickedColor('all')" class="btn btn-primary">All
+                            <button onclick="generateColorTabCommand('all')" class="btn btn-primary">All
                                 Characters</button>
-                            <button onclick="applyPickedColor('selected')" class="btn btn-secondary">Selected
+                            <button onclick="generateColorTabCommand('selected')" class="btn btn-secondary">Selected
                                 Only</button>
                             <button onclick="toggleColorSelectedList()" id="colorSelectedToggleBtn"
                                 class="btn btn-sm">Show Selected</button>
                         </div>
                         <div id="colorSelectedSummary" class="sort-filter-note"></div>
                         <div id="colorSelectedList" class="color-selected-list" style="display: none;"></div>
-                        <div id="colorApplyCount" class="sort-filter-note"></div>
+                        <div id="colorCommandOutput"></div>
                     </div>
                     <div class="control-group">
                         <button onclick="saveColorToQuickNotes()" class="btn btn-sm" style="width: 100%;">Save to
@@ -8203,36 +8209,118 @@ ${rouletteBarHTML}
             }
         }
 
-        // Applies the currently picked color to every character's hex color
-        // across the whole collection (not scoped to one series/group), same
-        // as the bulk-color group tool but collection-wide.
-        function applyPickedColor(target) {
+        // Tracks exactly which characters the most recently generated $ec
+        // command(s) actually covered, and the hex that was generated for,
+        // so confirming only applies what was really sent to Discord - same
+        // pattern as the Series/Note Order tabs' confirm-applied flow.
+        let lastColorCommandTargets = null;
+        let lastColorCommandHex = null;
+
+        function buildColorCommandTargets(target) {
+            const list = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const applies = (target === 'all') || (target === 'selected' && !char.excluded);
+                    if (applies) list.push({ seriesName: seriesName, char: char });
+                });
+            }
+            return list;
+        }
+
+        // $ec (unlike $smseries) takes one name-list-plus-color per call and
+        // doesn't need the whole collection in one message, so a big harem
+        // just becomes several independent commands - each one is complete
+        // on its own, no append/continuation semantics needed.
+        function generateColorTabCommand(target) {
             if (Object.keys(AppState.seriesData).length === 0) {
                 showMessage('No collection parsed yet - head to the Notes tab first.', 'error');
                 return;
             }
 
             const hex = updateColorPickerDisplay();
-            let count = 0;
-            for (const seriesName in AppState.seriesData) {
-                AppState.seriesData[seriesName].characters.forEach(function (char) {
-                    const applies = (target === 'all') || (target === 'selected' && !char.excluded);
-                    if (applies) {
-                        char.color = hex;
-                        count++;
-                    }
-                });
+            const targets = buildColorCommandTargets(target);
+            const output = document.getElementById('colorCommandOutput');
+            if (!output) return;
+
+            if (targets.length === 0) {
+                showMessage('No characters to include for that target.', 'error');
+                output.innerHTML = '';
+                return;
             }
 
-            const countDiv = document.getElementById('colorApplyCount');
-            if (countDiv) countDiv.textContent = `Applied ${hex} to ${count} character${count === 1 ? '' : 's'}.`;
-            showMessage(`Applied ${hex} to ${count} character${count === 1 ? '' : 's'}.`, 'success');
+            const prefix = '$ec ';
+            const suffix = ` $ ${hex}`;
+            const parts = [];
+            let currentNames = [];
+            let currentString = '';
 
-            if (AppState.ui.grouping === 'color') {
-                displaySeries();
-            }
+            targets.forEach(function (item) {
+                const name = item.char.name;
+                const separator = currentString ? '$' : '';
+                const potential = currentString + separator + name;
+                if (currentString && (prefix.length + potential.length + suffix.length) > 1990) {
+                    parts.push({ command: prefix + currentString + suffix, names: currentNames });
+                    currentString = name;
+                    currentNames = [name];
+                } else {
+                    currentString = potential;
+                    currentNames.push(name);
+                }
+            });
+            if (currentString) parts.push({ command: prefix + currentString + suffix, names: currentNames });
+
+            lastColorCommandTargets = targets;
+            lastColorCommandHex = hex;
+
+            output.innerHTML = `
+ <div class="commands-section">
+  <h2>Color Command${parts.length > 1 ? 's' : ''} ($ec)</h2>
+ </div>`;
+            const container = output.querySelector('.commands-section');
+
+            parts.forEach(function (part, idx) {
+                const headerText = `${part.names.length} character${part.names.length === 1 ? '' : 's'} \u2192 ${hex}`
+                    + (parts.length > 1 ? ` (Part ${idx + 1}/${parts.length})` : '');
+
+                const commandItem = document.createElement('div');
+                commandItem.className = 'command-item';
+                commandItem.innerHTML = `
+      <div class="command-header">
+       <div class="command-series">${headerText}</div>
+      </div>
+      <div class="command-text">${escapeHTML(part.command)}</div>
+      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${part.command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+     `;
+                container.appendChild(commandItem);
+            });
+
+            const confirmWrap = document.createElement('div');
+            confirmWrap.style.marginTop = '10px';
+            confirmWrap.innerHTML = buildConfirmAppliedHTML('confirmColorCommandApplied',
+                parts.length > 1 ? `Ran all ${parts.length} commands in Discord - update colors` : 'Ran this in Discord - update colors');
+            container.appendChild(confirmWrap);
+        }
+
+        // Actually applies the color, once the user confirms the command(s)
+        // ran - updates the characters' hex colors, rebuilds the raw
+        // parse-input text so it stays round-trippable, and refreshes the
+        // Notes tab display so card outlines pick up the change immediately
+        // (previously this only re-rendered when grouped by color, so the
+        // outline could silently stay stale).
+        function confirmColorCommandApplied() {
+            if (!lastColorCommandTargets || lastColorCommandTargets.length === 0) return;
+            const hex = lastColorCommandHex;
+
+            lastColorCommandTargets.forEach(function (item) { item.char.color = hex; });
+
+            AppState.rawInput = serializeSeriesDataToText(AppState.seriesData);
+            const mainInput = document.getElementById('input');
+            if (mainInput) mainInput.value = AppState.rawInput;
+
+            displaySeries();
             updateStats();
             saveToLocalStorage();
+            showMessage(`Applied ${hex} to ${lastColorCommandTargets.length} character${lastColorCommandTargets.length === 1 ? '' : 's'} - this is now the app's baseline color.`, 'success');
         }
 
         function saveColorToQuickNotes() {

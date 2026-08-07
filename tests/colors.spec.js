@@ -19,7 +19,12 @@ module.exports = [
         }
     },
     {
-        name: 'Apply to All Characters sets every character\'s color across the whole collection',
+        // Regression test for a real report: applying a color used to write
+        // straight into AppState without a Discord round-trip, and the
+        // Notes-tab card outline (which reads char.color) only refreshed
+        // when grouped by color, so it could look completely unchanged
+        // after "applying" a new color.
+        name: 'generating and confirming a $ec command sets every character\'s color, updates the raw input text, and refreshes the card outline',
         async run(page) {
             await loadDemoCollection(page);
             const totalChars = await page.evaluate(() => {
@@ -34,10 +39,20 @@ module.exports = [
             const hex = (await page.inputValue('#colorHexInput')).toLowerCase();
 
             await page.click('button:has-text("All Characters")');
-            await page.waitForTimeout(150);
+            await page.waitForSelector('.command-text');
 
-            const countText = await page.locator('#colorApplyCount').textContent();
-            assert.ok(countText.includes(String(totalChars)), `expected the apply-count message to mention ${totalChars} characters, got: "${countText}"`);
+            const commandText = await page.locator('.command-text').first().textContent();
+            assert.ok(commandText.startsWith('$ec '), `expected a $ec command, got: "${commandText}"`);
+            assert.ok(commandText.includes(hex), `expected the command to include the picked color ${hex}, got: "${commandText}"`);
+            const namesInCommand = commandText.slice('$ec '.length).split(' $ ')[0].split('$').length;
+            assert.strictEqual(namesInCommand, totalChars, `expected the command to list all ${totalChars} characters, got ${namesInCommand}`);
+
+            // Nothing should be applied yet - only generated.
+            const beforeConfirm = await page.evaluate(() => AppState.seriesData['Dungeon Meshi'].characters[0].color || '');
+            assert.notStrictEqual(beforeConfirm.toLowerCase(), hex, 'expected the color to NOT be applied before confirming');
+
+            await page.click('.confirm-applied-btn:has-text("Ran this in Discord")');
+            await page.waitForTimeout(150);
 
             const allMatch = await page.evaluate((expectedHex) => {
                 for (const s in AppState.seriesData) {
@@ -47,7 +62,24 @@ module.exports = [
                 }
                 return true;
             }, hex);
-            assert.ok(allMatch, 'expected every character in AppState to have the applied color');
+            assert.ok(allMatch, 'expected every character in AppState to have the applied color after confirming');
+
+            const rawInputHasColor = await page.evaluate(() => AppState.rawInput.toLowerCase());
+            assert.ok(rawInputHasColor.includes(hex), 'expected the raw parse-input text to include the new color after confirming');
+            const mainInputValue = (await page.inputValue('#input')).toLowerCase();
+            assert.ok(mainInputValue.includes(hex), 'expected the main input textarea to reflect the new color after confirming');
+
+            await page.click('#tab-notes-btn');
+            const outlineColor = await page.locator('.character-card').first().evaluate(el => getComputedStyle(el).borderColor);
+            const expectedRgb = await page.evaluate((h) => {
+                const div = document.createElement('div');
+                div.style.color = h;
+                document.body.appendChild(div);
+                const rgb = getComputedStyle(div).color;
+                document.body.removeChild(div);
+                return rgb;
+            }, hex);
+            assert.strictEqual(outlineColor, expectedRgb, `expected the character card's outline to reflect the newly-confirmed color, got "${outlineColor}" vs expected "${expectedRgb}"`);
         }
     },
     {
@@ -87,7 +119,7 @@ module.exports = [
         }
     },
     {
-        name: 'Apply to Selected Only skips deselected characters',
+        name: 'confirming a "Selected Only" $ec command skips deselected characters',
         async run(page) {
             await loadDemoCollection(page);
             await page.locator('.character-card').first().click(); // deselect one
@@ -106,6 +138,8 @@ module.exports = [
             await page.waitForSelector('#colorWheelCanvas');
             await page.click('#colorWheelCanvas', { position: { x: 170, y: 60 } });
             await page.click('button:has-text("Selected Only")');
+            await page.waitForSelector('.command-text');
+            await page.click('.confirm-applied-btn:has-text("Ran this in Discord")');
             await page.waitForTimeout(150);
 
             const stillUnchanged = await page.evaluate((key) => {
