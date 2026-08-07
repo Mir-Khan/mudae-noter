@@ -3469,6 +3469,7 @@
             }
 
             let addedCount = 0;
+            const addedCharacters = [];
 
             for (const seriesName in parsed) {
                 const incomingSeries = parsed[seriesName];
@@ -3503,6 +3504,7 @@
 
                     existingNames.add(char.name.toLowerCase());
                     addedCount++;
+                    addedCharacters.push({ seriesName: seriesName, char: char });
                 });
 
                 existingSeries.total = incomingSeries.total;
@@ -3513,7 +3515,42 @@
                 return { ok: false, error: 'No new characters found - everything in that paste is already in your collection.' };
             }
 
-            return { ok: true, addedCount };
+            return { ok: true, addedCount, addedCharacters };
+        }
+
+        // The Sort tab's AppState.sortData is a separate flat list from a
+        // distinct $mmmka+s paste, so merging new characters into
+        // AppState.seriesData (via the Add Characters modal) never used to
+        // touch it - newly added characters just silently never showed up
+        // there. Appends them (only if the Sort tab already has data - no
+        // point seeding it from nothing) with the same shape
+        // mergeSortEntryWithNotes produces for a normal paste.
+        function appendNewCharactersToSortData(addedCharacters) {
+            if (!AppState.sortData || AppState.sortData.length === 0) return;
+
+            addedCharacters.forEach(function (item) {
+                const char = item.char;
+                AppState.sortData.push({
+                    name: char.name,
+                    series: item.seriesName,
+                    kakera: char.kakera || '',
+                    matched: true,
+                    note: char.note || '',
+                    image: char.image || '',
+                    color: char.color || '',
+                    keys: char.keys || '',
+                    owner: char.owner || '',
+                    mudaeTags: char.mudaeTags ? char.mudaeTags.slice() : [],
+                    isDisabled: !!char.isDisabled,
+                    globalRank: char.globalRank || ''
+                });
+            });
+
+            const sortPanel = document.getElementById('sortTabPanel');
+            if (sortPanel && sortPanel.style.display !== 'none') {
+                renderSortCharacterList();
+                updateSortInfoBanner();
+            }
         }
 
         // Shared cleanup after either parseInput() or a successful merge:
@@ -3569,6 +3606,7 @@
             if (mainInput) mainInput.value = AppState.rawInput;
 
             refreshAfterCollectionChange();
+            appendNewCharactersToSortData(result.addedCharacters);
             saveToLocalStorage();
             closeAddCharactersModal();
             showMessage(`Added ${result.addedCount} new character${result.addedCount === 1 ? '' : 's'}.`, 'success');

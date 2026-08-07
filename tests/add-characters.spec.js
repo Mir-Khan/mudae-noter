@@ -208,5 +208,59 @@ module.exports = [
             assert.ok(order.indexOf('Bridget') < order.indexOf('I-No'),
                 `expected the underlying merge to also keep Bridget ranked ahead of I-No, got: ${JSON.stringify(order)}`);
         }
+    },
+    {
+        // Regression test for a real report: AppState.sortData - the Sort
+        // tab's own separate flat list, from a distinct $mmmka+s paste -
+        // never got the newly-merged character, so it silently never showed
+        // up there even though it was correctly added to the Notes tab.
+        name: 'a character added via the Add Characters modal is also appended to AppState.sortData if the Sort tab already has data',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', INITIAL_PASTE);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            await page.click('#tab-sort-btn');
+            await page.waitForSelector('#sortInput');
+            await page.fill('#sortInput', 'Marcille Donato - Dungeon Meshi 1304 ka');
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForSelector('#sortCharacterList .sort-character-item');
+
+            await page.click('#tab-notes-btn');
+            await addViaModal(page, INCREMENTAL_PASTE_NEW_CHAR);
+
+            const sortDataNames = await page.evaluate(() => AppState.sortData.map(e => e.name));
+            assert.ok(sortDataNames.includes('Izutsumi'),
+                `expected the newly-added character to also appear in AppState.sortData, got: ${JSON.stringify(sortDataNames)}`);
+
+            const sortEntry = await page.evaluate(() => AppState.sortData.find(e => e.name === 'Izutsumi'));
+            assert.strictEqual(sortEntry.series, 'Dungeon Meshi', 'expected the new sortData entry to carry the right series');
+            assert.strictEqual(sortEntry.kakera, '500', 'expected the new sortData entry to carry the right kakera value');
+        }
+    },
+    {
+        // Regression test for the other half of the same report: a
+        // brand-new series introduced via the modal should show up at the
+        // end of the Series Order tab's list, not get lost.
+        name: 'a brand new series added via the Add Characters modal appears at the end of the series order',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', INITIAL_PASTE);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            await page.click('#tab-series-btn');
+            await page.waitForSelector('#sortSeriesList');
+            await page.click('#tab-notes-btn');
+
+            await addViaModal(page, INCREMENTAL_PASTE_NEW_SERIES);
+
+            await page.click('#tab-series-btn');
+            await page.waitForSelector('#sortSeriesList');
+            const order = await page.evaluate(() => AppState.seriesOrder.slice());
+            assert.strictEqual(order[order.length - 1], 'Monogatari',
+                `expected the newly-added series to be appended at the end of the series order, got: ${JSON.stringify(order)}`);
+        }
     }
 ];
