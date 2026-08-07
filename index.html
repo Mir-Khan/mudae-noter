@@ -2852,7 +2852,8 @@
             <div id="wishlistsMessage"></div>
             <h2>Wishlists</h2>
             <p class="sort-hint">Save your own wishlist and your friends' to check for overlaps - handy for trades
-                or spotting who else wants what you've got.</p>
+                or spotting who else wants what you've got. Wishlists are saved per collection, since a different
+                collection can mean a whole different Mudae server with different people's wishes.</p>
 
             <button onclick="openWishlistModal()" class="btn btn-primary" style="margin: 10px 0 20px;">+ Add
                 Wishlist</button>
@@ -2988,6 +2989,7 @@
             sortRawInput: '',
             seriesOrder: [],
             noteOrder: [],
+            wishlists: { entries: {}, order: [] },
             ui: {
                 grouping: 'series',
                 sortMethod: 'count',
@@ -7715,6 +7717,7 @@ ${rouletteBarHTML}
                 if (typeof AppState.ui.sortCompactView !== 'boolean') AppState.ui.sortCompactView = false;
                 if (!AppState.ui.sortViewMode) AppState.ui.sortViewMode = AppState.ui.sortCompactView ? 'compact' : 'detailed';
                 if (!AppState.ui.seriesViewMode) AppState.ui.seriesViewMode = 'list';
+                currentWishlists();
 
                 // Selection and search/filter are per-session, so a collection
                 // switch or reload always starts from a clean slate.
@@ -8440,7 +8443,8 @@ ${rouletteBarHTML}
                     { type: 'fix', text: 'Editing a note or rank and pressing Enter could occasionally throw an error and leave the editor stuck open, caused by a rare double-save race between the Enter key and the input losing focus.' },
                     { type: 'fix', text: 'Adding a character to a series you already had (via + Add New Characters) used to show up as a second, duplicate series block at the bottom of the input box instead of grouped with the rest of that series - and within a series, newly-added characters now slot in by global rank (lower # first) instead of always landing last regardless of rank.' },
                     { type: 'fix', text: 'The "confirm order applied" button was hidden for any command over 2,000 characters, even ones comfortably under Discord Nitro\'s 4,000 char limit that could plausibly have actually been run.' },
-                    { type: 'fix', text: 'Confirming a series or note order applied only reordered the Notes tab\'s data, leaving the Sort tab\'s own list/grid (and its $sm/$smpos command) showing the old order until you manually re-dragged things.' }
+                    { type: 'fix', text: 'Confirming a series or note order applied only reordered the Notes tab\'s data, leaving the Sort tab\'s own list/grid (and its $sm/$smpos command) showing the old order until you manually re-dragged things.' },
+                    { type: 'fix', text: 'Wishlists are now saved per collection instead of shared across every collection you have - different collections can be entirely different Mudae servers, so one collection\'s friends\' wishlists showing up under another was never right. Existing wishlists are copied into every collection once as a one-time upgrade (so nothing disappears immediately), then each collection\'s wishlists are edited independently from here on.' }
                 ]
             }
         ];
@@ -8496,36 +8500,67 @@ ${rouletteBarHTML}
         }
 
         // ===================== Wishlists (standalone tab) =====================
-        // Stored independently of AppState/collections (own localStorage key)
-        // since a wishlist represents a Discord user's wishes, not something
-        // scoped to one particular collection import - useful to keep around
-        // and compare no matter which collection you're currently viewing.
-        const WISHLISTS_STORAGE_KEY = 'mudaeWishlists';
-        let WishlistState = { entries: {}, order: [] };
+        // Stored in AppState.wishlists, so they're scoped to the current
+        // collection like everything else (saved/loaded via the normal
+        // collectionStateKey flow) - different collections can represent
+        // entirely different Mudae servers, so one collection's friends'
+        // wishlists have no business showing up under another.
+        //
+        // This used to live in its own global localStorage key, shared
+        // across every collection regardless of relevance -
+        // migrateLegacyWishlistsIfNeeded() below handles the one-time
+        // upgrade from that.
+        const LEGACY_WISHLISTS_STORAGE_KEY = 'mudaeWishlists';
         let wishlistEditingId = null;
 
-        function loadWishlists() {
-            try {
-                const raw = localStorage.getItem(WISHLISTS_STORAGE_KEY);
-                if (!raw) return;
-                const parsed = JSON.parse(raw);
-                if (parsed && typeof parsed === 'object') {
-                    WishlistState = {
-                        entries: parsed.entries || {},
-                        order: Array.isArray(parsed.order) ? parsed.order : Object.keys(parsed.entries || {})
-                    };
-                }
-            } catch (e) {
-                console.error('Failed to load wishlists:', e);
-            }
+        function currentWishlists() {
+            if (!AppState.wishlists || typeof AppState.wishlists !== 'object') AppState.wishlists = { entries: {}, order: [] };
+            if (!AppState.wishlists.entries) AppState.wishlists.entries = {};
+            if (!Array.isArray(AppState.wishlists.order)) AppState.wishlists.order = Object.keys(AppState.wishlists.entries);
+            return AppState.wishlists;
         }
 
-        function saveWishlists() {
+        // One-time upgrade from the old shared-across-all-collections
+        // storage: copies whatever was there into every collection that
+        // doesn't already have its own wishlists, so nobody's data
+        // disappears the moment this ships - each collection then diverges
+        // independently from here on as they're edited. Runs once (tracked
+        // on the collections meta) and removes the legacy key afterward.
+        function migrateLegacyWishlistsIfNeeded() {
+            const meta = ensureCollectionsMeta();
+            if (meta.wishlistsMigrated) return;
+
             try {
-                localStorage.setItem(WISHLISTS_STORAGE_KEY, JSON.stringify(WishlistState));
+                const legacyRaw = localStorage.getItem(LEGACY_WISHLISTS_STORAGE_KEY);
+                if (legacyRaw) {
+                    const legacy = JSON.parse(legacyRaw);
+                    const legacyEntries = (legacy && legacy.entries) || {};
+                    const legacyOrder = Array.isArray(legacy && legacy.order) ? legacy.order : Object.keys(legacyEntries);
+
+                    if (legacyOrder.length > 0) {
+                        meta.order.forEach(function (id) {
+                            const key = collectionStateKey(id);
+                            let state = {};
+                            try {
+                                const raw = localStorage.getItem(key);
+                                if (raw) state = JSON.parse(raw);
+                            } catch (e) { state = {}; }
+
+                            const hasOwnWishlists = state.wishlists && Array.isArray(state.wishlists.order) && state.wishlists.order.length > 0;
+                            if (!hasOwnWishlists) {
+                                state.wishlists = { entries: JSON.parse(JSON.stringify(legacyEntries)), order: legacyOrder.slice() };
+                                localStorage.setItem(key, JSON.stringify(state));
+                            }
+                        });
+                    }
+                }
+                localStorage.removeItem(LEGACY_WISHLISTS_STORAGE_KEY);
             } catch (e) {
-                console.error('Failed to save wishlists:', e);
+                console.error('Failed to migrate legacy wishlists:', e);
             }
+
+            meta.wishlistsMigrated = true;
+            saveCollectionsMeta(meta);
         }
 
         // A trailing star (starwish - top priority) or check mark (already
@@ -8597,7 +8632,7 @@ ${rouletteBarHTML}
             if (!overlay) return;
 
             wishlistEditingId = editId || null;
-            const existing = editId ? WishlistState.entries[editId] : null;
+            const existing = editId ? currentWishlists().entries[editId] : null;
 
             if (title) title.textContent = existing ? 'Edit Wishlist' : 'Add Wishlist';
             if (nameField) nameField.value = existing ? existing.name : '';
@@ -8643,11 +8678,12 @@ ${rouletteBarHTML}
                 return;
             }
 
+            const wishlists = currentWishlists();
             const id = wishlistEditingId || generateWishlistId();
-            WishlistState.entries[id] = { id: id, name: name, characters: characters, updatedAt: Date.now() };
-            if (!WishlistState.order.includes(id)) WishlistState.order.push(id);
+            wishlists.entries[id] = { id: id, name: name, characters: characters, updatedAt: Date.now() };
+            if (!wishlists.order.includes(id)) wishlists.order.push(id);
 
-            saveWishlists();
+            saveToLocalStorage();
             closeWishlistModal();
             renderWishlistsList();
             populateWishlistCompareSelects();
@@ -8655,11 +8691,12 @@ ${rouletteBarHTML}
         }
 
         function deleteWishlist(id) {
-            const entry = WishlistState.entries[id];
+            const wishlists = currentWishlists();
+            const entry = wishlists.entries[id];
             if (!entry) return;
-            delete WishlistState.entries[id];
-            WishlistState.order = WishlistState.order.filter(function (x) { return x !== id; });
-            saveWishlists();
+            delete wishlists.entries[id];
+            wishlists.order = wishlists.order.filter(function (x) { return x !== id; });
+            saveToLocalStorage();
             renderWishlistsList();
             populateWishlistCompareSelects();
             showMessage(`Deleted "${entry.name}"'s wishlist.`, 'success');
@@ -8669,13 +8706,14 @@ ${rouletteBarHTML}
             const container = document.getElementById('wishlistsList');
             if (!container) return;
 
-            if (WishlistState.order.length === 0) {
+            const wishlists = currentWishlists();
+            if (wishlists.order.length === 0) {
                 container.innerHTML = '<p class="sort-empty-hint">No wishlists saved yet - click + Add Wishlist to save your own or a friend\'s.</p>';
                 return;
             }
 
-            container.innerHTML = WishlistState.order.map(function (id) {
-                const entry = WishlistState.entries[id];
+            container.innerHTML = wishlists.order.map(function (id) {
+                const entry = wishlists.entries[id];
                 if (!entry) return '';
                 const starCount = entry.characters.filter(function (c) { return c.isStarWish; }).length;
                 return `<div class="wishlist-card">
@@ -8696,17 +8734,18 @@ ${rouletteBarHTML}
 
             const prevA = selectA.value;
             const prevB = selectB.value;
+            const wishlists = currentWishlists();
 
-            const optionsHTML = '<option value="">Select a wishlist...</option>' + WishlistState.order.map(function (id) {
-                const entry = WishlistState.entries[id];
+            const optionsHTML = '<option value="">Select a wishlist...</option>' + wishlists.order.map(function (id) {
+                const entry = wishlists.entries[id];
                 return entry ? `<option value="${id}">${escapeHTML(entry.name)}</option>` : '';
             }).join('');
 
             selectA.innerHTML = optionsHTML;
             selectB.innerHTML = optionsHTML;
 
-            if (WishlistState.entries[prevA]) selectA.value = prevA;
-            if (WishlistState.entries[prevB]) selectB.value = prevB;
+            if (wishlists.entries[prevA]) selectA.value = prevA;
+            if (wishlists.entries[prevB]) selectB.value = prevB;
         }
 
         function compareWishlists() {
@@ -8727,8 +8766,9 @@ ${rouletteBarHTML}
                 return;
             }
 
-            const wlA = WishlistState.entries[idA];
-            const wlB = WishlistState.entries[idB];
+            const wishlists = currentWishlists();
+            const wlA = wishlists.entries[idA];
+            const wlB = wishlists.entries[idB];
             if (!wlA || !wlB) return;
 
             const mapB = new Map();
@@ -8769,18 +8809,11 @@ ${rouletteBarHTML}
         // bindings declared further down the file, which are in their
         // temporal dead zone until this point in the script's execution.
         //
-        // loadWishlists() has to run before loadFromLocalStorage(): if the
-        // Wishlists tab was the last-active one (persisted across the
-        // location.reload() a collection switch does), loadFromLocalStorage()
-        // renders it immediately via applyActiveTabUI(getStoredActiveTab()) -
-        // if that happens before WishlistState is actually populated from its
-        // own storage key, it paints an empty list that never gets refreshed
-        // until some other action (e.g. saving a new wishlist) happens to
-        // re-render it, which then makes the real, already-loaded contents
-        // suddenly "reappear" - easy to misread as data loss/cross-collection
-        // bleeding when it was really just a stale, one-time-empty render.
+        // migrateLegacyWishlistsIfNeeded() has to run before
+        // loadFromLocalStorage(): it patches each collection's own storage
+        // entry directly, which loadFromLocalStorage() then reads.
         initQuickNotes();
-        loadWishlists();
+        migrateLegacyWishlistsIfNeeded();
         loadFromLocalStorage();
         initMsFilters();
         showChangelogIfNeeded();

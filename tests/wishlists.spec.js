@@ -71,7 +71,7 @@ module.exports = [
             await addWishlist(page, 'Kakera', WISHLIST_WITH_KAKERA_DECORATION);
 
             const names = await page.evaluate(() => {
-                const entry = Object.values(WishlistState.entries).find(e => e.name === 'Kakera');
+                const entry = Object.values(AppState.wishlists.entries).find(e => e.name === 'Kakera');
                 return entry.characters.map(c => c.name);
             });
 
@@ -82,7 +82,7 @@ module.exports = [
             ], `expected only plain names with kakera decoration stripped, got: ${JSON.stringify(names)}`);
 
             const flags = await page.evaluate(() => {
-                const entry = Object.values(WishlistState.entries).find(e => e.name === 'Kakera');
+                const entry = Object.values(AppState.wishlists.entries).find(e => e.name === 'Kakera');
                 const riza = entry.characters.find(c => c.name === 'Riza Hawkeye');
                 const n = entry.characters.find(c => c.name === 'N');
                 const kim = entry.characters.find(c => c.name === 'Kim Wexler');
@@ -200,13 +200,15 @@ module.exports = [
     {
         // Regression test for a real report: switching collections reloads
         // the page and restores whichever tab was last active. If that tab
-        // is Wishlists, it used to render before WishlistState had actually
-        // been loaded from its storage key (loadFromLocalStorage ran before
-        // loadWishlists), painting an empty list that never refreshed on its
-        // own - only an unrelated action like saving a new wishlist would
-        // trigger a re-render and make the real (already-loaded) contents
-        // suddenly reappear, which looked like data loss / cross-collection
-        // bleeding.
+        // is Wishlists, it used to render before the wishlist data had
+        // actually been loaded (a separate load call ran after the render),
+        // painting an empty list that never refreshed on its own - only an
+        // unrelated action like saving a new wishlist would trigger a
+        // re-render and make the real (already-loaded) contents suddenly
+        // reappear, which looked like data loss / cross-collection bleeding.
+        // Now that wishlists live in AppState itself, they're loaded as part
+        // of the same call that renders the restored tab, so this can't
+        // happen - kept as a guard against a similar ordering bug returning.
         name: 'the Wishlists tab shows its saved wishlists immediately on reload when it was the last-active tab, with no extra action needed',
         async run(page) {
             await dismissChangelogIfPresent(page);
@@ -228,7 +230,7 @@ module.exports = [
         }
     },
     {
-        name: 'wishlists tab is unaffected by which collection is loaded (Parse Input doesn\'t touch it)',
+        name: 'wishlists survive parsing a fresh collection into the SAME collection (Parse Input doesn\'t touch them)',
         async run(page) {
             await dismissChangelogIfPresent(page);
             await page.click('#tab-wishlists-btn');
@@ -240,6 +242,110 @@ module.exports = [
             await page.click('#tab-wishlists-btn');
             const cardText = await page.locator('.wishlist-card').textContent();
             assert.ok(cardText.includes('Independent'), 'expected the wishlist to survive parsing an unrelated collection');
+        }
+    },
+    {
+        // Regression test for a real report: wishlists used to be stored
+        // globally (one shared list for every collection), so a wishlist
+        // saved while on one collection would show up - and be editable -
+        // under a completely unrelated one, and switching back would make
+        // it look like the original had lost its own wishlists. Wishlists
+        // now live inside each collection's own saved state.
+        name: 'a wishlist saved in one collection does not show up in a different collection, and each keeps its own',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-wishlists-btn');
+            await addWishlist(page, 'CollectionA-Wish', 'Lightning');
+
+            const firstId = await page.evaluate(() => ensureCollectionsMeta().activeId);
+
+            // Create and switch to a second collection directly (bypassing
+            // the native prompt() the real "+ New" button uses) - this is
+            // exactly what switchCollection()/createNewCollection() do under
+            // the hood: update the collections meta, then reload.
+            await page.evaluate(() => {
+                const meta = ensureCollectionsMeta();
+                const newId = generateCollectionId();
+                meta.collections[newId] = { id: newId, name: 'Second Collection' };
+                meta.order.push(newId);
+                meta.activeId = newId;
+                saveCollectionsMeta(meta);
+            });
+            await page.reload();
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-wishlists-btn');
+
+            const cardCountOnSecond = await page.locator('.wishlist-card').count();
+            assert.strictEqual(cardCountOnSecond, 0, 'expected none of the first collection\'s wishlists to show up on the second collection');
+            const emptyHint = await page.locator('#wishlistsList .sort-empty-hint').isVisible().catch(() => false);
+            assert.ok(emptyHint, 'expected the brand new second collection to show the "no wishlists" empty state');
+
+            await addWishlist(page, 'CollectionB-Wish', 'Jin Sakai');
+
+            // Switch back to the first collection.
+            await page.evaluate((idToRestore) => {
+                const meta = ensureCollectionsMeta();
+                meta.activeId = idToRestore;
+                saveCollectionsMeta(meta);
+            }, firstId);
+            await page.reload();
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-wishlists-btn');
+
+            const namesOnFirst = await page.locator('.wishlist-card-name').allTextContents();
+            assert.deepStrictEqual(namesOnFirst, ['CollectionA-Wish'],
+                `expected only the first collection's own wishlist back, got: ${JSON.stringify(namesOnFirst)}`);
+        }
+    },
+    {
+        // Regression coverage for the migration path itself: anyone with
+        // wishlists saved under the old shared-across-all-collections
+        // storage shouldn't have them vanish the moment this ships - each
+        // pre-existing collection should get a one-time copy.
+        name: 'legacy shared wishlists are migrated into every pre-existing collection once, then the old storage is cleaned up',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+
+            const ids = await page.evaluate(() => {
+                const idA = generateCollectionId();
+                const idB = generateCollectionId();
+                const meta = {
+                    order: [idA, idB],
+                    collections: { [idA]: { id: idA, name: 'Old A' }, [idB]: { id: idB, name: 'Old B' } },
+                    activeId: idA
+                };
+                localStorage.setItem('mudaeCollectionsMeta', JSON.stringify(meta));
+                localStorage.setItem('mudaeWishlists', JSON.stringify({
+                    entries: { wl1: { id: 'wl1', name: 'Legacy', characters: [{ name: 'Lightning', isStarWish: false, isClaimed: false }], updatedAt: 1 } },
+                    order: ['wl1']
+                }));
+                return { idA, idB };
+            });
+
+            await page.reload();
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-wishlists-btn');
+
+            const namesOnA = await page.locator('.wishlist-card-name').allTextContents();
+            assert.deepStrictEqual(namesOnA, ['Legacy'], `expected the legacy wishlist migrated onto the active collection, got: ${JSON.stringify(namesOnA)}`);
+
+            // The OTHER pre-existing collection should also have gotten its
+            // own copy - the migration covers every collection at once, not
+            // just whichever happens to be active first.
+            await page.evaluate((id) => {
+                const meta = ensureCollectionsMeta();
+                meta.activeId = id;
+                saveCollectionsMeta(meta);
+            }, ids.idB);
+            await page.reload();
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-wishlists-btn');
+
+            const namesOnB = await page.locator('.wishlist-card-name').allTextContents();
+            assert.deepStrictEqual(namesOnB, ['Legacy'], `expected the other pre-existing collection to also get a copy, got: ${JSON.stringify(namesOnB)}`);
+
+            const legacyStillThere = await page.evaluate(() => localStorage.getItem('mudaeWishlists'));
+            assert.strictEqual(legacyStillThere, null, 'expected the legacy shared storage key to be removed once migrated');
         }
     }
 ];
