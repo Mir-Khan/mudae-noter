@@ -2216,6 +2216,40 @@
             border-color: #7c3aed;
         }
 
+        .new-char-quick-notes-wrap {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #2a2a3a;
+        }
+
+        .new-char-quick-notes-label {
+            font-size: 0.8em;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .new-char-quick-notes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .new-char-quick-note-chip {
+            background: #1a1a24;
+            border: 1px solid #7c3aed;
+            color: #e5e7eb;
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .new-char-quick-note-chip:hover {
+            background: #7c3aed;
+            color: white;
+        }
+
         .add-chars-textarea {
             width: 100%;
             min-height: 160px;
@@ -3246,6 +3280,10 @@
             <h2>Add Notes to New Characters</h2>
             <p class="sort-hint" style="margin-top: 4px;" id="newCharacterNotesHeading"></p>
             <div id="newCharacterNotesList" class="new-char-notes-list"></div>
+            <div id="newCharacterNotesQuickNotesWrap" class="new-char-quick-notes-wrap" style="display: none;">
+                <div class="new-char-quick-notes-label">Quick Notes - click a field above, then a note below to fill it in:</div>
+                <div id="newCharacterNotesQuickNotes" class="new-char-quick-notes"></div>
+            </div>
             <div class="add-chars-modal-actions">
                 <button onclick="closeNewCharacterNotesModal()" class="btn">Skip</button>
                 <button onclick="saveNewCharacterNotes()" class="btn btn-primary">Save Notes</button>
@@ -4230,6 +4268,16 @@
         // top of mind, without hunting for them in the full grid.
         let pendingNewCharacterNotes = null;
 
+        // The modal's own overlay sits above everything else (z-index),
+        // including the Quick Notes sidebar - which was a real oversight,
+        // since jotting a note here is exactly when a saved quick note would
+        // be handy. Rather than relying on the (now-hidden) sidebar, quick
+        // notes are mirrored into this modal as click-to-fill chips; this
+        // tracks whichever character's note field was focused last, since
+        // there are several inputs and a chip needs to know which one to
+        // fill.
+        let newCharNotesActiveInput = null;
+
         function openNewCharacterNotesModal(addedCharacters) {
             if (!addedCharacters || addedCharacters.length === 0) return;
 
@@ -4253,15 +4301,42 @@
         </div>`;
             }).join('');
 
+            const inputs = list.querySelectorAll('.new-char-note-input');
+            inputs.forEach(function (input) {
+                input.addEventListener('focus', function () { newCharNotesActiveInput = input; });
+            });
+
+            const quickNotesWrap = document.getElementById('newCharacterNotesQuickNotesWrap');
+            const quickNotesRow = document.getElementById('newCharacterNotesQuickNotes');
+            const quickNotes = AppState.quickNotes || [];
+            if (quickNotesWrap && quickNotesRow) {
+                quickNotesWrap.style.display = quickNotes.length ? '' : 'none';
+                quickNotesRow.innerHTML = quickNotes.map(function (note) {
+                    return `<button type="button" class="new-char-quick-note-chip">${escapeHTML(note)}</button>`;
+                }).join('');
+                quickNotesRow.querySelectorAll('.new-char-quick-note-chip').forEach(function (chip, i) {
+                    chip.addEventListener('click', function () {
+                        const target = newCharNotesActiveInput || inputs[0];
+                        if (!target) return;
+                        target.value = quickNotes[i];
+                        target.focus();
+                    });
+                });
+            }
+
             overlay.style.display = 'flex';
-            const firstInput = list.querySelector('.new-char-note-input');
-            if (firstInput) firstInput.focus();
+            const firstInput = inputs[0];
+            if (firstInput) {
+                firstInput.focus();
+                newCharNotesActiveInput = firstInput;
+            }
         }
 
         function closeNewCharacterNotesModal() {
             const overlay = document.getElementById('newCharacterNotesOverlay');
             if (overlay) overlay.style.display = 'none';
             pendingNewCharacterNotes = null;
+            newCharNotesActiveInput = null;
         }
 
         function saveNewCharacterNotes() {

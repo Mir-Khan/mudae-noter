@@ -300,6 +300,41 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: the new-character-notes modal
+        // sits above everything else (including the Quick Notes sidebar),
+        // so there was no way to use a saved quick note while filling it in.
+        name: 'clicking a Quick Notes chip in the new-character-notes prompt fills the focused field',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', GGXX_INITIAL);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            const firstQuickNote = await page.evaluate(() => AppState.quickNotes[0]);
+
+            await page.click('button:has-text("Add New Characters")');
+            await page.waitForSelector('#addCharactersOverlay', { state: 'visible' });
+            await page.fill('#addCharsInput', GGXX_INCREMENTAL_BETTER_RANK);
+            await page.click('button:has-text("Add Characters")');
+            await page.waitForSelector('#newCharacterNotesOverlay', { state: 'visible' });
+
+            const chipsVisible = await page.locator('.new-char-quick-note-chip').count();
+            assert.ok(chipsVisible > 0, 'expected the modal to show Quick Notes chips');
+
+            // The first (only) field is focused automatically on open.
+            await page.click('.new-char-quick-note-chip >> nth=0');
+            await page.waitForTimeout(100);
+
+            const inputValue = await page.inputValue('.new-char-note-input');
+            assert.strictEqual(inputValue, firstQuickNote, `expected clicking the chip to fill the focused field with "${firstQuickNote}", got: "${inputValue}"`);
+
+            await page.click('#newCharacterNotesOverlay button:has-text("Save Notes")');
+            await page.waitForTimeout(150);
+            const note = await page.evaluate(() => AppState.seriesData['Guilty Gear XX'].characters.find(c => c.name === 'Bridget').note);
+            assert.strictEqual(note, firstQuickNote, 'expected the chip-filled note to actually be saved');
+        }
+    },
+    {
         name: 'skipping the new-character-notes prompt leaves every new character without a note',
         async run(page) {
             await dismissChangelogIfPresent(page);
