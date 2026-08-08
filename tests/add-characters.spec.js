@@ -27,6 +27,14 @@ async function addViaModal(page, text) {
     await page.fill('#addCharsInput', text);
     await page.click('button:has-text("Add Characters")');
     await page.waitForTimeout(150);
+
+    // A successful add immediately offers to note the new characters -
+    // most of these tests aren't exercising that, so skip past it.
+    const notesOverlay = page.locator('#newCharacterNotesOverlay');
+    if (await notesOverlay.isVisible().catch(() => false)) {
+        await page.click('#newCharacterNotesOverlay button:has-text("Skip")');
+        await page.waitForTimeout(100);
+    }
 }
 
 module.exports = [
@@ -261,6 +269,71 @@ module.exports = [
             const order = await page.evaluate(() => AppState.seriesOrder.slice());
             assert.strictEqual(order[order.length - 1], 'Monogatari',
                 `expected the newly-added series to be appended at the end of the series order, got: ${JSON.stringify(order)}`);
+        }
+    },
+    {
+        name: 'adding characters offers a note for each new one, and saving applies only the filled-in notes',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', GGXX_INITIAL);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            await page.click('button:has-text("Add New Characters")');
+            await page.waitForSelector('#addCharactersOverlay', { state: 'visible' });
+            await page.fill('#addCharsInput', GGXX_INCREMENTAL_BETTER_RANK);
+            await page.click('button:has-text("Add Characters")');
+            await page.waitForSelector('#newCharacterNotesOverlay', { state: 'visible' });
+
+            const rowNames = await page.locator('.new-char-note-name').allTextContents();
+            assert.ok(rowNames.some(n => n.includes('Bridget')), `expected the prompt to list the newly-added character, got: ${JSON.stringify(rowNames)}`);
+
+            await page.fill('.new-char-note-input', 'Traded from a friend');
+            await page.click('#newCharacterNotesOverlay button:has-text("Save Notes")');
+            await page.waitForTimeout(150);
+
+            const overlayHidden = await page.locator('#newCharacterNotesOverlay').isHidden();
+            assert.ok(overlayHidden, 'expected the prompt to close after saving');
+
+            const note = await page.evaluate(() => AppState.seriesData['Guilty Gear XX'].characters.find(c => c.name === 'Bridget').note);
+            assert.strictEqual(note, 'Traded from a friend', 'expected the typed note to be applied to the new character');
+        }
+    },
+    {
+        name: 'skipping the new-character-notes prompt leaves every new character without a note',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', GGXX_INITIAL);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            await page.click('button:has-text("Add New Characters")');
+            await page.waitForSelector('#addCharactersOverlay', { state: 'visible' });
+            await page.fill('#addCharsInput', GGXX_INCREMENTAL_BETTER_RANK);
+            await page.click('button:has-text("Add Characters")');
+            await page.waitForSelector('#newCharacterNotesOverlay', { state: 'visible' });
+
+            await page.click('#newCharacterNotesOverlay button:has-text("Skip")');
+            await page.waitForTimeout(150);
+
+            const note = await page.evaluate(() => AppState.seriesData['Guilty Gear XX'].characters.find(c => c.name === 'Bridget').note);
+            assert.ok(!note, `expected no note to be applied when skipped, got: ${JSON.stringify(note)}`);
+        }
+    },
+    {
+        // Regression guard for the earlier "big first-time import" report -
+        // this prompt is specifically for the incremental Add Characters
+        // flow, not the initial full Parse Input.
+        name: 'the initial Parse Input does not trigger the new-character-notes prompt',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', GGXX_INITIAL);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+            await page.waitForTimeout(150);
+
+            const overlayVisible = await page.locator('#newCharacterNotesOverlay').isVisible().catch(() => false);
+            assert.ok(!overlayVisible, 'expected the note prompt to stay hidden after a normal Parse Input');
         }
     }
 ];

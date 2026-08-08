@@ -2137,6 +2137,64 @@
             white-space: nowrap;
         }
 
+        .new-char-notes-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .new-char-note-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+
+        .new-char-note-name {
+            flex: 0 0 40%;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .new-char-note-name span:first-child {
+            color: #e5e7eb;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .new-char-note-series {
+            color: #9ca3af;
+            font-size: 0.8em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .new-char-note-input {
+            flex: 1;
+            min-width: 0;
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            border-radius: 5px;
+            padding: 7px 10px;
+            font-size: 0.9em;
+        }
+
+        .new-char-note-input:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
         .add-chars-textarea {
             width: 100%;
             min-height: 160px;
@@ -2894,7 +2952,7 @@
         <div id="message"></div>
         <div id="playerStatsSection" style="display: none;"></div>
         <div class="notes-top-search-bar">
-            <input type="text" id="notesSearchInputTop" placeholder="Search name or series..."
+            <input type="text" id="notesSearchInputTop" placeholder="Search name, series, or note..."
                 oninput="onNotesSearchChange(this)" class="add-note-input" style="flex: 1;">
             <button type="button" class="btn btn-sm" onclick="clearNotesSearch()">Reset</button>
             <div id="notesSearchNoteTop" class="sort-filter-note"></div>
@@ -3158,6 +3216,18 @@
             <div class="add-chars-modal-actions">
                 <button onclick="closeAddCharactersModal()" class="btn">Cancel</button>
                 <button onclick="submitAddCharactersModal()" class="btn btn-primary">Add Characters</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="newCharacterNotesOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2>Add Notes to New Characters</h2>
+            <p class="sort-hint" style="margin-top: 4px;" id="newCharacterNotesHeading"></p>
+            <div id="newCharacterNotesList" class="new-char-notes-list"></div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeNewCharacterNotesModal()" class="btn">Skip</button>
+                <button onclick="saveNewCharacterNotes()" class="btn btn-primary">Save Notes</button>
             </div>
         </div>
     </div>
@@ -3589,7 +3659,18 @@
                         'az': (a, b) => a.name.localeCompare(b.name),
                         'rank': (a, b) => (a.rank || 999999) - (b.rank || 999999),
                         'kakera': (a, b) => parseInt(b.kakera || 0) - parseInt(a.kakera || 0),
-                        'keys': (a, b) => parseInt(b.keys || 0) - parseInt(a.keys || 0)
+                        'keys': (a, b) => parseInt(b.keys || 0) - parseInt(a.keys || 0),
+                        // Un-noted characters sort after everything else,
+                        // rather than first (which is what an empty string
+                        // would do under plain localeCompare).
+                        'notes': (a, b) => {
+                            const noteA = (a.note || '').trim();
+                            const noteB = (b.note || '').trim();
+                            if (!noteA && !noteB) return 0;
+                            if (!noteA) return 1;
+                            if (!noteB) return -1;
+                            return noteA.localeCompare(noteB);
+                        }
                     };
 
                     groupCharsData.sort(sortFunctions[sortBy]);
@@ -4054,6 +4135,75 @@
             saveToLocalStorage();
             closeAddCharactersModal();
             showMessage(`Added ${result.addedCount} new character${result.addedCount === 1 ? '' : 's'}.`, 'success');
+            openNewCharacterNotesModal(result.addedCharacters);
+        }
+
+        // Offered right after adding characters via the modal above (not
+        // after a big initial Parse Input, which can add hundreds at once
+        // and isn't a good fit for a per-character prompt) - a quick way to
+        // jot a note on each newly-claimed character while they're still
+        // top of mind, without hunting for them in the full grid.
+        let pendingNewCharacterNotes = null;
+
+        function openNewCharacterNotesModal(addedCharacters) {
+            if (!addedCharacters || addedCharacters.length === 0) return;
+
+            pendingNewCharacterNotes = addedCharacters;
+            const overlay = document.getElementById('newCharacterNotesOverlay');
+            const list = document.getElementById('newCharacterNotesList');
+            const heading = document.getElementById('newCharacterNotesHeading');
+            if (!overlay || !list) return;
+
+            if (heading) {
+                heading.textContent = `Add a note to any of these ${addedCharacters.length} new character${addedCharacters.length === 1 ? '' : 's'}? (optional - leave blank to skip)`;
+            }
+
+            list.innerHTML = addedCharacters.map(function (item, idx) {
+                return `<div class="new-char-note-row">
+            <div class="new-char-note-name">
+                <span>${escapeHTML(item.char.name)}</span>
+                <span class="new-char-note-series">${escapeHTML(item.seriesName)}</span>
+            </div>
+            <input type="text" class="new-char-note-input" data-index="${idx}" placeholder="Add a note...">
+        </div>`;
+            }).join('');
+
+            overlay.style.display = 'flex';
+            const firstInput = list.querySelector('.new-char-note-input');
+            if (firstInput) firstInput.focus();
+        }
+
+        function closeNewCharacterNotesModal() {
+            const overlay = document.getElementById('newCharacterNotesOverlay');
+            if (overlay) overlay.style.display = 'none';
+            pendingNewCharacterNotes = null;
+        }
+
+        function saveNewCharacterNotes() {
+            if (!pendingNewCharacterNotes) {
+                closeNewCharacterNotesModal();
+                return;
+            }
+
+            let count = 0;
+            document.querySelectorAll('.new-char-note-input').forEach(function (input) {
+                const value = input.value.trim();
+                if (!value) return;
+                const idx = parseInt(input.dataset.index, 10);
+                const item = pendingNewCharacterNotes[idx];
+                if (!item) return;
+                item.char.note = value;
+                syncSortDataForCharacter(item.seriesName, item.char);
+                count++;
+            });
+
+            closeNewCharacterNotesModal();
+            displaySeries();
+            updateStats();
+            saveToLocalStorage();
+            if (count > 0) {
+                showMessage(`Added notes to ${count} new character${count === 1 ? '' : 's'}.`, 'success');
+            }
         }
 
         // Per-session only, like the Sort/Series Order tabs' search - not part
@@ -4394,6 +4544,7 @@ ${rouletteBarHTML}
 <button data-action="sort" data-sort-by="rank" class="btn btn-sm">Rank</button>
 <button data-action="sort" data-sort-by="kakera" class="btn btn-sm">Kakera</button>
 <button data-action="sort" data-sort-by="keys" class="btn btn-sm">Keys</button>
+<button data-action="sort" data-sort-by="notes" class="btn btn-sm">Notes</button>
 </div>
 </div>
 <div class="controls-row">
@@ -6016,9 +6167,19 @@ ${rouletteBarHTML}
             }
         }
 
+        // Per-session only (not persisted) - remembers how far down the page
+        // each tab was scrolled, so switching tabs and back doesn't dump you
+        // back at the top of a long list every time.
+        const tabScrollPositions = {};
+
         function switchAppTab(tab) {
+            const previousTab = getStoredActiveTab();
+            tabScrollPositions[previousTab] = window.scrollY;
+
             setStoredActiveTab(tab);
             applyActiveTabUI(tab);
+
+            window.scrollTo(0, tabScrollPositions[tab] || 0);
         }
 
         // Parses $mmmka+s output, one character per line in the form

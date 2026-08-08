@@ -3,6 +3,40 @@ const { loadDemoCollection } = require('./helpers');
 
 module.exports = [
     {
+        name: 'a series group can be sorted by note, un-noted characters last',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const group = page.locator('.series-card').filter({ hasText: 'Dungeon Meshi' });
+            const cards = group.locator('.character-card');
+            const firstName = (await cards.nth(0).locator('.character-name').textContent()).trim();
+            const secondName = (await cards.nth(1).locator('.character-name').textContent()).trim();
+
+            // The demo data already gives the first card its own note, so
+            // explicitly control both: clear it (to prove blank notes sort
+            // last) and give the second card a note (to prove a note-bearing
+            // card sorts ahead of it), rather than relying on whatever the
+            // demo happened to start with.
+            await cards.nth(0).locator('[data-action="edit-note"]').click();
+            await page.keyboard.press('Control+A');
+            await page.keyboard.press('Delete');
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(150);
+
+            await cards.nth(1).locator('[data-action="edit-note"]').click();
+            await page.keyboard.type('AAA');
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(150);
+
+            await group.locator('[data-action="sort"][data-sort-by="notes"]').click();
+            await page.waitForTimeout(150);
+
+            const namesAfterSort = await group.locator('.character-name').allTextContents();
+            assert.deepStrictEqual(namesAfterSort.map(n => n.trim()), [secondName, firstName],
+                `expected the noted character first and the un-noted one last, got: ${JSON.stringify(namesAfterSort)}`);
+        }
+    },
+    {
         // Regression test for a real report: editing a single character's
         // note directly on the Notes tab updated AppState.seriesData but
         // never touched the matching AppState.sortData entry, so the Sort
