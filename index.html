@@ -321,6 +321,27 @@
             color: white;
         }
 
+        .quick-note-drag-handle {
+            cursor: grab;
+            opacity: 0.45;
+            flex-shrink: 0;
+            font-size: 0.75em;
+            line-height: 1;
+        }
+
+        .quick-note-drag-handle:hover {
+            opacity: 0.9;
+        }
+
+        .quick-note.dragging {
+            opacity: 0.4;
+        }
+
+        .quick-note.drag-over {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35);
+        }
+
         .add-note-container {
             display: flex;
             gap: 8px;
@@ -3456,8 +3477,10 @@
             AppState.quickNotes.forEach(function (note, idx) {
                 const noteEl = document.createElement('div');
                 noteEl.className = 'quick-note';
+                noteEl.draggable = true;
+                noteEl.dataset.index = idx;
                 noteEl.onclick = function (e) {
-                    if (!e.target.classList.contains('quick-note-remove')) {
+                    if (!e.target.classList.contains('quick-note-remove') && !e.target.classList.contains('quick-note-drag-handle')) {
                         copyToClipboard(note);
 
                         noteEl.classList.add('copied');
@@ -3467,6 +3490,12 @@
                         }, 150);
                     }
                 };
+
+                const dragHandle = document.createElement('span');
+                dragHandle.className = 'quick-note-drag-handle';
+                dragHandle.textContent = '⠿';
+                dragHandle.title = 'Drag to reorder';
+                noteEl.appendChild(dragHandle);
 
                 const isColor = isColorCode.test(note);
 
@@ -3494,8 +3523,64 @@
 
                 noteEl.appendChild(document.createTextNode(' '));
                 noteEl.appendChild(removeSpan);
+
+                noteEl.addEventListener('dragstart', handleQuickNoteDragStart);
+                noteEl.addEventListener('dragover', handleQuickNoteDragOver);
+                noteEl.addEventListener('dragleave', handleQuickNoteDragLeave);
+                noteEl.addEventListener('drop', handleQuickNoteDrop);
+                noteEl.addEventListener('dragend', handleQuickNoteDragEnd);
+
                 list.appendChild(noteEl);
             });
+        }
+
+        let quickNoteDragFromIndex = null;
+
+        function handleQuickNoteDragStart(e) {
+            quickNoteDragFromIndex = parseInt(e.currentTarget.dataset.index, 10);
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleQuickNoteDragOver(e) {
+            if (quickNoteDragFromIndex === null) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleQuickNoteDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleQuickNoteDrop(e) {
+            if (quickNoteDragFromIndex === null) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('drag-over');
+
+            const toIndex = parseInt(e.currentTarget.dataset.index, 10);
+            const fromIndex = quickNoteDragFromIndex;
+            if (fromIndex === toIndex) return;
+
+            // Lands after the drop target when dragged from above it, before
+            // it when dragged from below - removing fromIndex first always
+            // shifts things such that re-inserting at the original toIndex
+            // achieves both (verified: dropping index 0 on index 2 leaves it
+            // just after 2; dropping index 3 on index 1 leaves it just
+            // before 1).
+            const notes = AppState.quickNotes;
+            const [moved] = notes.splice(fromIndex, 1);
+            notes.splice(toIndex, 0, moved);
+
+            displayQuickNotes();
+            saveToLocalStorage();
+        }
+
+        function handleQuickNoteDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('#quickNotesList .drag-over').forEach(function (el) { el.classList.remove('drag-over'); });
+            quickNoteDragFromIndex = null;
         }
 
         function addQuickNote() {
