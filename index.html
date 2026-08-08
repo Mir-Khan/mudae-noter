@@ -40,6 +40,7 @@
 
         .app-tabs {
             display: flex;
+            align-items: center;
             gap: 6px;
             margin: 0 -30px 20px;
             padding: 10px 30px 0;
@@ -48,6 +49,18 @@
             position: sticky;
             top: 0;
             z-index: 100;
+        }
+
+        /* Desktop: just a plain flex row, indistinguishable from before -
+           the scroll strip/dock split only matters once .app-tabs-scroll
+           starts scrolling on its own, on mobile. */
+        .app-tabs-scroll {
+            display: flex;
+            gap: 6px;
+        }
+
+        .mobile-undo-dock {
+            display: none;
         }
 
         .app-tab {
@@ -2236,21 +2249,230 @@
         .wishlist-marker {
             font-size: 0.85em;
         }
+
+        /* ===================== Mobile / narrow-screen layout =====================
+           Nothing below this point changes anything above ~900px wide - the
+           desktop layout (two-column input/options grid, fixed-width Quick
+           Notes sidebar sitting beside the main container, 3-column series
+           grid) is untouched. Below that, things stack into a single column
+           so nothing gets clipped or forced into horizontal scrolling. */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+                align-items: center;
+                padding: 10px;
+                gap: 12px;
+            }
+
+            .container {
+                padding: 16px;
+                max-width: 100%;
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 1.4em;
+            }
+
+            /* The sidebar no longer sits beside the container, so pinning
+               it to the viewport height (and sticking it while scrolling)
+               doesn't make sense anymore - let it flow as a normal block
+               with its own short scrollable note list instead. */
+            .quick-notes {
+                width: 100%;
+                position: static;
+                height: auto;
+                max-height: none;
+            }
+
+            .quick-notes-list {
+                max-height: 220px;
+            }
+
+            .app-tabs {
+                margin: 0 -16px 16px;
+                padding: 8px 16px 0;
+                flex-wrap: nowrap;
+            }
+
+            /* Only the tab strip itself scrolls - the undo/redo dock next
+               to it stays put as a fixed-width sibling, so it's reachable
+               without having to scroll the tabs first. */
+            .app-tabs-scroll {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .app-tab {
+                padding: 8px 12px;
+                font-size: 0.9em;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            /* Docked here (moved by dockUndoBarForMobile()), the bar is no
+               longer fixed/floating - it's just a normal flex item riding
+               along in the sticky tab bar, so it can't cover anything else
+               on the page anymore. */
+            .mobile-undo-dock {
+                display: flex;
+                flex-shrink: 0;
+                margin-left: 6px;
+                padding-left: 6px;
+                border-left: 1px solid #2a2a3a;
+            }
+
+            .mobile-undo-dock .floating-undo-bar {
+                position: static;
+                inset: auto;
+                background: none;
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+
+            /* Two-column Input/Options grid becomes one column, in document
+               order (Input, then Options) rather than the desktop's
+               side-by-side placement. */
+            .controls-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+                gap: 16px;
+            }
+
+            .options-panel {
+                grid-column: 1;
+                grid-row: auto;
+            }
+
+            .input-areas-container {
+                flex-direction: column;
+            }
+
+            .actions-panel,
+            .options-panel {
+                padding: 16px;
+            }
+
+            .instructions-list {
+                grid-template-columns: 1fr;
+            }
+
+            /* .instruction-item is a flex row on desktop so its label stays
+               pinned beside the text - that also stops the text itself from
+               ever wrapping (flex items don't reflow like normal inline
+               text), which is fine at desktop widths but overflows badly
+               here. Block layout lets it wrap normally; the label/badges
+               stay inline at the start of the paragraph either way. */
+            .instruction-item {
+                display: block;
+            }
+
+            .main-buttons,
+            .stats {
+                flex-wrap: wrap;
+            }
+
+            /* grid-template-columns itself isn't set here - #seriesGrid
+               gets it as an inline style from changeGridColumns()/
+               syncUIFromAppState() (driven by the Columns: 1/2/3/4
+               preference), which always wins over any stylesheet rule.
+               That inline value uses minmax(min(300px, 100%), 1fr), so it
+               already shrinks safely below 300px instead of overflowing. */
+            .series-grid {
+                gap: 14px;
+                margin-top: 20px;
+            }
+
+            .collections-bar {
+                padding: 10px 12px;
+            }
+
+            .collections-bar-left,
+            .collections-bar-actions {
+                width: 100%;
+            }
+
+            .collections-bar-actions .btn {
+                flex: 1 1 calc(33% - 8px);
+            }
+
+            /* dockUndoBarForMobile() moves the bar into .mobile-undo-dock
+               (in the sticky tab bar) at this width, where the rule above
+               resets it to a normal static flex item - these smaller
+               dimensions are just a pre-JS fallback for the brief instant
+               before that runs, and floating.btn overrides here are
+               harmless once docked since position:static ignores them.
+               Shrunk down as far as it can go while staying legible/
+               tappable, in case JS is unavailable. */
+            .floating-undo-bar {
+                bottom: 8px;
+                left: 8px;
+                right: auto;
+                padding: 5px;
+                gap: 5px;
+            }
+
+            .floating-undo-bar .btn {
+                padding: 5px 8px;
+                font-size: 0.8em;
+            }
+
+            .changelog-modal {
+                padding: 16px;
+            }
+        }
+
+        /* Extra-narrow phones: the Sort/Series Order rows (drag handle,
+           checkbox, rank badge, thumbnail, kakera figure are all
+           fixed-width) get too cramped for the name/series text at this
+           point even with ellipsis truncation, so shrink the fixed parts
+           further to leave them more room. */
+        @media (max-width: 480px) {
+            .sort-item-thumb {
+                width: 34px;
+                height: 48px;
+            }
+
+            .sort-item-kakera {
+                font-size: 0.72em;
+            }
+
+            .sort-character-item,
+            .sort-series-item {
+                gap: 8px;
+                padding: 6px 8px;
+            }
+
+            .character-card,
+            .character-card img {
+                width: 110px;
+            }
+
+            .character-card img {
+                height: 172px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <div class="app-tabs">
-            <button type="button" id="tab-notes-btn" class="app-tab active" onclick="switchAppTab('notes')">📝
-                Notes</button>
-            <button type="button" id="tab-sort-btn" class="app-tab" onclick="switchAppTab('sort')">🔀 Sort</button>
-            <button type="button" id="tab-series-btn" class="app-tab" onclick="switchAppTab('series')">📚 Series
-                Order</button>
-            <button type="button" id="tab-colors-btn" class="app-tab" onclick="switchAppTab('colors')">🎨
-                Colors</button>
-            <button type="button" id="tab-wishlists-btn" class="app-tab" onclick="switchAppTab('wishlists')">🌟
-                Wishlists</button>
+            <div class="app-tabs-scroll">
+                <button type="button" id="tab-notes-btn" class="app-tab active" onclick="switchAppTab('notes')">📝
+                    Notes</button>
+                <button type="button" id="tab-sort-btn" class="app-tab" onclick="switchAppTab('sort')">🔀 Sort</button>
+                <button type="button" id="tab-series-btn" class="app-tab" onclick="switchAppTab('series')">📚 Series
+                    Order</button>
+                <button type="button" id="tab-colors-btn" class="app-tab" onclick="switchAppTab('colors')">🎨
+                    Colors</button>
+                <button type="button" id="tab-wishlists-btn" class="app-tab" onclick="switchAppTab('wishlists')">🌟
+                    Wishlists</button>
+            </div>
+            <div id="mobileUndoDock" class="mobile-undo-dock"></div>
         </div>
 
         <div class="header-row">
@@ -3051,11 +3273,63 @@
                 displaySeries();
             }
         }
-        function changeGridColumns(columns) {
+        // #seriesGrid's column count is set as an inline style (always wins
+        // over any stylesheet rule, including the mobile media query's),
+        // so responsiveness has to be handled here rather than in CSS.
+        // minmax()'s percentage bound resolves against the WHOLE grid's
+        // width, not a per-column share, so e.g. minmax(min(300px,100%),1fr)
+        // can't shrink a forced 3-column layout below 900px total on its
+        // own - the column COUNT itself has to be capped to whatever
+        // actually fits at ~300px each, then only that many tracks get
+        // requested.
+        const SERIES_CARD_MIN_WIDTH = 300;
+        const SERIES_GRID_GAP = 20;
+
+        function applySeriesGridColumns(preferredColumns) {
             const grid = document.getElementById('seriesGrid');
-            if (grid) {
-                grid.style.gridTemplateColumns = `repeat(${columns}, minmax(300px, 1fr))`;
+            if (!grid) return;
+
+            const available = grid.clientWidth || window.innerWidth;
+            const maxFittable = Math.max(1, Math.floor((available + SERIES_GRID_GAP) / (SERIES_CARD_MIN_WIDTH + SERIES_GRID_GAP)));
+            const effective = Math.min(preferredColumns, maxFittable);
+            grid.style.gridTemplateColumns = `repeat(${effective}, minmax(min(${SERIES_CARD_MIN_WIDTH}px, 100%), 1fr))`;
+        }
+
+        let seriesGridResizeTimer = null;
+        window.addEventListener('resize', function () {
+            clearTimeout(seriesGridResizeTimer);
+            seriesGridResizeTimer = setTimeout(function () {
+                applySeriesGridColumns(AppState.ui.preferredColumns || 3);
+                dockUndoBarForMobile();
+            }, 150);
+        });
+
+        // Below the mobile breakpoint, there's no corner of a single-column
+        // layout the floating Undo/Redo bar can sit in without covering
+        // some other control (it used to land on Quick Notes' "Add note"
+        // row). Docking it into the sticky tab bar instead - by actually
+        // moving the same #undoBtn/#redoBtn buttons into
+        // #mobileUndoDock, not duplicating them - means it can't overlap
+        // page content at all, since it's just riding along in the nav bar.
+        // Moves it back out to its normal floating position above that
+        // width.
+        const mobileUndoDockQuery = window.matchMedia('(max-width: 900px)');
+        function dockUndoBarForMobile() {
+            const bar = document.querySelector('.floating-undo-bar');
+            const dock = document.getElementById('mobileUndoDock');
+            if (!bar || !dock) return;
+
+            if (mobileUndoDockQuery.matches) {
+                if (bar.parentElement !== dock) dock.appendChild(bar);
+            } else if (bar.parentElement === dock) {
+                document.body.appendChild(bar);
             }
+        }
+        mobileUndoDockQuery.addEventListener('change', dockUndoBarForMobile);
+        dockUndoBarForMobile();
+
+        function changeGridColumns(columns) {
+            applySeriesGridColumns(columns);
 
             if (columns > 1) {
                 AppState.ui.preferredColumns = columns;
@@ -7781,8 +8055,7 @@ ${rouletteBarHTML}
             }
             const activeColBtn = document.getElementById(`grid-btn-${AppState.ui.preferredColumns}`);
             if (activeColBtn) activeColBtn.classList.add('active');
-            const grid = document.getElementById('seriesGrid');
-            if (grid) grid.style.gridTemplateColumns = `repeat(${AppState.ui.preferredColumns}, minmax(300px, 1fr))`;
+            applySeriesGridColumns(AppState.ui.preferredColumns);
 
             document.getElementById('deselected-show-btn').classList.toggle('active', AppState.ui.showDeselected);
             document.getElementById('deselected-hide-btn').classList.toggle('active', !AppState.ui.showDeselected);
