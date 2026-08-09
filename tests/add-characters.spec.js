@@ -370,5 +370,50 @@ module.exports = [
             const overlayVisible = await page.locator('#newCharacterNotesOverlay').isVisible().catch(() => false);
             assert.ok(!overlayVisible, 'expected the note prompt to stay hidden after a normal Parse Input');
         }
+    },
+    {
+        name: 'saving a note from the new-character-notes prompt also adds that character to the "Recently noted" panel',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', GGXX_INITIAL);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            await page.click('button:has-text("Add New Characters")');
+            await page.waitForSelector('#addCharactersOverlay', { state: 'visible' });
+            await page.fill('#addCharsInput', GGXX_INCREMENTAL_BETTER_RANK);
+            await page.click('button:has-text("Add Characters")');
+            await page.waitForSelector('#newCharacterNotesOverlay', { state: 'visible' });
+
+            await page.fill('.new-char-note-input', 'Traded from a friend');
+            await page.click('#newCharacterNotesOverlay button:has-text("Save Notes")');
+            await page.waitForTimeout(150);
+
+            const panelVisible = await page.locator('#recentlyNotedPanel').isVisible();
+            assert.ok(panelVisible, 'expected the Recently Noted panel to appear');
+            const chipText = await page.locator('.recently-noted-chip').first().textContent();
+            assert.ok(chipText.includes('Bridget'), `expected the newly-added, newly-noted character to appear in the panel, got: "${chipText}"`);
+        }
+    },
+    {
+        name: 'skipping the new-character-notes prompt does not add anything to the "Recently noted" panel',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', GGXX_INITIAL);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            await page.click('button:has-text("Add New Characters")');
+            await page.waitForSelector('#addCharactersOverlay', { state: 'visible' });
+            await page.fill('#addCharsInput', GGXX_INCREMENTAL_BETTER_RANK);
+            await page.click('button:has-text("Add Characters")');
+            await page.waitForSelector('#newCharacterNotesOverlay', { state: 'visible' });
+
+            await page.click('#newCharacterNotesOverlay button:has-text("Skip")');
+            await page.waitForTimeout(150);
+
+            const panelVisible = await page.locator('#recentlyNotedPanel').isVisible().catch(() => false);
+            assert.ok(!panelVisible, 'expected the Recently Noted panel to stay hidden when no note was actually saved');
+        }
     }
 ];

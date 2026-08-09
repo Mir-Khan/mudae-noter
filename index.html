@@ -4520,6 +4520,7 @@
             }
 
             let count = 0;
+            const justNoted = [];
             document.querySelectorAll('.new-char-note-input').forEach(function (input) {
                 const value = input.value.trim();
                 if (!value) return;
@@ -4528,6 +4529,7 @@
                 if (!item) return;
                 item.char.note = value;
                 syncSortDataForCharacter(item.seriesName, item.char);
+                justNoted.push(item);
                 count++;
             });
 
@@ -4537,6 +4539,7 @@
             saveToLocalStorage();
             if (count > 0) {
                 showMessage(`Added notes to ${count} new character${count === 1 ? '' : 's'}.`, 'success');
+                addToRecentlyNoted(justNoted);
             }
         }
 
