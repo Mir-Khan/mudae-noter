@@ -3796,9 +3796,56 @@
             const action = target.dataset.action;
             const card = target.closest('.character-card');
             const groupCard = target.closest('.series-card');
+            const addKeysTarget = target.closest('[data-action="add-keys"]');
 
-            if (!action && card) {
+            if (!action && !addKeysTarget && card) {
                 toggleCharacter(card.dataset.originalSeries, parseInt(card.dataset.originalIndex, 10));
+                return;
+            }
+
+            if (card && addKeysTarget) {
+                e.stopPropagation();
+                const series = card.dataset.originalSeries;
+                const index = parseInt(card.dataset.originalIndex, 10);
+                const char = AppState.seriesData[series].characters[index];
+                const valueEl = addKeysTarget.querySelector('.stat-badge-value');
+                addKeysTarget.style.display = 'none';
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.placeholder = '+keys';
+                input.style.cssText = 'width: 100%; box-sizing: border-box; font-size: 0.85em; text-align: center; padding: 2px; border: 1px solid #7c3aed; background: #1a1a24; color: #e5e7eb; border-radius: 4px; margin: 0;';
+                addKeysTarget.parentNode.insertBefore(input, addKeysTarget);
+                input.focus();
+
+                // Same one-shot re-entrancy guard as edit-note/edit-rank below -
+                // removing the focused input on blur can re-fire blur mid-removal.
+                let alreadyClosed = false;
+                const saveAndClose = () => {
+                    if (alreadyClosed) return;
+                    alreadyClosed = true;
+
+                    const delta = parseInt(input.value) || 0;
+                    if (delta !== 0) {
+                        char.keys = ((parseInt(char.keys) || 0) + delta).toString();
+                        syncSortDataForCharacter(series, char);
+
+                        // Keeps the raw parse-input textarea round-trippable with
+                        // the new key count, same as note/color edits.
+                        AppState.rawInput = serializeSeriesDataToText(AppState.seriesData);
+                        const mainInputField = document.getElementById('input');
+                        if (mainInputField) mainInputField.value = AppState.rawInput;
+
+                        valueEl.textContent = char.keys;
+                        saveToLocalStorage();
+                        refreshSortTabIfVisible();
+                    }
+
+                    if (input.parentNode) input.parentNode.removeChild(input);
+                    addKeysTarget.style.display = '';
+                };
+                input.onblur = saveAndClose;
+                input.onkeydown = (event) => { if (event.key === 'Enter') saveAndClose(); };
                 return;
             }
 
@@ -4823,7 +4870,7 @@ ${(() => {
 <div class="character-stats">
 <div class="stat-badge"><div class="stat-badge-label">Rank</div><div class="stat-badge-value">${char.globalRank ? '#' + char.globalRank : '#?'}</div></div>
 <div class="stat-badge"><div class="stat-badge-label">Ka</div><div class="stat-badge-value">${char.kakera || '?'}</div></div>
-<div class="stat-badge"><div class="stat-badge-label">Keys</div><div class="stat-badge-value">${char.keys || '?'}</div></div>
+<div class="stat-badge" data-action="add-keys" style="cursor: pointer;" title="Click to add keys"><div class="stat-badge-label">Keys</div><div class="stat-badge-value">${char.keys || '?'}</div></div>
 </div>
 </div>
 ${genderBarHTML}
