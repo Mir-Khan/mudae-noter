@@ -3288,6 +3288,9 @@
                 <div class="sort-toolbar" style="margin-bottom: 10px;">
                     <input type="text" id="colorGridSearchInput" placeholder="Search name or series..."
                         oninput="onColorGridSearchChange()">
+                    <button type="button" class="btn btn-sm" id="colorGridNoColorOnlyBtn"
+                        onclick="toggleColorGridNoColorOnly()" title="Only show keyed characters that don't have a color yet">No
+                        Color Only</button>
                     <button type="button" class="btn btn-sm" onclick="clearColorGridFilter()">Reset Filter</button>
                     <button type="button" class="btn btn-sm" onclick="selectAllShownColorGridEntries()">Select
                         Shown</button>
@@ -9264,7 +9267,7 @@ ${rouletteBarHTML}
         // shown/hidden on a totally different tab" was more confusing than
         // useful to work across two tabs for.
         let colorGridSelection = new Set();
-        const colorGridFilterState = { query: '' };
+        const colorGridFilterState = { query: '', onlyUncolored: false };
 
         function getKeyedCharacterEntries() {
             const list = [];
@@ -9278,11 +9281,18 @@ ${rouletteBarHTML}
 
         function getVisibleColorGridEntries(entries) {
             const query = colorGridFilterState.query.trim().toLowerCase();
-            if (!query) return entries;
-            return entries.filter(function (item) {
-                const haystack = `${item.char.name} ${item.seriesName}`.toLowerCase();
-                return haystack.includes(query);
-            });
+            let result = entries;
+
+            if (colorGridFilterState.onlyUncolored) {
+                result = result.filter(function (item) { return !item.char.color; });
+            }
+            if (query) {
+                result = result.filter(function (item) {
+                    const haystack = `${item.char.name} ${item.seriesName}`.toLowerCase();
+                    return haystack.includes(query);
+                });
+            }
+            return result;
         }
 
         function updateColorGridSummary(entries) {
@@ -9320,15 +9330,19 @@ ${rouletteBarHTML}
             }
 
             const visible = getVisibleColorGridEntries(entries);
+            const isFiltering = colorGridFilterState.query.trim() || colorGridFilterState.onlyUncolored;
             const filterNote = document.getElementById('colorGridFilterNote');
             if (filterNote) {
-                filterNote.textContent = colorGridFilterState.query.trim()
+                filterNote.textContent = isFiltering
                     ? `Showing ${visible.length} of ${entries.length} keyed characters`
                     : '';
             }
 
+            const noColorBtn = document.getElementById('colorGridNoColorOnlyBtn');
+            if (noColorBtn) noColorBtn.classList.toggle('active', colorGridFilterState.onlyUncolored);
+
             if (visible.length === 0) {
-                container.innerHTML = '<p class="sort-empty-hint">No keyed characters match the current search.</p>';
+                container.innerHTML = '<p class="sort-empty-hint">No keyed characters match the current filter.</p>';
                 updateColorGridSummary(entries);
                 return;
             }
@@ -9378,6 +9392,12 @@ ${rouletteBarHTML}
             const field = document.getElementById('colorGridSearchInput');
             if (field) field.value = '';
             colorGridFilterState.query = '';
+            colorGridFilterState.onlyUncolored = false;
+            renderColorCharacterGrid();
+        }
+
+        function toggleColorGridNoColorOnly() {
+            colorGridFilterState.onlyUncolored = !colorGridFilterState.onlyUncolored;
             renderColorCharacterGrid();
         }
 

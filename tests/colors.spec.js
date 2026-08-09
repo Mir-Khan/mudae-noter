@@ -148,6 +148,41 @@ module.exports = [
         }
     },
     {
+        name: '"No Color Only" filters the Colors tab grid to keyed characters that don\'t have a color yet',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            // The demo data gives every character a color already - clear
+            // exactly one so there's a real, controlled mix to filter.
+            const uncoloredCount = 1;
+            await page.evaluate(() => {
+                const s = Object.keys(AppState.seriesData)[0];
+                AppState.seriesData[s].characters[0].color = '';
+            });
+
+            await page.click('#tab-colors-btn');
+            await page.waitForSelector('#colorCharacterGrid .sort-character-item');
+            const totalKeyed = await page.locator('#colorCharacterGrid .sort-character-item').count();
+
+            await page.click('#colorGridNoColorOnlyBtn');
+            await page.waitForTimeout(100);
+
+            const visibleAfter = await page.locator('#colorCharacterGrid .sort-character-item').count();
+            assert.strictEqual(visibleAfter, uncoloredCount, `expected only the one uncolored keyed character to remain visible, got ${visibleAfter}`);
+
+            const anyColorDots = await page.locator('#colorCharacterGrid .sort-color-dot').count();
+            assert.strictEqual(anyColorDots, 0, 'expected none of the remaining visible cards to already have a color');
+
+            const btnActive = await page.locator('#colorGridNoColorOnlyBtn').evaluate(el => el.classList.contains('active'));
+            assert.ok(btnActive, 'expected the toggle button to show as active while the filter is on');
+
+            await page.click('#colorGridNoColorOnlyBtn');
+            await page.waitForTimeout(100);
+            const visibleAfterToggleOff = await page.locator('#colorCharacterGrid .sort-character-item').count();
+            assert.strictEqual(visibleAfterToggleOff, totalKeyed, 'expected toggling the filter back off to restore every keyed character');
+        }
+    },
+    {
         // Regression test for a real report: "Selected Only" used to target
         // whatever was selected/deselected on the Notes tab - it now only
         // targets characters checked in the Colors tab's own grid, so a
