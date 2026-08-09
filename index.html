@@ -1353,31 +1353,6 @@
             text-transform: uppercase;
         }
 
-        .color-selected-list {
-            margin-top: 8px;
-            max-height: 220px;
-            overflow-y: auto;
-            border: 1px solid #2a2a3a;
-            border-radius: 6px;
-            padding: 8px 10px;
-            font-size: 0.85em;
-            color: #d1d5db;
-        }
-
-        .color-selected-list .color-selected-series {
-            color: #a78bfa;
-            font-weight: 600;
-            margin-top: 8px;
-        }
-
-        .color-selected-list .color-selected-series:first-child {
-            margin-top: 0;
-        }
-
-        .color-selected-list p {
-            margin: 2px 0 2px 10px;
-        }
-
         .sort-character-item,
         .sort-series-item {
             display: flex;
@@ -2693,9 +2668,9 @@
                     lightness - or just type a hex code.
                 </p>
                 <p class="instruction-item">
-                    <strong>Apply:</strong> Applies to characters across your <b>whole collection</b> (not just one
-                    series/group) - choose <b>All</b> or just your currently <b>Selected</b> (non-deselected)
-                    characters from the Notes tab.
+                    <strong>Apply:</strong> Choose <b>All Keyed Characters</b> or just the ones you've checked in the
+                    <b>Pick Characters</b> list below - its own selection, scoped to characters holding a key, kept
+                    separate from whatever's selected/deselected on the Notes tab.
                 </p>
                 <p class="instruction-item">
                     <strong>Save:</strong> Click <b>Save to Quick Notes</b> to keep a color for fast copy-paste later.
@@ -2886,6 +2861,14 @@
                                 class="btn btn-sm" class="active">Show</button>
                             <button onclick="toggleDisabledIconVisibility(false)" class="btn btn-sm"
                                 id="disabled-icon-hide-btn">Hide</button>
+                        </div>
+                        <div class="button-group">
+                            <label>Series:</label>
+                            <button onclick="toggleDisabledSeriesFilter(false)" id="disabled-series-all-btn"
+                                class="btn btn-sm active">All</button>
+                            <button onclick="toggleDisabledSeriesFilter(true)" id="disabled-series-only-btn"
+                                class="btn btn-sm" title="Only show a series if every character in it is disabled">Disabled
+                                Only</button>
                         </div>
                         <div class="button-group">
                             <label>Columns:</label>
@@ -3161,25 +3144,41 @@
                         <input type="text" id="colorHexInput" class="color-hex-text-input" placeholder="#RRGGBB"
                             maxlength="7">
                     </div>
-                    <div class="control-group" style="margin-top: 4px;">
-                        <h3>Generate $ec Command For</h3>
-                        <div class="button-group">
-                            <button onclick="generateColorTabCommand('all')" class="btn btn-primary">All
-                                Characters</button>
-                            <button onclick="generateColorTabCommand('selected')" class="btn btn-secondary">Selected
-                                Only</button>
-                            <button onclick="toggleColorSelectedList()" id="colorSelectedToggleBtn"
-                                class="btn btn-sm">Show Selected</button>
-                        </div>
-                        <div id="colorSelectedSummary" class="sort-filter-note"></div>
-                        <div id="colorSelectedList" class="color-selected-list" style="display: none;"></div>
-                        <div id="colorCommandOutput"></div>
-                    </div>
                     <div class="control-group">
                         <button onclick="saveColorToQuickNotes()" class="btn btn-sm" style="width: 100%;">Save to
                             Quick Notes</button>
                     </div>
                 </div>
+            </div>
+
+            <div class="control-group" style="margin-top: 20px;">
+                <h3>Pick Characters</h3>
+                <p class="sort-hint" style="margin: 0 0 10px;">Its own list, scoped to characters holding at least
+                    one key (the only ones worth spending a color change on) - separate from whatever's
+                    selected/deselected on the Notes tab.</p>
+                <div class="sort-toolbar" style="margin-bottom: 10px;">
+                    <input type="text" id="colorGridSearchInput" placeholder="Search name or series..."
+                        oninput="onColorGridSearchChange()">
+                    <button type="button" class="btn btn-sm" onclick="clearColorGridFilter()">Reset Filter</button>
+                    <button type="button" class="btn btn-sm" onclick="selectAllShownColorGridEntries()">Select
+                        Shown</button>
+                    <button type="button" class="btn btn-sm" onclick="clearColorGridSelection()">Clear
+                        Selection</button>
+                </div>
+                <div id="colorGridFilterNote" class="sort-filter-note"></div>
+                <div id="colorCharacterGrid" class="sort-character-list"></div>
+            </div>
+
+            <div class="control-group">
+                <h3>Generate $ec Command For</h3>
+                <div class="button-group">
+                    <button onclick="generateColorTabCommand('all')" class="btn btn-primary">All Keyed
+                        Characters</button>
+                    <button onclick="generateColorTabCommand('selected')" class="btn btn-secondary">Selected
+                        Only</button>
+                </div>
+                <div id="colorSelectedSummary" class="sort-filter-note"></div>
+                <div id="colorCommandOutput"></div>
             </div>
         </div>
 
@@ -3347,6 +3346,7 @@
                 rankingEnabled: false,
                 showDeselected: true,
                 showDisabledIcon: true,
+                showOnlyDisabledSeries: false,
                 preferredColumns: 3,
                 fitToScreen: false,
                 sortCompactView: false,
@@ -3492,6 +3492,22 @@
             document.getElementById('disabled-icon-hide-btn').classList.toggle('active', !shouldShow);
 
             document.querySelector('.container').classList.toggle('hide-disabled-emoji', !shouldShow);
+
+            saveToLocalStorage();
+        }
+
+        // "Disabled Only" hides any group where at least one character
+        // isn't permanently disabled - so with the default series grouping
+        // it isolates series you have nothing left to claim in, without
+        // having to eyeball the 🚫 badge across every card yourself.
+        function toggleDisabledSeriesFilter(onlyDisabled) {
+            AppState.ui.showOnlyDisabledSeries = onlyDisabled;
+            document.getElementById('disabled-series-all-btn').classList.toggle('active', !onlyDisabled);
+            document.getElementById('disabled-series-only-btn').classList.toggle('active', onlyDisabled);
+
+            if (Object.keys(AppState.seriesData).length > 0) {
+                displaySeries();
+            }
 
             saveToLocalStorage();
         }
@@ -3837,6 +3853,15 @@
                             syncSortDataForCharacter(char.originalSeries, originalChar);
                         }
                     });
+
+                    // Keeps the raw parse-input textarea (and AppState.rawInput)
+                    // round-trippable with the actual note/color values, same
+                    // as every other place characters get edited (Add
+                    // Characters, the Colors tab's confirm flow) - this bulk
+                    // apply widget was the one spot that skipped it.
+                    AppState.rawInput = serializeSeriesDataToText(AppState.seriesData);
+                    const mainInputField = document.getElementById('input');
+                    if (mainInputField) mainInputField.value = AppState.rawInput;
 
                     input.value = '';
 
@@ -4589,7 +4614,13 @@ ${rouletteBarHTML}
                             groupKey = `${keysLowerBound} - ${keysUpperBound} Keys`;
                             break;
                         case 'color':
-                            groupKey = char.color.trim().toUpperCase() || '#670D08';
+                            // Binary split rather than one group per exact
+                            // hex value - with dozens of near-identical
+                            // colors applied over time, grouping by literal
+                            // hex just fragmented into a wall of one- or
+                            // two-character groups instead of anything
+                            // useful to scan.
+                            groupKey = char.color.trim() ? 'Colored' : 'No Color';
                             break;
                         case 'nogroup': groupKey = 'All Characters'; break;
                         case 'kakera':
@@ -4666,8 +4697,6 @@ ${rouletteBarHTML}
                 let displayName = groupName;
                 if (AppState.ui.grouping === 'note' && groupName === '') {
                     displayName = '(No Note)';
-                } else if (AppState.ui.grouping === 'color' && groupName.toUpperCase() === '#670D08') {
-                    displayName = '(No Color)';
                 }
 
                 if (AppState.ui.rankingEnabled && data.characters.every(c => (c.rank === 0 || !c.rank))) {
@@ -4738,7 +4767,9 @@ ${rouletteBarHTML}
                 const showGroup = notesSearchQuery
                     ? data.characters.some(characterIsShownInNotes)
                     : (AppState.ui.showDeselected || hasVisibleChars);
-                if (showGroup) {
+                const passesDisabledFilter = !AppState.ui.showOnlyDisabledSeries
+                    || data.characters.every(function (c) { return c.isDisabled; });
+                if (showGroup && passesDisabledFilter) {
                     finalHTML += groupCardHTML;
                 }
             }
@@ -5837,6 +5868,7 @@ ${rouletteBarHTML}
                     rankingEnabled: false,
                     showDeselected: true,
                     showDisabledIcon: true,
+                    showOnlyDisabledSeries: false,
                     preferredColumns: 3,
                     fitToScreen: false,
                     sortCompactView: false,
@@ -8312,6 +8344,7 @@ ${rouletteBarHTML}
                 if (typeof AppState.ui.sortCompactView !== 'boolean') AppState.ui.sortCompactView = false;
                 if (!AppState.ui.sortViewMode) AppState.ui.sortViewMode = AppState.ui.sortCompactView ? 'compact' : 'detailed';
                 if (!AppState.ui.seriesViewMode) AppState.ui.seriesViewMode = 'list';
+                if (typeof AppState.ui.showOnlyDisabledSeries !== 'boolean') AppState.ui.showOnlyDisabledSeries = false;
                 currentWishlists();
 
                 // Selection and search/filter are per-session, so a collection
@@ -8383,6 +8416,8 @@ ${rouletteBarHTML}
             document.getElementById('disabled-icon-show-btn').classList.toggle('active', AppState.ui.showDisabledIcon);
             document.getElementById('disabled-icon-hide-btn').classList.toggle('active', !AppState.ui.showDisabledIcon);
             document.querySelector('.container').classList.toggle('hide-disabled-emoji', !AppState.ui.showDisabledIcon);
+            document.getElementById('disabled-series-all-btn').classList.toggle('active', !AppState.ui.showOnlyDisabledSeries);
+            document.getElementById('disabled-series-only-btn').classList.toggle('active', AppState.ui.showOnlyDisabledSeries);
 
             document.getElementById('fit-on-btn').classList.toggle('active', AppState.ui.fitToScreen);
             document.getElementById('fit-off-btn').classList.toggle('active', !AppState.ui.fitToScreen);
@@ -8796,53 +8831,140 @@ ${rouletteBarHTML}
         // characters that haven't been deselected/disabled (char.excluded is
         // false) - so this surfaces exactly who "Selected Only" would hit,
         // since that state isn't otherwise visible from the Colors tab.
-        let colorSelectedListVisible = false;
+        // ===================== Colors tab: keyed-character picker =====================
+        // Its own selection, scoped to characters holding at least one key
+        // (the only ones worth spending a color change on) - deliberately
+        // separate from the Notes tab's char.excluded selection state, since
+        // driving a Colors-tab action off of "whatever happens to be
+        // shown/hidden on a totally different tab" was more confusing than
+        // useful to work across two tabs for.
+        let colorGridSelection = new Set();
+        const colorGridFilterState = { query: '' };
 
-        function getCurrentlySelectedCharacters() {
-            const result = [];
+        function getKeyedCharacterEntries() {
+            const list = [];
             for (const seriesName in AppState.seriesData) {
                 AppState.seriesData[seriesName].characters.forEach(function (char) {
-                    if (!char.excluded) result.push({ name: char.name, series: seriesName });
+                    if ((parseInt(char.keys) || 0) > 0) list.push({ seriesName: seriesName, char: char });
                 });
             }
-            return result;
+            return list;
         }
 
-        function refreshColorSelectedSummary() {
+        function getVisibleColorGridEntries(entries) {
+            const query = colorGridFilterState.query.trim().toLowerCase();
+            if (!query) return entries;
+            return entries.filter(function (item) {
+                const haystack = `${item.char.name} ${item.seriesName}`.toLowerCase();
+                return haystack.includes(query);
+            });
+        }
+
+        function updateColorGridSummary(entries) {
             const summary = document.getElementById('colorSelectedSummary');
-            const list = document.getElementById('colorSelectedList');
-            if (!summary || !list) return;
-
-            const selected = getCurrentlySelectedCharacters();
-            summary.textContent = Object.keys(AppState.seriesData).length === 0
+            if (!summary) return;
+            summary.textContent = entries.length === 0
                 ? ''
-                : `"Selected Only" currently covers ${selected.length} character${selected.length === 1 ? '' : 's'} (deselect/disable characters on the Notes tab to change this).`;
+                : `${colorGridSelection.size} of ${entries.length} keyed character${entries.length === 1 ? '' : 's'} selected.`;
+        }
 
-            if (selected.length === 0) {
-                list.innerHTML = '<p class="sort-empty-hint" style="margin: 0;">No characters currently selected.</p>';
+        function renderColorCharacterGrid() {
+            const container = document.getElementById('colorCharacterGrid');
+            if (!container) return;
+
+            const searchField = document.getElementById('colorGridSearchInput');
+            if (searchField && searchField.value !== colorGridFilterState.query) searchField.value = colorGridFilterState.query;
+
+            const entries = getKeyedCharacterEntries();
+
+            // Drop selections for characters that no longer qualify (lost
+            // their last key, or the collection was re-parsed).
+            const liveChars = new Set(entries.map(function (item) { return item.char; }));
+            Array.from(colorGridSelection).forEach(function (char) {
+                if (!liveChars.has(char)) colorGridSelection.delete(char);
+            });
+
+            container.innerHTML = '';
+
+            if (entries.length === 0) {
+                container.innerHTML = Object.keys(AppState.seriesData).length === 0
+                    ? '<p class="sort-empty-hint">No collection parsed yet - head to the Notes tab first.</p>'
+                    : '<p class="sort-empty-hint">None of your characters currently hold a key.</p>';
+                updateColorGridSummary(entries);
                 return;
             }
 
-            const bySeries = {};
-            selected.forEach(function (c) {
-                if (!bySeries[c.series]) bySeries[c.series] = [];
-                bySeries[c.series].push(c.name);
+            const visible = getVisibleColorGridEntries(entries);
+            const filterNote = document.getElementById('colorGridFilterNote');
+            if (filterNote) {
+                filterNote.textContent = colorGridFilterState.query.trim()
+                    ? `Showing ${visible.length} of ${entries.length} keyed characters`
+                    : '';
+            }
+
+            if (visible.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No keyed characters match the current search.</p>';
+                updateColorGridSummary(entries);
+                return;
+            }
+
+            visible.forEach(function (item) {
+                const char = item.char;
+                const el = document.createElement('div');
+                el.className = 'sort-character-item';
+                if (colorGridSelection.has(char)) el.classList.add('selected');
+
+                const thumb = char.image
+                    ? `<img src="${escapeHTML(char.image)}" alt="${escapeHTML(char.name)}" loading="lazy" onerror="handleImageError(this)">`
+                    : `<div class="sort-item-thumb-placeholder">No Image</div>`;
+
+                const colorDot = char.color ? `<span class="sort-color-dot" style="background: ${escapeHTML(char.color)};"></span>` : '';
+                const keysCount = parseInt(char.keys) || 0;
+
+                el.innerHTML = `
+                    <div class="sort-select-box" title="Click the card to select">✔</div>
+                    <div class="sort-item-thumb">${thumb}</div>
+                    <div class="sort-item-info">
+                        <div class="sort-item-name">${colorDot}${escapeHTML(char.name)}</div>
+                        <div class="sort-item-series">${escapeHTML(item.seriesName)}</div>
+                    </div>
+                    <div class="sort-item-kakera">${keysCount} key${keysCount === 1 ? '' : 's'}</div>
+                `;
+
+                el.addEventListener('click', function () {
+                    if (colorGridSelection.has(char)) colorGridSelection.delete(char);
+                    else colorGridSelection.add(char);
+                    renderColorCharacterGrid();
+                });
+
+                container.appendChild(el);
             });
 
-            list.innerHTML = Object.keys(bySeries).sort(function (a, b) { return a.localeCompare(b); }).map(function (seriesName) {
-                const names = bySeries[seriesName].map(function (n) { return `<p>${escapeHTML(n)}</p>`; }).join('');
-                return `<div class="color-selected-series">${escapeHTML(seriesName)}</div>${names}`;
-            }).join('');
+            updateColorGridSummary(entries);
         }
 
-        function toggleColorSelectedList() {
-            const list = document.getElementById('colorSelectedList');
-            const btn = document.getElementById('colorSelectedToggleBtn');
-            if (!list) return;
-            colorSelectedListVisible = !colorSelectedListVisible;
-            list.style.display = colorSelectedListVisible ? '' : 'none';
-            if (btn) btn.textContent = colorSelectedListVisible ? 'Hide Selected' : 'Show Selected';
-            if (colorSelectedListVisible) refreshColorSelectedSummary();
+        function onColorGridSearchChange() {
+            const field = document.getElementById('colorGridSearchInput');
+            colorGridFilterState.query = field ? field.value : '';
+            renderColorCharacterGrid();
+        }
+
+        function clearColorGridFilter() {
+            const field = document.getElementById('colorGridSearchInput');
+            if (field) field.value = '';
+            colorGridFilterState.query = '';
+            renderColorCharacterGrid();
+        }
+
+        function selectAllShownColorGridEntries() {
+            const entries = getVisibleColorGridEntries(getKeyedCharacterEntries());
+            entries.forEach(function (item) { colorGridSelection.add(item.char); });
+            renderColorCharacterGrid();
+        }
+
+        function clearColorGridSelection() {
+            colorGridSelection.clear();
+            renderColorCharacterGrid();
         }
 
         function initColorPicker() {
@@ -8853,7 +8975,7 @@ ${rouletteBarHTML}
 
             drawColorWheel();
             updateColorPickerDisplay();
-            refreshColorSelectedSummary();
+            renderColorCharacterGrid();
 
             if (colorPickerState.ready) return;
             colorPickerState.ready = true;
@@ -8896,14 +9018,9 @@ ${rouletteBarHTML}
         let lastColorCommandHex = null;
 
         function buildColorCommandTargets(target) {
-            const list = [];
-            for (const seriesName in AppState.seriesData) {
-                AppState.seriesData[seriesName].characters.forEach(function (char) {
-                    const applies = (target === 'all') || (target === 'selected' && !char.excluded);
-                    if (applies) list.push({ seriesName: seriesName, char: char });
-                });
-            }
-            return list;
+            const keyedEntries = getKeyedCharacterEntries();
+            if (target === 'all') return keyedEntries;
+            return keyedEntries.filter(function (item) { return colorGridSelection.has(item.char); });
         }
 
         // $ec (unlike $smseries) takes one name-list-plus-color per call and

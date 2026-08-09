@@ -24,9 +24,11 @@ module.exports = [
         // Notes-tab card outline (which reads char.color) only refreshed
         // when grouped by color, so it could look completely unchanged
         // after "applying" a new color.
-        name: 'generating and confirming a $ec command sets every character\'s color, updates the raw input text, and refreshes the card outline',
+        name: 'generating and confirming a $ec command sets every keyed character\'s color, updates the raw input text, and refreshes the card outline',
         async run(page) {
             await loadDemoCollection(page);
+            // Every demo character holds at least one key, so "All Keyed
+            // Characters" should still cover the whole collection here.
             const totalChars = await page.evaluate(() => {
                 let n = 0;
                 for (const s in AppState.seriesData) n += AppState.seriesData[s].characters.length;
@@ -38,7 +40,7 @@ module.exports = [
             await page.click('#colorWheelCanvas', { position: { x: 170, y: 60 } });
             const hex = (await page.inputValue('#colorHexInput')).toLowerCase();
 
-            await page.click('button:has-text("All Characters")');
+            await page.click('button:has-text("All Keyed Characters")');
             await page.waitForSelector('.command-text');
 
             const commandText = await page.locator('.command-text').first().textContent();
@@ -83,70 +85,130 @@ module.exports = [
         }
     },
     {
-        // Regression test for: there was previously no way to tell which
-        // characters "Selected Only" would affect before clicking it.
-        name: '"Show Selected" lists exactly the currently-selected (non-excluded) characters',
+        // Regression test for a real report: the Colors tab used to target
+        // whatever was selected/deselected on the Notes tab, which was
+        // confusing to work across two tabs for. It now has its own grid and
+        // selection, scoped to characters holding a key.
+        name: 'the Colors tab has its own character grid (scoped to keyed characters) with its own selection, independent of the Notes tab',
         async run(page) {
             await loadDemoCollection(page);
 
-            // Deselect one character on the Notes tab first.
-            const deselectedName = await page.locator('.character-card').first().locator('.character-name').textContent();
-            await page.locator('.character-card').first().click();
-
-            const expectedSelectedCount = await page.evaluate(() => {
+            const keyedCount = await page.evaluate(() => {
                 let n = 0;
                 for (const s in AppState.seriesData) {
-                    for (const c of AppState.seriesData[s].characters) if (!c.excluded) n++;
+                    for (const c of AppState.seriesData[s].characters) if ((parseInt(c.keys) || 0) > 0) n++;
                 }
                 return n;
             });
+            assert.ok(keyedCount > 0, 'expected the demo collection to have at least one keyed character for this test to be meaningful');
 
             await page.click('#tab-colors-btn');
-            await page.waitForSelector('#colorWheelCanvas');
+            await page.waitForSelector('#colorCharacterGrid .sort-character-item');
 
-            const summaryText = await page.locator('#colorSelectedSummary').textContent();
-            assert.ok(summaryText.includes(String(expectedSelectedCount)),
-                `expected the summary to mention ${expectedSelectedCount} selected characters, got: "${summaryText}"`);
+            const gridCardCount = await page.locator('#colorCharacterGrid .sort-character-item').count();
+            assert.strictEqual(gridCardCount, keyedCount, `expected the Colors tab grid to list exactly the keyed characters, got ${gridCardCount} cards for ${keyedCount} keyed characters`);
 
-            await page.click('#colorSelectedToggleBtn');
+            const summaryBefore = await page.locator('#colorSelectedSummary').textContent();
+            assert.ok(summaryBefore.includes(`0 of ${keyedCount}`), `expected nothing selected initially, got: "${summaryBefore}"`);
+
+            await page.locator('#colorCharacterGrid .sort-character-item').first().click();
             await page.waitForTimeout(100);
-            const listVisible = await page.locator('#colorSelectedList').isVisible();
-            assert.ok(listVisible, 'expected the selected-characters list to become visible after clicking Show Selected');
+            const summaryAfter = await page.locator('#colorSelectedSummary').textContent();
+            assert.ok(summaryAfter.includes(`1 of ${keyedCount}`), `expected the summary to reflect the click, got: "${summaryAfter}"`);
 
-            const listText = await page.locator('#colorSelectedList').textContent();
-            assert.ok(!listText.includes(deselectedName) || deselectedName.length === 0,
-                `expected the deselected character ("${deselectedName}") to be absent from the selected list`);
+            await page.click('#colorsTabPanel button:has-text("Clear Selection")');
+            await page.waitForTimeout(100);
+            const summaryCleared = await page.locator('#colorSelectedSummary').textContent();
+            assert.ok(summaryCleared.includes(`0 of ${keyedCount}`), `expected Clear Selection to reset the count, got: "${summaryCleared}"`);
+
+            await page.click('#colorsTabPanel button:has-text("Select Shown")');
+            await page.waitForTimeout(100);
+            const summarySelectAll = await page.locator('#colorSelectedSummary').textContent();
+            assert.ok(summarySelectAll.includes(`${keyedCount} of ${keyedCount}`), `expected Select Shown to select every visible card, got: "${summarySelectAll}"`);
         }
     },
     {
-        name: 'confirming a "Selected Only" $ec command skips deselected characters',
+        name: 'searching the Colors tab grid filters to matching keyed characters',
         async run(page) {
             await loadDemoCollection(page);
-            await page.locator('.character-card').first().click(); // deselect one
+            await page.click('#tab-colors-btn');
+            await page.waitForSelector('#colorCharacterGrid .sort-character-item');
 
-            const deselectedKey = await page.evaluate(() => {
-                for (const s in AppState.seriesData) {
-                    for (const c of AppState.seriesData[s].characters) {
-                        if (c.excluded) return { series: s, name: c.name, colorBefore: c.color || '' };
-                    }
-                }
-                return null;
-            });
-            assert.ok(deselectedKey, 'expected exactly one deselected character to exist');
+            const targetName = await page.locator('#colorCharacterGrid .sort-item-name').first().textContent();
+            await page.fill('#colorGridSearchInput', targetName.trim());
+            await page.waitForTimeout(100);
+
+            const visibleCount = await page.locator('#colorCharacterGrid .sort-character-item').count();
+            assert.strictEqual(visibleCount, 1, `expected exactly one keyed character to match "${targetName.trim()}", got ${visibleCount}`);
+
+            await page.click('#colorsTabPanel button:has-text("Reset Filter")');
+            await page.waitForTimeout(100);
+            const searchValue = await page.inputValue('#colorGridSearchInput');
+            assert.strictEqual(searchValue, '', 'expected Reset Filter to clear the search box');
+        }
+    },
+    {
+        // Regression test for a real report: "Selected Only" used to target
+        // whatever was selected/deselected on the Notes tab - it now only
+        // targets characters checked in the Colors tab's own grid, so a
+        // Notes-tab deselection should have zero effect here.
+        name: 'confirming a "Selected Only" $ec command only covers characters selected in the Colors tab grid, ignoring Notes tab selection',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            // Deselect a character on the Notes tab - this should be
+            // completely irrelevant to the Colors tab now.
+            await page.locator('.character-card').first().click();
 
             await page.click('#tab-colors-btn');
-            await page.waitForSelector('#colorWheelCanvas');
+            await page.waitForSelector('#colorCharacterGrid .sort-character-item');
+
+            const pickedName = await page.locator('#colorCharacterGrid .sort-item-name').first().textContent();
+            await page.locator('#colorCharacterGrid .sort-character-item').first().click();
+            await page.waitForTimeout(100);
+
             await page.click('#colorWheelCanvas', { position: { x: 170, y: 60 } });
+            const hex = (await page.inputValue('#colorHexInput')).toLowerCase();
             await page.click('button:has-text("Selected Only")');
             await page.waitForSelector('.command-text');
             await page.click('.confirm-applied-btn:has-text("Ran this in Discord")');
             await page.waitForTimeout(150);
 
-            const stillUnchanged = await page.evaluate((key) => {
-                const c = AppState.seriesData[key.series].characters.find(ch => ch.name === key.name);
-                return (c.color || '') === key.colorBefore;
-            }, deselectedKey);
-            assert.ok(stillUnchanged, 'expected the deselected character\'s color to be left alone by "Selected Only"');
+            const colors = await page.evaluate(() => {
+                const result = {};
+                for (const s in AppState.seriesData) {
+                    for (const c of AppState.seriesData[s].characters) result[c.name] = (c.color || '').toLowerCase();
+                }
+                return result;
+            });
+
+            const pickedTrimmed = pickedName.trim();
+            assert.strictEqual(colors[pickedTrimmed], hex, `expected the character checked in the Colors tab grid to get the new color, got: ${JSON.stringify(colors)}`);
+
+            const othersUnchanged = Object.keys(colors).filter(function (n) { return n !== pickedTrimmed; }).every(function (n) { return colors[n] !== hex; });
+            assert.ok(othersUnchanged, `expected characters NOT checked in the Colors tab grid to be untouched regardless of Notes-tab selection, got: ${JSON.stringify(colors)}`);
+        }
+    },
+    {
+        // Regression test for a real report: the series-card group's bulk
+        // "apply color" widget (on the Notes tab) wrote directly into
+        // AppState.seriesData but skipped the raw parse-input text resync
+        // that every other character-editing flow (Add Characters, the
+        // Colors tab's own confirm flow) does.
+        name: 'applying a color via a series group\'s bulk color widget updates the raw parse-input text too',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const group = page.locator('.series-card').filter({ hasText: 'Dungeon Meshi' });
+            await group.locator('.color-hex-input').fill('#123abc');
+            await group.locator('[data-action="bulk-color"][data-target="all"]').click();
+            await page.waitForTimeout(150);
+
+            const rawInput = await page.evaluate(() => AppState.rawInput.toLowerCase());
+            assert.ok(rawInput.includes('#123abc'), `expected AppState.rawInput to include the newly-applied color, got a snippet: ${rawInput.slice(0, 200)}`);
+
+            const mainInputValue = (await page.inputValue('#input')).toLowerCase();
+            assert.ok(mainInputValue.includes('#123abc'), 'expected the main input textarea to reflect the newly-applied color too');
         }
     }
 ];

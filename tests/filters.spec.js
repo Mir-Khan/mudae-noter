@@ -45,5 +45,56 @@ module.exports = [
             const excludedAfterRevert = await page.locator('.character-card.excluded').count();
             assert.strictEqual(excludedAfterRevert, 1, 'Revert should restore exactly the pre-filter manual selection state, not clear it entirely');
         }
+    },
+    {
+        name: '"Disabled Only" series filter shows only series where every character is disabled',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            // Make Monogatari (a single-character series in the demo data)
+            // fully disabled, leaving the rest untouched.
+            await page.evaluate(() => {
+                AppState.seriesData['Monogatari'].characters.forEach(c => { c.isDisabled = true; });
+                displaySeries();
+            });
+            await page.waitForTimeout(100);
+
+            const totalSeriesBefore = await page.locator('.series-card').count();
+            assert.ok(totalSeriesBefore > 1, 'expected more than one series in the demo collection for this test to be meaningful');
+
+            await page.click('#disabled-series-only-btn');
+            await page.waitForTimeout(150);
+
+            const visibleSeriesNames = await page.locator('.series-card .series-title').allTextContents();
+            assert.deepStrictEqual(visibleSeriesNames, ['Monogatari'], `expected only the fully-disabled series to show, got: ${JSON.stringify(visibleSeriesNames)}`);
+
+            await page.click('#disabled-series-all-btn');
+            await page.waitForTimeout(150);
+            const visibleSeriesAfterReset = await page.locator('.series-card').count();
+            assert.strictEqual(visibleSeriesAfterReset, totalSeriesBefore, 'expected switching back to "All" to restore every series');
+        }
+    },
+    {
+        // Regression test for a real report: grouping by color used to make
+        // one group per exact hex value, fragmenting into many tiny groups
+        // instead of anything useful to scan.
+        name: 'grouping by color produces exactly two groups: Colored and No Color',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            // Give a couple of demo characters distinct colors, leave the
+            // rest uncolored, so both buckets are populated.
+            await page.evaluate(() => {
+                AppState.seriesData['Dungeon Meshi'].characters[0].color = '#ff0000';
+                AppState.seriesData['One Piece'].characters[0].color = '#00ff00';
+                AppState.seriesData['Dungeon Meshi'].characters[1].color = '';
+            });
+
+            await page.click('#group-color-btn');
+            await page.waitForTimeout(150);
+
+            const groupTitles = await page.locator('.series-title').allTextContents();
+            assert.deepStrictEqual(groupTitles.slice().sort(), ['Colored', 'No Color'], `expected exactly two color groups, got: ${JSON.stringify(groupTitles)}`);
+        }
     }
 ];
