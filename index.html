@@ -4135,6 +4135,8 @@
             AppState.seriesData = parsed;
 
             refreshAfterCollectionChange();
+            resyncAllSortDataMatches();
+            refreshSortTabIfVisible();
             saveToLocalStorage();
         }
 
@@ -6729,6 +6731,39 @@ ${rouletteBarHTML}
             };
         }
 
+        // A full Parse Input replaces AppState.seriesData wholesale (see
+        // parseInput() below), so any character's note/image/color/rank/etc
+        // can change from a fresh re-paste (new art claimed, a rename,
+        // corrected data, etc.) - but AppState.sortData's cached copies of
+        // those fields were only ever set once, at whatever moment the Sort
+        // tab was last matched, and nothing previously kept them in sync
+        // with a *later* Notes-tab re-parse. That's how a Sort tab entry
+        // could keep showing an old/wrong image (e.g. from before a
+        // character's art was updated) even though the Notes tab itself was
+        // already showing the correct, current one. Re-runs the same
+        // matching every entry originally went through, refreshing the
+        // cached fields - except entries manually fixed via "Link to a
+        // Character", which are left exactly as the user set them.
+        function resyncAllSortDataMatches() {
+            if (!AppState.sortData || AppState.sortData.length === 0) return;
+
+            const lookup = buildNotesLookupFromSeriesData(AppState.seriesData);
+            AppState.sortData.forEach(function (entry) {
+                if (entry.manuallyLinked) return;
+
+                const merged = mergeSortEntryWithNotes({ name: entry.name, series: entry.series, kakera: entry.kakera }, lookup);
+                entry.matched = merged.matched;
+                entry.note = merged.note;
+                entry.image = merged.image;
+                entry.color = merged.color;
+                entry.keys = merged.keys;
+                entry.owner = merged.owner;
+                entry.mudaeTags = merged.mudaeTags;
+                entry.isDisabled = merged.isDisabled;
+                entry.globalRank = merged.globalRank;
+            });
+        }
+
         function parseSortInput() {
             const textField = document.getElementById('sortInput');
             const text = textField ? textField.value : '';
@@ -7272,6 +7307,11 @@ ${rouletteBarHTML}
             entry.mudaeTags = char.mudaeTags ? char.mudaeTags.slice() : [];
             entry.isDisabled = !!char.isDisabled;
             entry.globalRank = char.globalRank || '';
+            // Marks this as a deliberate manual choice so a later full
+            // re-parse's resync (resyncAllSortDataMatches) leaves it alone
+            // instead of overwriting it with whatever the automatic
+            // name/series/kakera matching comes up with.
+            entry.manuallyLinked = true;
 
             closeLinkSortEntryModal();
             renderSortCharacterList();
