@@ -211,5 +211,67 @@ module.exports = [
             const orderAfter = await page.evaluate(() => AppState.noteOrder.slice());
             assert.strictEqual(orderAfter[0], orderBefore[1], `expected the moved note to now be first, got: ${JSON.stringify(orderAfter)}`);
         }
+    },
+    {
+        // Regression test for a real report: applying a note to "Selected"
+        // left those characters still selected, forcing a manual deselect
+        // of the batch just handled before a different batch could be
+        // selected for a different note. "All" is untouched - only
+        // "Selected" has this select-a-batch/apply/repeat workflow.
+        name: 'applying a note to "Selected" characters deselects exactly those characters afterward',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const group = page.locator('.series-card').filter({ hasText: 'Dungeon Meshi' });
+            const cards = group.locator('.character-card');
+            const cardCount = await cards.count();
+            assert.ok(cardCount >= 2, 'expected at least 2 characters in Dungeon Meshi for this test to be meaningful');
+
+            // Deselect the second card so only the first is "Selected".
+            await cards.nth(1).click();
+            const excludedBefore = await group.locator('.character-card.excluded').count();
+            assert.strictEqual(excludedBefore, 1, 'expected exactly one manually-deselected card before applying');
+
+            await group.locator('.note-input').first().fill('BatchOne');
+            await group.locator('[data-action="bulk-note"][data-target="selected"]').click();
+            await page.waitForTimeout(150);
+
+            const excludedAfter = await group.locator('.character-card.excluded').count();
+            assert.strictEqual(excludedAfter, cardCount, `expected every character to be deselected after applying to "Selected" (the previously-selected one auto-deselects, the already-deselected one stays deselected), got ${excludedAfter} of ${cardCount}`);
+
+            const firstCharNote = await page.evaluate(() => AppState.seriesData['Dungeon Meshi'].characters[0].note);
+            assert.strictEqual(firstCharNote, 'BatchOne', 'expected the note to still be applied even though the character also got deselected');
+        }
+    },
+    {
+        name: 'grouping by note keeps the un-noted group pinned first regardless of sort method',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            // Give every character a note except one, so there's exactly one
+            // un-noted group plus at least one noted group to sort against.
+            await page.evaluate(() => {
+                let skippedOne = false;
+                for (const s in AppState.seriesData) {
+                    for (const c of AppState.seriesData[s].characters) {
+                        if (!skippedOne) { c.note = ''; skippedOne = true; }
+                        else c.note = 'zzz-last-alphabetically';
+                    }
+                }
+            });
+
+            await page.click('#group-note-btn');
+            await page.waitForTimeout(150);
+
+            await page.click('#sort-count-btn');
+            await page.waitForTimeout(150);
+            const firstGroupByCount = await page.locator('.series-title').first().textContent();
+            assert.strictEqual(firstGroupByCount, '(No Note)', `expected the un-noted group first when sorted by count, got: "${firstGroupByCount}"`);
+
+            await page.click('#sort-alpha-btn');
+            await page.waitForTimeout(150);
+            const firstGroupByAlpha = await page.locator('.series-title').first().textContent();
+            assert.strictEqual(firstGroupByAlpha, '(No Note)', `expected the un-noted group first when sorted alphabetically too (it would otherwise lose to "zzz-last-alphabetically"), got: "${firstGroupByAlpha}"`);
+        }
     }
 ];

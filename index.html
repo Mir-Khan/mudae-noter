@@ -3844,12 +3844,22 @@
                         return;
                     }
 
+                    // Applying a note to "Selected" also deselects exactly
+                    // those characters afterward (color's "Selected" is left
+                    // alone - only notes have this back-and-forth "tag a
+                    // batch, then tag the next batch" workflow) - otherwise
+                    // they'd still show as selected, forcing a manual
+                    // deselect of the batch you just handled before you
+                    // could select a fresh one for a different note.
+                    const applyingSelectedNotes = isNote && applyTo === 'selected';
+
                     getGroupChars().forEach(char => {
                         const applies = (applyTo === 'all') || (applyTo === 'selected' && !char.excluded);
                         if (applies) {
                             const originalChar = AppState.seriesData[char.originalSeries].characters[char.originalIndex];
                             if (isNote) originalChar.note = newValue;
                             else originalChar.color = newValue.trim();
+                            if (applyingSelectedNotes) originalChar.excluded = true;
                             syncSortDataForCharacter(char.originalSeries, originalChar);
                         }
                     });
@@ -3874,6 +3884,10 @@
                         // Order list itself - only needed here since this
                         // branch skips that full re-render.
                         if (isNote) renderNoteOrderList();
+                        // Selected-notes deselecting its targets changes the
+                        // group's included count - keep the header/toggle
+                        // button in sync with the partial rebuild above.
+                        if (applyingSelectedNotes) updateGroupUI(groupCard);
                     }
                     refreshSortTabIfVisible();
                     break;
@@ -4677,6 +4691,14 @@ ${rouletteBarHTML}
 
             const sortedGroupEntries = Object.entries(groups).sort((a, b) => {
                 const [keyA, dataA] = a; const [keyB, dataB] = b;
+                // The un-noted bucket is pinned first when grouping by note -
+                // it's usually the one you actually need to work through,
+                // and letting it fall wherever count/alpha sorting happened
+                // to put it meant scrolling to find it every time.
+                if (AppState.ui.grouping === 'note') {
+                    if (keyA === '' && keyB !== '') return -1;
+                    if (keyB === '' && keyA !== '') return 1;
+                }
                 if (AppState.ui.sortMethod === 'count') return dataB.characters.length - dataA.characters.length;
                 if (AppState.ui.grouping === 'kakera') {
                     const valA = parseInt(keyA.split(' ')[0]); const valB = parseInt(keyB.split(' ')[0]);
