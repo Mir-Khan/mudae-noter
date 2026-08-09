@@ -1306,6 +1306,56 @@
             border-radius: 4px;
         }
 
+        .missing-from-sort-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid #38bdf8;
+            color: #e5e7eb;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            margin-bottom: 20px;
+        }
+
+        .missing-from-sort-panel-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .missing-from-sort-panel-top strong {
+            color: #38bdf8;
+        }
+
+        .missing-from-sort-list {
+            display: none;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .missing-from-sort-list.expanded {
+            display: flex;
+        }
+
+        .missing-from-sort-chip {
+            background: #1a1a24;
+            border: 1px solid #38bdf8;
+            color: #e5e7eb;
+            border-radius: 5px;
+            padding: 3px 8px;
+            font-size: 0.92em;
+        }
+
+        .missing-from-sort-chip span {
+            color: #9ca3af;
+            font-size: 0.85em;
+        }
+
         .sort-column-header {
             display: flex;
             align-items: center;
@@ -3093,6 +3143,7 @@
 
             <div id="sortMessage"></div>
             <div id="sortDataInfoBanner" class="sort-info-banner" style="display: none;"></div>
+            <div id="missingFromSortPanel" class="missing-from-sort-panel" style="display: none;"></div>
 
             <div class="sort-column-header">
                 <h2>Character Order</h2>
@@ -6805,6 +6856,8 @@ ${rouletteBarHTML}
         }
 
         function updateSortInfoBanner() {
+            updateMissingFromSortPanel();
+
             const banner = document.getElementById('sortDataInfoBanner');
             if (!banner) return;
 
@@ -6827,6 +6880,80 @@ ${rouletteBarHTML}
             } else {
                 banner.innerHTML = `${total - matchedCount} of ${total} character(s) are missing notes/images/colors. Parse this collection on the <strong>Notes</strong> tab with <code>$mmsaty+ri-c+x+ko</code> to fill in the rest.`;
             }
+        }
+
+        // Different problem from the "unmatched" case above: an unmatched
+        // Sort tab entry still exists (its name/series/kakera line was
+        // pasted in, it just couldn't be linked to Notes-tab data). This
+        // instead finds Notes-tab characters with NO Sort tab entry at all -
+        // e.g. claimed/renamed after the last time $mmmka+s was pasted here
+        // - so there's nothing to click-to-link; the only fix is re-pasting
+        // a fresh, complete $mmmka+s output. Matches on name (and
+        // series+name when available) rather than object identity, since a
+        // sortData entry is just parsed text, never a real reference to a
+        // Notes-tab character.
+        function getCharactersMissingFromSortData() {
+            if (!AppState.sortData || AppState.sortData.length === 0) return [];
+
+            const bySeriesName = new Set();
+            const byNameOnly = new Set();
+            AppState.sortData.forEach(function (entry) {
+                bySeriesName.add(normalizeMatchPart(entry.series) + '::' + normalizeMatchPart(entry.name));
+                byNameOnly.add(normalizeMatchPart(entry.name));
+            });
+
+            const missing = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const seriesKey = normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(char.name);
+                    const nameKey = normalizeMatchPart(char.name);
+                    if (!bySeriesName.has(seriesKey) && !byNameOnly.has(nameKey)) {
+                        missing.push({ seriesName: seriesName, char: char });
+                    }
+                });
+            }
+            return missing;
+        }
+
+        let missingFromSortListExpanded = false;
+
+        function updateMissingFromSortPanel() {
+            const panel = document.getElementById('missingFromSortPanel');
+            if (!panel) return;
+
+            if (!AppState.sortData || AppState.sortData.length === 0) {
+                panel.style.display = 'none';
+                panel.innerHTML = '';
+                return;
+            }
+
+            const missing = getCharactersMissingFromSortData();
+            if (missing.length === 0) {
+                panel.style.display = 'none';
+                panel.innerHTML = '';
+                return;
+            }
+
+            const chips = missing.map(function (item) {
+                return `<span class="missing-from-sort-chip">${escapeHTML(item.char.name)} <span>${escapeHTML(item.seriesName)}</span></span>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <div class="missing-from-sort-panel-top">
+                    <span><strong>${missing.length}</strong> character${missing.length === 1 ? '' : 's'} from your collection ${missing.length === 1 ? 'has' : 'have'} no entry in this Sort tab data at all - most likely claimed or renamed since you last pasted <code>$mmmka+s</code> here. Re-paste a fresh, complete output above to include ${missing.length === 1 ? 'it' : 'them'}.</span>
+                    <button type="button" class="btn btn-sm" onclick="toggleMissingFromSortList()" id="missingFromSortToggleBtn">${missingFromSortListExpanded ? 'Hide' : 'Show'} List</button>
+                </div>
+                <div class="missing-from-sort-list${missingFromSortListExpanded ? ' expanded' : ''}" id="missingFromSortList">${chips}</div>
+            `;
+            panel.style.display = 'flex';
+        }
+
+        function toggleMissingFromSortList() {
+            missingFromSortListExpanded = !missingFromSortListExpanded;
+            const list = document.getElementById('missingFromSortList');
+            const btn = document.getElementById('missingFromSortToggleBtn');
+            if (list) list.classList.toggle('expanded', missingFromSortListExpanded);
+            if (btn) btn.textContent = missingFromSortListExpanded ? 'Hide List' : 'Show List';
         }
 
         // ===================== Generic multi-select dropdown =====================

@@ -109,5 +109,92 @@ module.exports = [
             assert.strictEqual(afterReparse.image, linkedImage, 'expected the manually-linked image to be untouched by the resync');
             assert.strictEqual(afterReparse.manuallyLinked, true, 'expected the manual-link flag itself to persist');
         }
+    },
+    {
+        // Regression test for a real report: a Notes-tab character can be
+        // entirely absent from the Sort tab's own data (claimed/renamed
+        // after the last $mmmka+s paste there) - distinct from the
+        // "unmatched" case, since there's no sortData line for them at all,
+        // so nothing to click-to-link. The only fix is re-pasting a fresh
+        // $mmmka+s output; this just makes that gap visible instead of
+        // letting a character silently vanish from Sort tab search results.
+        name: 'a Notes-tab character missing from the Sort tab data entirely is surfaced in the "missing from Sort tab" panel',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            // Sort tab data that covers every demo character EXCEPT Izutsumi.
+            const sortInputText = await page.evaluate(() => {
+                const lines = [];
+                for (const seriesName in AppState.seriesData) {
+                    AppState.seriesData[seriesName].characters.forEach(c => {
+                        if (c.name === 'Izutsumi') return;
+                        lines.push(`${c.name} - ${seriesName} ${c.kakera || 1} ka`);
+                    });
+                }
+                return lines.join('\n');
+            });
+
+            await page.click('#tab-sort-btn');
+            await page.waitForSelector('#sortInput');
+            await page.fill('#sortInput', sortInputText);
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForSelector('#sortCharacterList .sort-character-item');
+
+            const panelVisible = await page.locator('#missingFromSortPanel').isVisible();
+            assert.ok(panelVisible, 'expected the missing-from-Sort-tab panel to appear');
+            const panelText = await page.locator('#missingFromSortPanel').textContent();
+            assert.ok(panelText.includes('1'), `expected the panel to report exactly 1 missing character, got: "${panelText}"`);
+
+            await page.click('#missingFromSortToggleBtn');
+            await page.waitForTimeout(100);
+            const chipText = await page.locator('.missing-from-sort-chip').textContent();
+            assert.ok(chipText.includes('Izutsumi'), `expected the expanded list to name the missing character, got: "${chipText}"`);
+
+            // Search still shouldn't surface her, since she never had an
+            // entry to begin with.
+            await page.fill('#sortSearchInput', 'Izutsumi');
+            await page.waitForTimeout(100);
+            const searchResultCount = await page.locator('#sortCharacterList .sort-character-item').count();
+            assert.strictEqual(searchResultCount, 0, 'expected the Sort tab search to find nothing for a character with no sortData entry at all');
+        }
+    },
+    {
+        name: 'the "missing from Sort tab" panel disappears once the missing character is included in a fresh paste',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const allButIzutsumi = await page.evaluate(() => {
+                const lines = [];
+                for (const seriesName in AppState.seriesData) {
+                    AppState.seriesData[seriesName].characters.forEach(c => {
+                        if (c.name === 'Izutsumi') return;
+                        lines.push(`${c.name} - ${seriesName} ${c.kakera || 1} ka`);
+                    });
+                }
+                return lines.join('\n');
+            });
+            await page.click('#tab-sort-btn');
+            await page.waitForSelector('#sortInput');
+            await page.fill('#sortInput', allButIzutsumi);
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForSelector('#sortCharacterList .sort-character-item');
+            assert.ok(await page.locator('#missingFromSortPanel').isVisible(), 'expected the panel to show up before the fix');
+
+            const everyone = await page.evaluate(() => {
+                const lines = [];
+                for (const seriesName in AppState.seriesData) {
+                    AppState.seriesData[seriesName].characters.forEach(c => {
+                        lines.push(`${c.name} - ${seriesName} ${c.kakera || 1} ka`);
+                    });
+                }
+                return lines.join('\n');
+            });
+            await page.fill('#sortInput', everyone);
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForTimeout(150);
+
+            const panelVisibleAfter = await page.locator('#missingFromSortPanel').isVisible();
+            assert.ok(!panelVisibleAfter, 'expected the panel to disappear once every character has a Sort tab entry');
+        }
     }
 ];
