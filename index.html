@@ -9641,7 +9641,26 @@ ${rouletteBarHTML}
                 items: [
                     { type: 'feature', text: 'New <b>"No Color Only"</b> filter on the Colors tab\'s character grid, so you can jump straight to keyed characters that don\'t have a color assigned yet.' },
                     { type: 'feature', text: 'The <b>Keys</b> stat on each character card is now clickable - add a key count directly (e.g. after claiming keys in Discord) without pasting a whole fresh <code>$ec</code>-style command, and it keeps the raw input text in sync.' },
-                    { type: 'feature', text: 'New <b>What\'s New</b> link next to the title lets you pull up this changelog any time, instead of only ever seeing it once automatically.' }
+                    { type: 'feature', text: 'New <b>What\'s New</b> link next to the title lets you pull up this changelog any time, instead of only ever seeing it once automatically.' },
+                    { type: 'feature', text: 'New <b>"Recently Noted"</b> panel above the character grid: a scrollable, most-recent-first list of characters you\'ve just noted, with click-to-jump chips, individual removal, a "Clear" button, and its own scoped <code>Generate $n Command</code>.' },
+                    { type: 'feature', text: 'Applying a note to a series group\'s <b>"Selected"</b> characters now deselects exactly those characters afterward, so you can pick a fresh batch for a different note without manually deselecting the last one first.' },
+                    { type: 'feature', text: 'Grouping by note now keeps the un-noted group pinned at the top, instead of buried wherever it falls by size.' },
+                    { type: 'feature', text: 'New <b>"missing from Sort tab"</b> panel: flags Notes-tab characters that have no corresponding entry in the Sort tab at all (claimed/renamed after your last <code>$mmmka+s</code> paste there), since they\'d otherwise silently vanish from Sort tab search with no clue why.' },
+                    { type: 'fix', text: 'Sort tab entries could keep showing a stale image/note/color after a fresh Notes tab re-parse (e.g. new art claimed) - already-matched entries are now refreshed automatically, unless manually linked.' }
+                ]
+            },
+            {
+                version: '2026-08-08',
+                date: 'August 8, 2026',
+                items: [
+                    { type: 'feature', text: 'Switching tabs now remembers how far down each tab was scrolled (session-only), so hopping between tabs on a long list doesn\'t dump you back at the top every time.' },
+                    { type: 'feature', text: 'New <b>"Series: All / Disabled Only"</b> filter on the Notes tab, showing only groups where every character is permanently disabled.' },
+                    { type: 'feature', text: 'Added a <b>"Notes"</b> sort option to a series group\'s sort buttons, alongside A-Z/Rank/Kakera/Keys.' },
+                    { type: 'feature', text: 'After using <b>+ Add New Characters</b>, a modal now offers a quick, optional note field for each newly-added character right away, instead of leaving them un-noted until your next pass.' },
+                    { type: 'feature', text: 'That new-character note prompt now mirrors your <b>Quick Notes</b> in as click-to-fill chips, since the modal sits above the Quick Notes sidebar and couldn\'t reach it otherwise.' },
+                    { type: 'feature', text: '<b>Quick Notes</b> can now be reordered by dragging one onto another, same as the Sort/Series/Note Order lists.' },
+                    { type: 'feature', text: 'The Colors tab now has its own character grid and selection, scoped to keyed characters and fully independent from whatever\'s selected/deselected on the Notes tab.' },
+                    { type: 'fix', text: 'The series group\'s bulk "apply color" widget updated characters\' colors but skipped resyncing the raw parse-input textarea, unlike every other place characters get edited.' }
                 ]
             },
             {
