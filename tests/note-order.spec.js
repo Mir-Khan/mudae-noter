@@ -273,5 +273,69 @@ module.exports = [
             const firstGroupByAlpha = await page.locator('.series-title').first().textContent();
             assert.strictEqual(firstGroupByAlpha, '(No Note)', `expected the un-noted group first when sorted alphabetically too (it would otherwise lose to "zzz-last-alphabetically"), got: "${firstGroupByAlpha}"`);
         }
+    },
+    {
+        // Regression test for a real report: once "Selected" auto-deselects
+        // its targets, the cards gray out and blend in with everything else
+        // already deselected - the "Recently noted" panel is the only trace
+        // left of what was just tagged.
+        name: 'the "Recently noted" panel lists characters noted across multiple bulk applies, most recent first, and supports removing/clearing entries',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const groups = page.locator('.series-card');
+            const firstGroupChar = (await groups.nth(0).locator('.character-name').first().textContent()).trim();
+            const thirdGroupChar = (await groups.nth(2).locator('.character-name').first().textContent()).trim();
+
+            await groups.nth(0).locator('.note-input').first().fill('Batch A');
+            await groups.nth(0).locator('[data-action="bulk-note"][data-target="all"]').click();
+            await page.waitForTimeout(150);
+
+            let panelText = await page.locator('#recentlyNotedPanel').textContent();
+            assert.ok(panelText.includes(firstGroupChar), `expected the panel to list the just-noted character, got: "${panelText}"`);
+
+            await groups.nth(2).locator('.note-input').first().fill('Batch B');
+            await groups.nth(2).locator('[data-action="bulk-note"][data-target="all"]').click();
+            await page.waitForTimeout(150);
+
+            const chipNames = await page.locator('.recently-noted-chip').allTextContents();
+            assert.ok(chipNames[0].includes(thirdGroupChar), `expected the most-recently-noted character to be listed first, got: ${JSON.stringify(chipNames)}`);
+            assert.ok(chipNames.some(n => n.includes(firstGroupChar)), 'expected the earlier batch to still be present in the rolling list');
+
+            // Remove one entry via its chip's ×.
+            const chipCountBefore = await page.locator('.recently-noted-chip').count();
+            await page.locator('.recently-noted-chip-remove').first().click();
+            await page.waitForTimeout(100);
+            const chipCountAfterRemove = await page.locator('.recently-noted-chip').count();
+            assert.strictEqual(chipCountAfterRemove, chipCountBefore - 1, 'expected removing one chip to shrink the list by exactly one');
+
+            await page.click('#recentlyNotedPanel button:has-text("Clear")');
+            await page.waitForTimeout(100);
+            const panelVisible = await page.locator('#recentlyNotedPanel').isVisible();
+            assert.ok(!panelVisible, 'expected Clear to hide the panel entirely');
+        }
+    },
+    {
+        name: 'the "Recently noted" panel\'s "Generate $n Command" button builds a command scoped to exactly its own list',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const groups = page.locator('.series-card');
+            await groups.nth(0).locator('.note-input').first().fill('Batch A');
+            await groups.nth(0).locator('[data-action="bulk-note"][data-target="all"]').click();
+            await page.waitForTimeout(150);
+
+            const namesInBatch = await groups.nth(0).locator('.character-name').allTextContents();
+
+            await page.click('#recentlyNotedPanel button:has-text("Generate $n Command")');
+            await page.waitForTimeout(150);
+
+            const commandText = await page.locator('#recentlyNotedCommandOutput .command-text').first().textContent();
+            assert.ok(commandText.startsWith('$n '), `expected an $n command, got: "${commandText}"`);
+            assert.ok(commandText.includes('Batch A'), `expected the command to include the note text, got: "${commandText}"`);
+            namesInBatch.forEach(name => {
+                assert.ok(commandText.includes(name.trim()), `expected the command to include "${name.trim()}", got: "${commandText}"`);
+            });
+        }
     }
 ];

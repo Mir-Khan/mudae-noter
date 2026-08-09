@@ -380,6 +380,83 @@
             margin: 0;
         }
 
+        .recently-noted-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin: 0 0 18px;
+        }
+
+        .recently-noted-panel-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .recently-noted-panel-label {
+            color: #f59e0b;
+            font-weight: 700;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        .recently-noted-panel-names {
+            flex: 1 1 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .recently-noted-chip {
+            background: #1a1a24;
+            border: 1px solid #f59e0b;
+            color: #e5e7eb;
+            border-radius: 5px;
+            padding: 3px 6px 3px 8px;
+            font-size: 0.82em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .recently-noted-chip:hover {
+            background: rgba(245, 158, 11, 0.25);
+        }
+
+        .recently-noted-chip-remove {
+            opacity: 0.6;
+            padding: 0 2px;
+        }
+
+        .recently-noted-chip-remove:hover {
+            opacity: 1;
+            color: #f59e0b;
+        }
+
+        .recently-noted-panel-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        @keyframes recentlyNotedFlash {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+            25%, 75% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.8); }
+        }
+
+        .character-card.flash-highlight {
+            animation: recentlyNotedFlash 1s ease-in-out 2;
+        }
+
         .hidden-char {
             display: none !important;
         }
@@ -2995,6 +3072,7 @@
             <button type="button" class="btn btn-sm" onclick="clearNotesSearch()">Reset</button>
             <div id="notesSearchNoteTop" class="sort-filter-note"></div>
         </div>
+        <div id="recentlyNotedPanel" class="recently-noted-panel" style="display: none;"></div>
         <div id="seriesGrid" class="series-grid"></div>
         <div id="commands"></div>
         </div>
@@ -3852,6 +3930,7 @@
                     // deselect of the batch you just handled before you
                     // could select a fresh one for a different note.
                     const applyingSelectedNotes = isNote && applyTo === 'selected';
+                    const justNoted = [];
 
                     getGroupChars().forEach(char => {
                         const applies = (applyTo === 'all') || (applyTo === 'selected' && !char.excluded);
@@ -3861,8 +3940,11 @@
                             else originalChar.color = newValue.trim();
                             if (applyingSelectedNotes) originalChar.excluded = true;
                             syncSortDataForCharacter(char.originalSeries, originalChar);
+                            if (isNote) justNoted.push({ seriesName: char.originalSeries, char: originalChar });
                         }
                     });
+
+                    if (isNote && justNoted.length) addToRecentlyNoted(justNoted);
 
                     // Keeps the raw parse-input textarea (and AppState.rawInput)
                     // round-trippable with the actual note/color values, same
@@ -4463,6 +4545,157 @@
             ['notesSearchNote', 'notesSearchNoteTop'].forEach(function (id) {
                 const note = document.getElementById(id);
                 if (note) note.textContent = text;
+            });
+        }
+
+        // Surfaces which characters got noted recently (a series group's
+        // "Apply note" All/Selected), as a small running list above the grid
+        // - added because "Selected" also deselects its targets (see the
+        // bulk-note handler above), so those cards immediately gray out and
+        // blend in with everything else already deselected, with no other
+        // trace of what was just done. Session-only (not part of AppState),
+        // a rolling list rather than just the latest batch (re-noting a
+        // character moves it back to the front instead of duplicating it),
+        // capped so it stays a quick-reference list rather than growing
+        // unbounded over a long session.
+        const RECENTLY_NOTED_MAX = 50;
+        let recentlyNotedEntries = [];
+
+        function addToRecentlyNoted(entries) {
+            entries.forEach(function (item) {
+                recentlyNotedEntries = recentlyNotedEntries.filter(function (e) { return e.char !== item.char; });
+                recentlyNotedEntries.unshift(item);
+            });
+            if (recentlyNotedEntries.length > RECENTLY_NOTED_MAX) {
+                recentlyNotedEntries.length = RECENTLY_NOTED_MAX;
+            }
+            renderRecentlyNotedPanel();
+        }
+
+        function removeFromRecentlyNoted(idx) {
+            recentlyNotedEntries.splice(idx, 1);
+            renderRecentlyNotedPanel();
+        }
+
+        function clearRecentlyNotedBatch() {
+            recentlyNotedEntries = [];
+            renderRecentlyNotedPanel();
+        }
+
+        function renderRecentlyNotedPanel() {
+            const panel = document.getElementById('recentlyNotedPanel');
+            if (!panel) return;
+
+            if (recentlyNotedEntries.length === 0) {
+                panel.style.display = 'none';
+                panel.innerHTML = '';
+                return;
+            }
+
+            const chips = recentlyNotedEntries.map(function (item, idx) {
+                const noteLabel = (item.char.note || '').trim() || '(blank note)';
+                return `<span class="recently-noted-chip" data-index="${idx}" title="${escapeHTML(noteLabel)} - click to jump, × to remove from this list">${escapeHTML(item.char.name)}<span class="recently-noted-chip-remove" data-index="${idx}">×</span></span>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <div class="recently-noted-panel-top">
+                    <span class="recently-noted-panel-label">Recently noted (${recentlyNotedEntries.length}):</span>
+                    <div class="recently-noted-panel-names">${chips}</div>
+                    <div class="recently-noted-panel-actions">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="generateNotesForRecentlyNoted()">Generate $n Command</button>
+                        <button type="button" class="btn btn-sm" onclick="clearRecentlyNotedBatch()">Clear</button>
+                    </div>
+                </div>
+                <div id="recentlyNotedCommandOutput"></div>
+            `;
+            panel.style.display = 'flex';
+
+            panel.querySelectorAll('.recently-noted-chip').forEach(function (chip) {
+                chip.addEventListener('click', function (e) {
+                    const idx = parseInt(chip.dataset.index, 10);
+                    if (e.target.classList.contains('recently-noted-chip-remove')) {
+                        e.stopPropagation();
+                        removeFromRecentlyNoted(idx);
+                        return;
+                    }
+                    jumpToRecentlyNotedCharacter(recentlyNotedEntries[idx]);
+                });
+            });
+        }
+
+        function jumpToRecentlyNotedCharacter(item) {
+            if (!item) return;
+            const seriesData = AppState.seriesData[item.seriesName];
+            if (!seriesData) return;
+            const index = seriesData.characters.indexOf(item.char);
+            if (index === -1) return;
+
+            const cardEl = document.querySelector(`.character-card[data-original-series="${CSS.escape(item.seriesName)}"][data-original-index="${index}"]`);
+            if (!cardEl) return;
+
+            cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            cardEl.classList.add('flash-highlight');
+            setTimeout(function () { cardEl.classList.remove('flash-highlight'); }, 2000);
+        }
+
+        // A self-contained $n command generator scoped to exactly the
+        // recently-noted list, rather than whatever's currently
+        // selected/excluded on the grid - so you can tag a batch, jump
+        // straight to "Generate Notes" for just that batch, and copy it
+        // into Discord without having to fight with the main selection
+        // state at all.
+        function generateNotesForRecentlyNoted() {
+            const output = document.getElementById('recentlyNotedCommandOutput');
+            if (!output) return;
+            if (recentlyNotedEntries.length === 0) {
+                output.innerHTML = '';
+                return;
+            }
+
+            const commandsByNote = {};
+            recentlyNotedEntries.forEach(function (item) {
+                const note = (item.char.note || '').trim();
+                if (!commandsByNote[note]) commandsByNote[note] = [];
+                commandsByNote[note].push(item.char.name);
+            });
+
+            output.innerHTML = '<div class="commands-section"></div>';
+            const container = output.querySelector('.commands-section');
+
+            Object.keys(commandsByNote).sort(function (a, b) { return a.localeCompare(b); }).forEach(function (note) {
+                const names = commandsByNote[note];
+                const prefix = '$n ';
+                const suffix = note ? ` $ ${note}` : '';
+                const parts = [];
+                let current = '';
+                let currentCount = 0;
+
+                names.forEach(function (name) {
+                    const sep = current ? '$' : '';
+                    const potential = current + sep + name;
+                    if (current && (prefix.length + potential.length + suffix.length) > 1990) {
+                        parts.push({ command: prefix + current + suffix, count: currentCount });
+                        current = name;
+                        currentCount = 1;
+                    } else {
+                        current = potential;
+                        currentCount++;
+                    }
+                });
+                if (current) parts.push({ command: prefix + current + suffix, count: currentCount });
+
+                parts.forEach(function (part, idx) {
+                    const commandItem = document.createElement('div');
+                    commandItem.className = 'command-item';
+                    let headerText = `Note: ${note || 'None'} - ${part.count} character${part.count === 1 ? '' : 's'}`;
+                    if (parts.length > 1) headerText += ` (Part ${idx + 1}/${parts.length})`;
+                    commandItem.innerHTML = `
+                        <div class="command-header"><div class="command-series">${headerText}</div></div>
+                        <div class="command-text">${escapeHTML(part.command)}</div>
+                        <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${part.command.replace(/`/g, '\\`')}\`)">Copy Command</button>
+                    `;
+                    container.appendChild(commandItem);
+                });
             });
         }
 
