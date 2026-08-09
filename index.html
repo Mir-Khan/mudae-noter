@@ -2691,7 +2691,12 @@
         </div>
 
         <div class="header-row">
-            <h1>Mudae Collection Manager</h1>
+            <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+                <h1 style="margin: 0;">Mudae Collection Manager</h1>
+                <button type="button" onclick="showChangelog()"
+                    style="background: none; border: none; color: #6b7280; font-size: 0.8em; cursor: pointer; padding: 2px 4px; text-decoration: underline; text-underline-offset: 2px;"
+                    title="See recent updates">What's New</button>
+            </div>
             <div class="instructions-list" id="notesInstructions">
                 <p class="instruction-item">
                     <strong>Get Started:</strong> Paste <code>$mmasi-</code> output in the box and&nbsp;<b>Parse
@@ -9628,8 +9633,17 @@ ${rouletteBarHTML}
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-07';
+        const CHANGELOG_VERSION = '2026-08-09';
         const CHANGELOG = [
+            {
+                version: '2026-08-09',
+                date: 'August 9, 2026',
+                items: [
+                    { type: 'feature', text: 'New <b>"No Color Only"</b> filter on the Colors tab\'s character grid, so you can jump straight to keyed characters that don\'t have a color assigned yet.' },
+                    { type: 'feature', text: 'The <b>Keys</b> stat on each character card is now clickable - add a key count directly (e.g. after claiming keys in Discord) without pasting a whole fresh <code>$ec</code>-style command, and it keeps the raw input text in sync.' },
+                    { type: 'feature', text: 'New <b>What\'s New</b> link next to the title lets you pull up this changelog any time, instead of only ever seeing it once automatically.' }
+                ]
+            },
             {
                 version: '2026-08-07',
                 date: 'August 7, 2026',
@@ -9653,10 +9667,6 @@ ${rouletteBarHTML}
         ];
 
         function showChangelogIfNeeded() {
-            const overlay = document.getElementById('changelogOverlay');
-            const body = document.getElementById('changelogBody');
-            if (!overlay || !body) return;
-
             let seenVersion = null;
             try { seenVersion = localStorage.getItem('mudaeChangelogSeenVersion'); } catch (e) { }
             if (seenVersion === CHANGELOG_VERSION) return;
@@ -9664,7 +9674,20 @@ ${rouletteBarHTML}
             const unseenEntries = seenVersion
                 ? CHANGELOG.filter(function (entry) { return entry.version > seenVersion; })
                 : [CHANGELOG[0]];
-            const entriesToShow = unseenEntries.length ? unseenEntries : [CHANGELOG[0]];
+            renderChangelog(unseenEntries.length ? unseenEntries : [CHANGELOG[0]]);
+        }
+
+        // Small "What's New" link in the header - lets you pull up the full
+        // changelog history on demand, since the auto-popup only ever shows
+        // itself once per version and is otherwise gone for good.
+        function showChangelog() {
+            renderChangelog(CHANGELOG);
+        }
+
+        function renderChangelog(entriesToShow) {
+            const overlay = document.getElementById('changelogOverlay');
+            const body = document.getElementById('changelogBody');
+            if (!overlay || !body) return;
 
             body.innerHTML = entriesToShow.map(function (entry) {
                 const features = entry.items.filter(function (item) { return item.type !== 'fix'; });
