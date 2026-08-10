@@ -150,6 +150,98 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: confirming the $ai command used
+        // to close the modal immediately, even when there was also a $c
+        // command still waiting to be run - easy to forget about it once the
+        // modal's gone. Now the modal only closes once BOTH have been
+        // confirmed (when there is a $c command to confirm).
+        name: 'with a $c command present, confirming $ai alone does not close the modal - confirming $c does',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/test123.png' }] } })
+                });
+            });
+
+            const { card } = await openUploadSectionForFirstCharacter(page);
+            await page.fill('#imsImagePasteArea', '1. https://mudae.net/uploads/1/a.png');
+            await page.waitForSelector('.ims-image-thumb');
+
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text:has-text("$c")');
+
+            // The $ai button is a direct child of the status area; the $c
+            // one lives nested inside its own command block - both share
+            // the same "Ran this in Discord" label, so the DOM structure is
+            // what disambiguates them here.
+            const aiConfirmBtn = page.locator('#imgChestUploadStatus > button:has-text("Ran this in Discord")');
+            const cConfirmBtn = page.locator('#imgChestUploadStatus div button:has-text("Ran this in Discord")');
+
+            await aiConfirmBtn.click();
+            await page.waitForTimeout(150);
+
+            const stillOpenAfterAi = await page.locator('#imsImagePickerOverlay').isVisible();
+            assert.ok(stillOpenAfterAi, 'expected the modal to stay open after confirming $ai, since a $c command is still pending');
+
+            const imageAfterAi = await card.evaluate(el => {
+                const series = el.dataset.originalSeries;
+                const index = parseInt(el.dataset.originalIndex, 10);
+                return AppState.seriesData[series].characters[index].image;
+            });
+            assert.strictEqual(imageAfterAi, 'https://cdn.imgchest.com/files/test123.png', 'expected confirming $ai to still apply the image right away');
+
+            await cConfirmBtn.click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
+        }
+    },
+    {
+        // Regression test for the same real report: confirming $c before
+        // $ai doesn't make sense (the image has to actually be in Mudae's
+        // pool first) - warn instead of silently closing.
+        name: 'confirming $c before $ai warns instead of closing the modal',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/test123.png' }] } })
+                });
+            });
+
+            const { card } = await openUploadSectionForFirstCharacter(page);
+            await page.fill('#imsImagePasteArea', '1. https://mudae.net/uploads/1/a.png');
+            await page.waitForSelector('.ims-image-thumb');
+
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text:has-text("$c")');
+
+            const cConfirmBtn = page.locator('#imgChestUploadStatus div button:has-text("Ran this in Discord")');
+            await cConfirmBtn.click();
+            await page.waitForTimeout(150);
+
+            const stillOpen = await page.locator('#imsImagePickerOverlay').isVisible();
+            assert.ok(stillOpen, 'expected the modal to stay open - $c was confirmed before $ai');
+
+            const messageText = await page.locator('#imsImagePickerMessage').textContent();
+            assert.ok(/run.*\$ai.*first/i.test(messageText), `expected a warning to run $ai first, got: "${messageText}"`);
+
+            const imageStillUnset = await card.evaluate(el => {
+                const series = el.dataset.originalSeries;
+                const index = parseInt(el.dataset.originalIndex, 10);
+                return AppState.seriesData[series].characters[index].image;
+            });
+            assert.notStrictEqual(imageStillUnset, 'https://cdn.imgchest.com/files/test123.png', 'expected the image to NOT be applied since $ai was never confirmed');
+        }
+    },
+    {
         name: 'a successful upload with no $ims DM pasted first shows a hint instead of guessing a $c command',
         async run(page) {
             await page.route('https://api.imgchest.com/v1/post', (route) => {

@@ -6391,22 +6391,6 @@ ${rouletteBarHTML}
                 imsImagePendingUploadLink = link;
                 imsImageApplySource = 'upload';
                 updateImsImageGridNote();
-                const confirmBtn = document.createElement('button');
-                confirmBtn.type = 'button';
-                confirmBtn.className = 'btn btn-sm confirm-applied-btn';
-                confirmBtn.textContent = '✓ Ran this in Discord';
-                confirmBtn.onclick = function () {
-                    applyImsImagePickerImage(link);
-                    imsImageUploadPending = false;
-                    imsImagePendingUploadLink = null;
-                    // The image is fully applied at this point - staying
-                    // open just left "Save Image" as a dead end (nothing
-                    // left to pick, so it showed a confusing error). Closing
-                    // here matches picking a thumbnail + Save Image, which
-                    // already closes immediately too.
-                    closeImsImagePickerModal();
-                };
-                statusDiv.appendChild(confirmBtn);
 
                 // $ai only adds the image to the pool - it doesn't make it
                 // the active one. $c does that, by index number, and $ai
@@ -6415,7 +6399,30 @@ ${rouletteBarHTML}
                 // seen in the pasted $ims DM was. Without that DM pasted
                 // first, the current count (and so this number) is unknown,
                 // so the command is skipped rather than guessed at.
-                if (imsImageMaxNumber > 0) {
+                const hasCCommand = imsImageMaxNumber > 0;
+                let imsImageAiConfirmed = false;
+
+                const aiConfirmBtn = document.createElement('button');
+                aiConfirmBtn.type = 'button';
+                aiConfirmBtn.className = 'btn btn-sm confirm-applied-btn';
+                aiConfirmBtn.textContent = '✓ Ran this in Discord';
+                aiConfirmBtn.onclick = function () {
+                    applyImsImagePickerImage(link);
+                    imsImageUploadPending = false;
+                    imsImagePendingUploadLink = null;
+                    imsImageAiConfirmed = true;
+                    aiConfirmBtn.textContent = '✓ Applied';
+                    aiConfirmBtn.disabled = true;
+                    aiConfirmBtn.classList.add('confirm-applied-done');
+                    // Nothing else left to confirm - close immediately, same
+                    // as picking a thumbnail + Save Image already does. If
+                    // there's also a $c command below, stay open until
+                    // that's confirmed too, so it doesn't get forgotten.
+                    if (!hasCCommand) closeImsImagePickerModal();
+                };
+                statusDiv.appendChild(aiConfirmBtn);
+
+                if (hasCCommand) {
                     const newNumber = imsImageMaxNumber + 1;
                     const cCommand = `$c ${char.name}$${newNumber}`;
                     const cBlock = document.createElement('div');
@@ -6427,6 +6434,23 @@ ${rouletteBarHTML}
 </div>`;
                     statusDiv.appendChild(cBlock);
                     document.getElementById('imgChestCCopyBtn').onclick = function () { copyCommand(this, cCommand); };
+
+                    const cConfirmBtn = document.createElement('button');
+                    cConfirmBtn.type = 'button';
+                    cConfirmBtn.className = 'btn btn-sm confirm-applied-btn';
+                    cConfirmBtn.style.marginTop = '8px';
+                    cConfirmBtn.textContent = '✓ Ran this in Discord';
+                    cConfirmBtn.onclick = function () {
+                        if (!imsImageAiConfirmed) {
+                            showImsPickerMessage('Run and confirm the $ai command above first - $c only works once the image has actually been added to the pool.', 'error');
+                            return;
+                        }
+                        cConfirmBtn.textContent = '✓ Applied';
+                        cConfirmBtn.disabled = true;
+                        cConfirmBtn.classList.add('confirm-applied-done');
+                        closeImsImagePickerModal();
+                    };
+                    cBlock.appendChild(cConfirmBtn);
                 } else {
                     const hint = document.createElement('p');
                     hint.className = 'sort-hint';
