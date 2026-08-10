@@ -1337,6 +1337,23 @@
             padding: 10px 0;
         }
 
+        .ims-image-selected-preview-wrap {
+            display: flex;
+            justify-content: center;
+            margin-top: 14px;
+            padding: 10px;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+        }
+
+        .ims-image-selected-preview-wrap img {
+            max-width: 100%;
+            max-height: 320px;
+            border-radius: 6px;
+            object-fit: contain;
+        }
+
         .ims-image-thumb-number {
             position: absolute;
             top: 3px;
@@ -3629,14 +3646,20 @@
             <h2>Pick an Image</h2>
             <p class="sort-hint" style="margin-top: 4px;">Run the command below in Discord - Mudae will DM you every
                 image link already claimed for this character. Paste the whole DM below (numbers and all - anything
-                that isn't a link is ignored) and click one to pick it.</p>
+                that isn't a link is ignored) and click one to pick it. <span class="sort-limit-warning">&#9888;
+                    Characters with a lot of claimed images can come back as several separate DMs</span> - paste all
+                of them in together (any order is fine) so nothing's missing.</p>
             <div class="command-item" style="margin-bottom: 12px;">
                 <div class="command-text" id="imsImageCommandText"></div>
                 <button type="button" class="btn btn-sm btn-primary" id="imsImageCopyBtn">Copy Command</button>
             </div>
             <textarea id="imsImagePasteArea" class="add-chars-textarea" style="min-height: 90px;"
                 placeholder="Paste Mudae's $ims DM here..." oninput="renderImsImageThumbs()"></textarea>
+            <div id="imsImageGapWarning"></div>
             <div id="imsImageThumbGrid" class="ims-image-thumb-grid"></div>
+            <div id="imsImageSelectedPreviewWrap" class="ims-image-selected-preview-wrap" style="display: none;">
+                <img id="imsImageSelectedPreview" alt="" onerror="handleImageError(this)">
+            </div>
             <div id="imsImageCCommandBox"></div>
 
             <div class="ims-upload-divider">or upload a new image</div>
@@ -8282,12 +8305,30 @@ ${rouletteBarHTML}
             return entries;
         }
 
+        // Mudae numbers images 1..N with no gaps - if fewer entries got
+        // parsed than the highest number seen, some numbers are missing,
+        // which for a character with lots of claimed images usually means
+        // only one of several DMs got pasted in (rather than, say, Mudae
+        // itself skipping a number). Left uncaught, that would show an
+        // incomplete grid and make $c commands land on the wrong count.
+        function renderImsImageGapWarning(entries) {
+            const el = document.getElementById('imsImageGapWarning');
+            if (!el) return;
+            if (entries.length > 0 && entries.length < imsImageMaxNumber) {
+                const missing = imsImageMaxNumber - entries.length;
+                el.innerHTML = `<p class="sort-hint sort-limit-warning" style="margin: -4px 0 10px;">&#9888; Only ${entries.length} of ${imsImageMaxNumber} numbered images are here - looks like a DM might be missing. Paste any others Mudae sent in too.</p>`;
+            } else {
+                el.innerHTML = '';
+            }
+        }
+
         function renderImsImageThumbs() {
             const text = document.getElementById('imsImagePasteArea').value;
             const entries = parseImsImageEntries(text);
             const grid = document.getElementById('imsImageThumbGrid');
 
             imsImageMaxNumber = entries.reduce(function (max, e) { return Math.max(max, e.number); }, 0);
+            renderImsImageGapWarning(entries);
 
             const stillPresent = entries.some(function (e) { return e.url === imsImageSelectedUrl; });
             if (imsImageSelectedUrl && !stillPresent) {
@@ -8311,6 +8352,7 @@ ${rouletteBarHTML}
 </button>`;
             }).join('');
 
+            renderImsImageSelectedPreview();
             renderImsImageCCommandBox();
         }
 
@@ -8318,6 +8360,31 @@ ${rouletteBarHTML}
             imsImageSelectedUrl = url;
             imsImageSelectedNumber = number;
             renderImsImageThumbs();
+        }
+
+        // Grid thumbnails stay small so many images can be scanned at once -
+        // this shows a much bigger version of just the one currently
+        // selected, so it's actually possible to tell what you're about to
+        // save instead of squinting at a tiny thumbnail.
+        function renderImsImageSelectedPreview() {
+            const wrap = document.getElementById('imsImageSelectedPreviewWrap');
+            const img = document.getElementById('imsImageSelectedPreview');
+            if (!wrap || !img) return;
+
+            // handleImageError() (shared with every other <img> in the app)
+            // permanently hides the element and inserts a placeholder
+            // sibling on failure - clear that back out before trying a new
+            // URL, or a once-broken preview stays stuck on "No Image
+            // Available" even after picking a working image afterward.
+            Array.from(wrap.children).forEach(function (child) { if (child !== img) child.remove(); });
+            img.style.display = '';
+
+            if (imsImageSelectedUrl) {
+                img.src = imsImageSelectedUrl;
+                wrap.style.display = 'flex';
+            } else {
+                wrap.style.display = 'none';
+            }
         }
 
         // Shows the $c command (the one that actually switches Mudae's

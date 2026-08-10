@@ -74,6 +74,76 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: the grid thumbnails are too
+        // small to actually see what's being picked - selecting one now
+        // also shows a much bigger preview.
+        name: 'clicking a thumbnail shows a bigger preview of it, and switching thumbnails updates that preview',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            const previewWrapHiddenBefore = await page.locator('#imsImageSelectedPreviewWrap').isHidden();
+            assert.ok(previewWrapHiddenBefore, 'expected no preview before anything is selected');
+
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
+            await page.click('.ims-image-thumb:nth-child(1)');
+            await page.waitForTimeout(300);
+
+            const previewVisible = await page.locator('#imsImageSelectedPreviewWrap').isVisible();
+            assert.ok(previewVisible, 'expected the preview to appear once a thumbnail is selected');
+            const previewSrc1 = await page.locator('#imsImageSelectedPreview').getAttribute('src');
+            assert.strictEqual(previewSrc1, 'https://mudae.net/uploads/3341897/Tp1LMe1~oI9kqRz.gif', 'expected the preview to show the selected thumbnail\'s image');
+
+            await page.click('.ims-image-thumb:nth-child(2)');
+            await page.waitForTimeout(300);
+            const previewSrc2 = await page.locator('#imsImageSelectedPreview').getAttribute('src');
+            assert.strictEqual(previewSrc2, 'https://mudae.net/uploads/3341897/9IdP3Ys~QcpkGJn.gif', 'expected switching thumbnails to update the preview to the new selection');
+
+            // These are fake URLs that never actually resolve, so this also
+            // exercises the shared handleImageError() path, which
+            // permanently hides an <img> and inserts a placeholder sibling
+            // on failure - the fix ensures that placeholder gets cleaned up
+            // on the next selection instead of accumulating or getting
+            // permanently stuck showing "No Image Available".
+            const placeholderCount = await page.locator('#imsImageSelectedPreviewWrap > div').count();
+            assert.ok(placeholderCount <= 1, `expected at most one error placeholder to accumulate across selections, got ${placeholderCount}`);
+        }
+    },
+    {
+        // Regression test for a real report: running $ims on a character
+        // with lots of claimed images can come back as several separate
+        // DMs - pasting only one of them leaves gaps in the numbering
+        // (Mudae numbers 1..N with none skipped), which this catches and
+        // flags instead of silently showing an incomplete grid.
+        name: 'a gap in the pasted image numbering warns that a DM might be missing',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            const warningBefore = await page.locator('#imsImageGapWarning').textContent();
+            assert.strictEqual(warningBefore.trim(), '', 'expected no warning before anything is pasted');
+
+            // Only 2 of 32 numbered entries present - a real gap.
+            await page.fill('#imsImagePasteArea', '32. https://mudae.net/uploads/1/a.png\n10. https://mudae.net/uploads/1/b.png');
+            await page.waitForTimeout(150);
+            const gapWarning = await page.locator('#imsImageGapWarning').textContent();
+            assert.ok(/only 2 of 32/i.test(gapWarning), `expected a warning naming the missing count, got: "${gapWarning}"`);
+
+            // A complete, gap-free sequence shouldn't warn.
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForTimeout(150);
+            const noWarning = await page.locator('#imsImageGapWarning').textContent();
+            assert.strictEqual(noWarning.trim(), '', `expected no warning for a complete 1..3 sequence, got: "${noWarning}"`);
+        }
+    },
+    {
         // Regression test for a real report: $ai only adds an image to
         // Mudae's pool, it doesn't make it active - $c does that, by the
         // number shown next to each image in the $ims DM.
