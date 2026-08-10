@@ -1,13 +1,23 @@
 const assert = require('assert');
 const { loadDemoCollection } = require('./helpers');
 
+// A realistic $ims DM dump: numbered links interleaved with Discord's
+// "Image" embed-preview placeholder lines (which have no URL of their own).
+const SAMPLE_DM = `3. https://mudae.net/uploads/3341897/Tp1LMe1~oI9kqRz.gif
+2. https://mudae.net/uploads/3341897/9IdP3Ys~QcpkGJn.gif
+1. https://mudae.net/uploads/3341897/Uujtplc~m8Jz2n8.gif
+Image
+Image
+Image`;
+
 module.exports = [
     {
         // Regression test for a real report: there was no way to fix or
         // change a single character's image without a full re-parse. Mudae's
-        // `$ims [name]` command DMs a numbered list of image links already
-        // claimed for that character - this generates that command and lets
-        // the chosen link be pasted straight back in.
+        // `$ims [name]` command DMs every image link already claimed for
+        // that character - this generates that command and lets the whole
+        // DM be pasted back in, picking visually from a thumbnail grid
+        // rather than having to identify and copy one link out by hand.
         name: 'clicking the image-edit badge opens a modal with the $ims command for that character',
         async run(page) {
             await loadDemoCollection(page);
@@ -43,7 +53,28 @@ module.exports = [
         }
     },
     {
-        name: 'pasting a URL and saving updates the character, the card, the raw input, and its Sort tab entry',
+        name: 'pasting a $ims DM shows one thumbnail per link, ignoring the interleaved "Image" placeholder lines',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            const thumbCount = await page.locator('.ims-image-thumb').count();
+            assert.strictEqual(thumbCount, 3, `expected exactly 3 thumbnails for 3 links, got ${thumbCount}`);
+
+            const thumbUrls = await page.locator('.ims-image-thumb').evaluateAll(els => els.map(el => el.dataset.url));
+            assert.deepStrictEqual(thumbUrls, [
+                'https://mudae.net/uploads/3341897/Tp1LMe1~oI9kqRz.gif',
+                'https://mudae.net/uploads/3341897/9IdP3Ys~QcpkGJn.gif',
+                'https://mudae.net/uploads/3341897/Uujtplc~m8Jz2n8.gif'
+            ], `expected the links in the order they appeared, got: ${JSON.stringify(thumbUrls)}`);
+        }
+    },
+    {
+        name: 'clicking a thumbnail and saving updates the character, the card, the raw input, and its Sort tab entry',
         async run(page) {
             await loadDemoCollection(page);
 
@@ -59,8 +90,14 @@ module.exports = [
             await card.locator('[data-action="edit-image"]').click();
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
 
-            const newUrl = 'https://example.com/new-image.png';
-            await page.fill('#imsImageUrlInput', newUrl);
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
+            const pickedUrl = 'https://mudae.net/uploads/3341897/9IdP3Ys~QcpkGJn.gif';
+            await page.click(`.ims-image-thumb[data-url="${pickedUrl}"]`);
+
+            const selectedClass = await page.locator(`.ims-image-thumb[data-url="${pickedUrl}"]`).getAttribute('class');
+            assert.ok(selectedClass.includes('selected'), 'expected the clicked thumbnail to show as selected');
+
             await page.click('button:has-text("Save Image")');
             await page.waitForTimeout(150);
 
@@ -72,25 +109,25 @@ module.exports = [
                 const index = parseInt(el.dataset.originalIndex, 10);
                 return AppState.seriesData[series].characters[index].image;
             });
-            assert.strictEqual(charImage, newUrl, 'expected AppState to have the new image');
+            assert.strictEqual(charImage, pickedUrl, 'expected AppState to have the picked image');
 
             const cardImgSrc = await card.locator('img').getAttribute('src');
-            assert.strictEqual(cardImgSrc, newUrl, 'expected the rendered card image to update immediately');
+            assert.strictEqual(cardImgSrc, pickedUrl, 'expected the rendered card image to update immediately');
 
-            const rawInputHasNewUrl = await page.evaluate(() => AppState.rawInput.includes('https://example.com/new-image.png'));
-            assert.ok(rawInputHasNewUrl, 'expected AppState.rawInput to include the new image URL');
+            const rawInputHasNewUrl = await page.evaluate((u) => AppState.rawInput.includes(u), pickedUrl);
+            assert.ok(rawInputHasNewUrl, 'expected AppState.rawInput to include the picked image URL');
             const mainInputValue = await page.inputValue('#input');
-            assert.ok(mainInputValue.includes(newUrl), 'expected the main input textarea to reflect the new image URL too');
+            assert.ok(mainInputValue.includes(pickedUrl), 'expected the main input textarea to reflect the picked image URL too');
 
             const sortEntryImage = await page.evaluate((n) => {
                 const entry = AppState.sortData.find(e => e.name === n.trim());
                 return entry ? entry.image : null;
             }, name);
-            assert.strictEqual(sortEntryImage, newUrl, 'expected the matching Sort tab entry to be resynced with the new image');
+            assert.strictEqual(sortEntryImage, pickedUrl, 'expected the matching Sort tab entry to be resynced with the picked image');
         }
     },
     {
-        name: 'saving with an empty URL shows an error and does not close the modal or change the character',
+        name: 'saving without picking a thumbnail shows an error and does not close the modal or change the character',
         async run(page) {
             await loadDemoCollection(page);
 
@@ -103,12 +140,13 @@ module.exports = [
 
             await card.locator('[data-action="edit-image"]').click();
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
-            await page.fill('#imsImageUrlInput', '');
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
             await page.click('button:has-text("Save Image")');
             await page.waitForTimeout(150);
 
             const overlayVisible = await page.locator('#imsImagePickerOverlay').isVisible();
-            assert.ok(overlayVisible, 'expected the modal to stay open on an empty URL');
+            assert.ok(overlayVisible, 'expected the modal to stay open when nothing was picked');
 
             const after = await card.evaluate(el => {
                 const series = el.dataset.originalSeries;
@@ -116,6 +154,22 @@ module.exports = [
                 return AppState.seriesData[series].characters[index].image;
             });
             assert.strictEqual(after, before, 'expected the character\'s image to be untouched');
+        }
+    },
+    {
+        name: 'pasting text with no links shows an empty-state message instead of a broken grid',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.fill('#imsImagePasteArea', 'Image\nImage\nnothing here but placeholders');
+            const thumbCount = await page.locator('.ims-image-thumb').count();
+            assert.strictEqual(thumbCount, 0, 'expected no thumbnails for text with no links');
+            const emptyMessage = await page.locator('.ims-image-thumb-empty').isVisible();
+            assert.ok(emptyMessage, 'expected an empty-state message when text has no links');
         }
     },
     {
@@ -128,7 +182,9 @@ module.exports = [
 
             await card.locator('[data-action="edit-image"]').click();
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
-            await page.fill('#imsImageUrlInput', 'https://example.com/should-not-be-saved.png');
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
+            await page.click('.ims-image-thumb');
             await page.click('#imsImagePickerOverlay button:has-text("Cancel")');
 
             const overlayHidden = await page.locator('#imsImagePickerOverlay').isHidden();

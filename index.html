@@ -1299,6 +1299,63 @@
             margin-bottom: 10px;
         }
 
+        .ims-image-thumb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .ims-image-thumb {
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            background: #1a1a24;
+            padding: 0;
+            line-height: 0;
+        }
+
+        .ims-image-thumb img {
+            width: 100%;
+            height: 90px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .ims-image-thumb.selected {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.4);
+        }
+
+        .ims-image-thumb-empty {
+            color: #6b7280;
+            font-size: 0.85em;
+            padding: 10px 0;
+        }
+
+        .ims-upload-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #6b7280;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 20px 0 12px;
+        }
+
+        .ims-upload-divider::before,
+        .ims-upload-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #2a2a3a;
+        }
+
         .imgchest-token-steps {
             margin: 0 0 14px;
             padding-left: 20px;
@@ -2946,9 +3003,6 @@
                             Generate Imgur Links
                         </button>
 
-                        <button onclick="openImgChestUploadModal()" id="uploadImageBtn" class="btn btn-primary"
-                            title="Upload an image and get a link to use with Mudae's $ai command">Upload Image</button>
-
                         <button onclick="showPlayerStats()" id="playerStatsBtn" class="btn btn-primary" disabled>
                             Player Stats
                         </button>
@@ -3483,30 +3537,21 @@
     <div id="imsImagePickerOverlay" class="changelog-overlay" style="display: none;">
         <div class="changelog-modal">
             <h2>Pick an Image</h2>
-            <p class="sort-hint" style="margin-top: 4px;">Run the command below in Discord - Mudae will DM you a
-                numbered list of image links already claimed for this character. Paste the one you want below.</p>
+            <p class="sort-hint" style="margin-top: 4px;">Run the command below in Discord - Mudae will DM you every
+                image link already claimed for this character. Paste the whole DM below (numbers and all - anything
+                that isn't a link is ignored) and click one to pick it.</p>
             <div class="command-item" style="margin-bottom: 12px;">
                 <div class="command-text" id="imsImageCommandText"></div>
                 <button type="button" class="btn btn-sm btn-primary" id="imsImageCopyBtn">Copy Command</button>
             </div>
-            <input type="text" id="imsImageUrlInput" class="color-hex-text-input" style="text-transform: none;"
-                placeholder="Paste the image URL here..." oninput="updateImsImagePreview()">
-            <img id="imsImagePreviewImg" src="" alt="" onerror="handleImageError(this)"
-                style="display: none; max-height: 220px; max-width: 100%; object-fit: contain; border-radius: 8px; margin-top: 10px;">
-            <div class="add-chars-modal-actions">
-                <button onclick="closeImsImagePickerModal()" class="btn">Cancel</button>
-                <button onclick="saveImsImagePickerModal()" class="btn btn-primary">Save Image</button>
-            </div>
-        </div>
-    </div>
+            <textarea id="imsImagePasteArea" class="add-chars-textarea" style="min-height: 90px;"
+                placeholder="Paste Mudae's $ims DM here..." oninput="renderImsImageThumbs()"></textarea>
+            <div id="imsImageThumbGrid" class="ims-image-thumb-grid"></div>
 
-    <div id="imgChestUploadOverlay" class="changelog-overlay" style="display: none;">
-        <div class="changelog-modal">
-            <h2>Upload Image (ImgChest)</h2>
-            <p class="sort-hint" style="margin-top: 4px;">Mudae's <code>$ai</code> command only accepts images
-                hosted on imgur.com or imgchest.com, so uploading here needs a free ImgChest account and a personal
-                access token - a one-time, couple-minute setup. It's saved on this device only, so you (and each
-                friend using this app) only need to do this once per device.</p>
+            <div class="ims-upload-divider">or upload a new image</div>
+            <p class="sort-hint">Mudae's <code>$ai</code> command only accepts images hosted on imgur.com or
+                imgchest.com, so uploading here needs a free ImgChest account and a personal access token - a
+                one-time, couple-minute setup, saved on this device only.</p>
             <ol class="imgchest-token-steps">
                 <li>Create a free account (or log in) at <a href="https://imgchest.com/" target="_blank"
                         rel="noopener">imgchest.com</a>.</li>
@@ -3523,11 +3568,13 @@
             <input type="file" id="imgChestFileInput" accept="image/*" style="margin-top: 16px; width: 100%;">
             <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
                 <button type="button" id="imgChestUploadBtn" class="btn btn-primary"
-                    onclick="uploadImageToImgChest()">Upload</button>
+                    onclick="uploadImageForCharacter()">Upload</button>
             </div>
             <div id="imgChestUploadStatus" style="margin-top: 12px;"></div>
+
             <div class="add-chars-modal-actions">
-                <button onclick="closeImgChestUploadModal()" class="btn">Close</button>
+                <button onclick="closeImsImagePickerModal()" class="btn">Cancel</button>
+                <button onclick="saveImsImagePickerModal()" class="btn btn-primary">Save Image</button>
             </div>
         </div>
     </div>
@@ -5727,20 +5774,11 @@ ${rouletteBarHTML}
         // Mudae's $ai command only accepts imgur.com or imgchest.com links.
         // Imgur no longer accepts new API app registrations, so this uses
         // ImgChest instead, authenticated with each user's own personal
-        // access token (there's no shared app secret to embed).
-        function openImgChestUploadModal() {
-            let token = '';
-            try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
-            document.getElementById('imgChestTokenInput').value = token;
-            document.getElementById('imgChestFileInput').value = '';
-            document.getElementById('imgChestUploadStatus').innerHTML = '';
-            document.getElementById('imgChestUploadOverlay').style.display = 'flex';
-        }
-
-        function closeImgChestUploadModal() {
-            document.getElementById('imgChestUploadOverlay').style.display = 'none';
-        }
-
+        // access token (there's no shared app secret to embed). Tied to
+        // whichever character the Pick an Image modal is currently open
+        // for: a successful upload generates an $ai command naming that
+        // character, and confirming it was run in Discord applies the new
+        // image locally the same way picking an $ims thumbnail does.
         function saveImgChestToken() {
             const token = document.getElementById('imgChestTokenInput').value.trim();
             try {
@@ -5750,7 +5788,12 @@ ${rouletteBarHTML}
             showMessage(token ? 'ImgChest token saved.' : 'ImgChest token cleared.', 'success');
         }
 
-        async function uploadImageToImgChest() {
+        async function uploadImageForCharacter() {
+            if (!imsImagePickerTarget) return;
+            const { seriesName, index } = imsImagePickerTarget;
+            const char = AppState.seriesData[seriesName]?.characters[index];
+            if (!char) return;
+
             const token = document.getElementById('imgChestTokenInput').value.trim();
             const statusDiv = document.getElementById('imgChestUploadStatus');
             const uploadBtn = document.getElementById('imgChestUploadBtn');
@@ -5786,15 +5829,30 @@ ${rouletteBarHTML}
                 const link = result?.data?.images?.[0]?.link;
                 if (!link) throw new Error('No image link in the ImgChest response.');
 
+                // Matches Mudae's actual $ai syntax: "$ai <name>$<link>".
+                const command = `$ai ${char.name}$${link}`;
                 statusDiv.innerHTML = `
+<p class="sort-hint" style="margin: 0 0 8px;">Run this in Discord to add the image to Mudae, then confirm it below to update it here too.</p>
 <div class="command-item">
- <div class="command-text">${escapeHTML(link)}</div>
- <button type="button" class="btn btn-sm btn-primary" id="imgChestCopyLinkBtn">Copy Link</button>
+ <div class="command-text">${escapeHTML(command)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="imgChestCopyLinkBtn">Copy Command</button>
 </div>`;
-                document.getElementById('imgChestCopyLinkBtn').onclick = function () { copyCommand(this, link); };
+                document.getElementById('imgChestCopyLinkBtn').onclick = function () { copyCommand(this, command); };
+                const confirmBtn = document.createElement('button');
+                confirmBtn.type = 'button';
+                confirmBtn.className = 'btn btn-sm confirm-applied-btn';
+                confirmBtn.textContent = '✓ Ran this in Discord';
+                confirmBtn.onclick = function () {
+                    applyImsImagePickerImage(link);
+                    confirmBtn.textContent = '✓ Applied';
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.add('confirm-applied-done');
+                };
+                statusDiv.appendChild(confirmBtn);
+
                 showMessage('Image uploaded!', 'success');
             } catch (err) {
-                statusDiv.innerHTML = '<p class="sort-empty-hint">Upload failed - this can happen if ImgChest blocks requests from this page (CORS). Try uploading directly at imgchest.com instead and paste the resulting link in manually.</p>';
+                statusDiv.innerHTML = '<p class="sort-empty-hint">Upload failed - this can happen if ImgChest blocks requests from this page (CORS). Try uploading directly at imgchest.com instead and pasting the resulting link into the DM paste box above.</p>';
                 showMessage('Image upload failed.', 'error');
             } finally {
                 uploadBtn.disabled = false;
@@ -7686,58 +7744,111 @@ ${rouletteBarHTML}
         }
 
         // ===================== $ims image picker =====================
-        // Mudae's `$ims [name]` command DMs a numbered list of image links
-        // already claimed for a character - this lets a user generate that
-        // command for one character, then paste back whichever link they
-        // picked to update it here, without a full re-parse.
+        // Mudae's `$ims [name]` command DMs every image link already
+        // claimed for a character, mixed in with plain "Image" placeholder
+        // lines (Discord's embed preview, which has no text of its own) and
+        // numbering that isn't meaningful here - this lets a user generate
+        // that command for one character, paste the whole DM back in, and
+        // pick the one they want from a thumbnail grid instead of having to
+        // manually identify and copy a single link out of the DM themselves.
         let imsImagePickerTarget = null;
+        let imsImageSelectedUrl = null;
 
         function openImsImagePickerModal(seriesName, index) {
             const char = AppState.seriesData[seriesName]?.characters[index];
             if (!char) return;
 
             imsImagePickerTarget = { seriesName, index };
+            imsImageSelectedUrl = null;
 
             const command = `$ims ${char.name}`;
             document.getElementById('imsImageCommandText').textContent = command;
             document.getElementById('imsImageCopyBtn').onclick = function () { copyCommand(this, command); };
 
-            const urlInput = document.getElementById('imsImageUrlInput');
-            urlInput.value = char.image || '';
-            updateImsImagePreview();
+            const pasteArea = document.getElementById('imsImagePasteArea');
+            pasteArea.value = '';
+            renderImsImageThumbs();
+
+            let token = '';
+            try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
+            document.getElementById('imgChestTokenInput').value = token;
+            document.getElementById('imgChestFileInput').value = '';
+            document.getElementById('imgChestUploadStatus').innerHTML = '';
 
             document.getElementById('imsImagePickerOverlay').style.display = 'flex';
-            urlInput.focus();
+            pasteArea.focus();
         }
 
         function closeImsImagePickerModal() {
             document.getElementById('imsImagePickerOverlay').style.display = 'none';
             imsImagePickerTarget = null;
+            imsImageSelectedUrl = null;
         }
 
-        function updateImsImagePreview() {
-            const url = document.getElementById('imsImageUrlInput').value.trim();
-            const preview = document.getElementById('imsImagePreviewImg');
-            if (url) {
-                preview.src = url;
-                preview.style.display = '';
-            } else {
-                preview.style.display = 'none';
-                preview.src = '';
+        // Pulls every http(s) link out of a pasted $ims DM, in the order
+        // they appear - the leading "N." numbering and interleaved "Image"
+        // placeholder lines aren't links themselves, so a plain URL match
+        // already ignores them without needing to parse the numbering at all.
+        function parseImsImageLinks(text) {
+            const matches = text.match(/https?:\/\/\S+/g) || [];
+            const seen = new Set();
+            const links = [];
+            matches.forEach(function (raw) {
+                const url = raw.replace(/[.,)\]]+$/, '');
+                if (!seen.has(url)) {
+                    seen.add(url);
+                    links.push(url);
+                }
+            });
+            return links;
+        }
+
+        function renderImsImageThumbs() {
+            const text = document.getElementById('imsImagePasteArea').value;
+            const links = parseImsImageLinks(text);
+            const grid = document.getElementById('imsImageThumbGrid');
+
+            if (imsImageSelectedUrl && links.indexOf(imsImageSelectedUrl) === -1) imsImageSelectedUrl = null;
+
+            if (links.length === 0) {
+                grid.innerHTML = text.trim()
+                    ? '<p class="ims-image-thumb-empty">No image links found in that text.</p>'
+                    : '';
+                return;
             }
+
+            grid.innerHTML = links.map(function (url) {
+                const selected = url === imsImageSelectedUrl;
+                return `<button type="button" class="ims-image-thumb${selected ? ' selected' : ''}" data-url="${escapeHTML(url)}" onclick="selectImsImageThumb(this.dataset.url)" title="${escapeHTML(url)}">
+    <img src="${escapeHTML(url)}" alt="" loading="lazy" onerror="handleImageError(this)">
+</button>`;
+            }).join('');
+        }
+
+        function selectImsImageThumb(url) {
+            imsImageSelectedUrl = url;
+            renderImsImageThumbs();
         }
 
         function saveImsImagePickerModal() {
             if (!imsImagePickerTarget) return;
+            const url = imsImageSelectedUrl;
+            if (!url) {
+                showMessage('Pick an image from the grid first.', 'error');
+                return;
+            }
+            applyImsImagePickerImage(url);
+            closeImsImagePickerModal();
+        }
+
+        // Shared by both ways of finalizing this modal's target character's
+        // image: picking a thumbnail + Save Image, and confirming an $ai
+        // upload command was run in Discord.
+        function applyImsImagePickerImage(url) {
+            if (!imsImagePickerTarget) return;
             const { seriesName, index } = imsImagePickerTarget;
             const char = AppState.seriesData[seriesName]?.characters[index];
             if (!char) return;
-
-            const url = document.getElementById('imsImageUrlInput').value.trim();
-            if (!url) {
-                showMessage('Please paste an image URL first.', 'error');
-                return;
-            }
 
             char.image = url;
             syncSortDataForCharacter(seriesName, char);
@@ -7755,7 +7866,6 @@ ${rouletteBarHTML}
             if (cardImg) cardImg.src = url;
 
             saveToLocalStorage();
-            closeImsImagePickerModal();
             refreshSortTabIfVisible();
             showMessage(`Updated image for "${char.name}".`, 'success');
         }
