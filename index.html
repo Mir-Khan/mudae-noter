@@ -1369,6 +1369,63 @@
             background: #2a2a3a;
         }
 
+        .ims-crop-link {
+            background: none;
+            border: none;
+            color: #a78bfa;
+            font-size: 0.85em;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .image-cropper-viewport {
+            position: relative;
+            width: 225px;
+            height: 350px;
+            margin: 0 auto;
+            overflow: hidden;
+            border-radius: 8px;
+            border: 2px solid #7c3aed;
+            background: #0a0a0f repeating-conic-gradient(#1a1a24 0% 25%, #13131a 0% 50%) 50% / 16px 16px;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .image-cropper-viewport.dragging {
+            cursor: grabbing;
+        }
+
+        .image-cropper-viewport img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            max-width: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .image-cropper-zoom-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 225px;
+            margin: 12px auto 0;
+        }
+
+        .image-cropper-zoom-row input[type="range"] {
+            flex: 1;
+        }
+
+        #imageCropperStatus {
+            text-align: center;
+            font-size: 0.8em;
+            color: #9ca3af;
+            margin-top: 8px;
+            min-height: 1.2em;
+        }
+
         .imgchest-token-steps {
             margin: 0 0 14px;
             padding-left: 20px;
@@ -3563,9 +3620,10 @@
             <div id="imsImageCCommandBox"></div>
 
             <div class="ims-upload-divider">or upload a new image</div>
-            <p class="sort-hint">Mudae's <code>$ai</code> command only accepts images hosted on imgur.com or
-                imgchest.com, so uploading here needs a free ImgChest account and a personal access token - a
-                one-time, couple-minute setup, saved on this device only.</p>
+            <p class="sort-hint">No need to paste a <code>$ims</code> DM first - upload a file here to get an
+                <code>$ai</code> command for it right away. Mudae's <code>$ai</code> command only accepts images
+                hosted on imgur.com or imgchest.com, so uploading here needs a free ImgChest account and a personal
+                access token - a one-time, couple-minute setup, saved on this device only.</p>
             <ol class="imgchest-token-steps">
                 <li>Create a free account (or log in) at <a href="https://imgchest.com/" target="_blank"
                         rel="noopener">imgchest.com</a>.</li>
@@ -3580,15 +3638,43 @@
                 <button onclick="saveImgChestToken()" class="btn btn-sm">Save Token</button>
             </div>
             <input type="file" id="imgChestFileInput" accept="image/*" style="margin-top: 16px; width: 100%;">
-            <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
+            <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px; gap: 14px;">
                 <button type="button" id="imgChestUploadBtn" class="btn btn-primary"
                     onclick="uploadImageForCharacter()">Upload</button>
+                <button type="button" class="ims-crop-link" onclick="openImageCropperFromUpload()">✂️ Crop this
+                    image first</button>
             </div>
             <div id="imgChestUploadStatus" style="margin-top: 12px;"></div>
 
             <div class="add-chars-modal-actions">
                 <button onclick="closeImsImagePickerModal()" class="btn">Cancel</button>
                 <button onclick="saveImsImagePickerModal()" class="btn btn-primary">Save Image</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="imageCropperOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2>Crop Image</h2>
+            <p class="sort-hint" style="margin-top: 4px;">Crops to <b>225&times;350</b> - the size Mudae's own
+                images use. Works on GIFs too, animation included. Drag to reposition, use the slider to zoom.</p>
+            <input type="file" id="imageCropperFileInput" accept="image/*" style="margin-bottom: 12px; width: 100%;">
+            <div id="imageCropperWorkspace" style="display: none;">
+                <div id="imageCropperViewport" class="image-cropper-viewport">
+                    <img id="imageCropperImg" alt="" draggable="false">
+                </div>
+                <div class="image-cropper-zoom-row">
+                    <span>🔍</span>
+                    <input type="range" id="imageCropperZoom" min="1" max="4" step="0.01" value="1">
+                </div>
+                <div id="imageCropperStatus"></div>
+            </div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeImageCropperModal()" class="btn">Cancel</button>
+                <button id="imageCropperDownloadBtn" onclick="downloadCroppedImage()" class="btn"
+                    style="display: none;">Download</button>
+                <button id="imageCropperUseBtn" onclick="applyImageCrop()" class="btn btn-primary" disabled>Use This
+                    Crop</button>
             </div>
         </div>
     </div>
@@ -5899,6 +5985,297 @@ ${rouletteBarHTML}
                 uploadBtn.disabled = false;
                 uploadBtn.textContent = originalText;
             }
+        }
+
+        // ===================== Image cropper =====================
+        // Crops to 225x350 (the size Mudae's own images use), the same
+        // target as community cropper tools. Works on animated GIFs too -
+        // the interactive preview just uses a native <img> (the browser
+        // already animates GIFs for free), but the actual crop/export for a
+        // GIF has to happen frame-by-frame: decode every frame with
+        // gifuct-js (composited per its disposal method, since GIF frames
+        // are deltas, not full images), draw the same crop transform onto
+        // each one, and re-encode with gif.js. Both libraries are loaded
+        // lazily, only when a GIF actually needs cropping, to avoid the
+        // network cost for the (far more common) static-image case.
+        const CROP_OUTPUT_WIDTH = 225;
+        const CROP_OUTPUT_HEIGHT = 350;
+
+        let cropperSourceFile = null;
+        let cropperNaturalSize = null;
+        let cropperPan = { x: 0, y: 0 };
+        let cropperZoom = 1;
+        let cropperDrag = null;
+        let cropperResultBlob = null;
+        let cropperReturnToUpload = false;
+
+        function openImageCropperFromUpload() {
+            const file = document.getElementById('imgChestFileInput').files[0];
+            openImageCropperModal(file || null, true);
+        }
+
+        function openImageCropperModal(file, returnToUpload) {
+            resetImageCropperState();
+            cropperReturnToUpload = !!returnToUpload;
+            document.getElementById('imageCropperOverlay').style.display = 'flex';
+            if (file) loadImageIntoCropper(file);
+        }
+
+        function closeImageCropperModal() {
+            document.getElementById('imageCropperOverlay').style.display = 'none';
+            resetImageCropperState();
+        }
+
+        function resetImageCropperState() {
+            const img = document.getElementById('imageCropperImg');
+            if (img && img.src) URL.revokeObjectURL(img.src);
+            if (cropperResultBlob) { /* revoked alongside any download link below */ }
+            cropperSourceFile = null;
+            cropperNaturalSize = null;
+            cropperPan = { x: 0, y: 0 };
+            cropperZoom = 1;
+            cropperResultBlob = null;
+            cropperReturnToUpload = false;
+            document.getElementById('imageCropperFileInput').value = '';
+            document.getElementById('imageCropperWorkspace').style.display = 'none';
+            document.getElementById('imageCropperZoom').value = 1;
+            document.getElementById('imageCropperStatus').textContent = '';
+            document.getElementById('imageCropperUseBtn').disabled = true;
+            document.getElementById('imageCropperDownloadBtn').style.display = 'none';
+        }
+
+        document.getElementById('imageCropperFileInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) loadImageIntoCropper(file);
+        });
+
+        function loadImageIntoCropper(file) {
+            cropperSourceFile = file;
+            const img = document.getElementById('imageCropperImg');
+            const url = URL.createObjectURL(file);
+            img.onload = function () {
+                cropperNaturalSize = { w: img.naturalWidth, h: img.naturalHeight };
+                cropperPan = { x: 0, y: 0 };
+                cropperZoom = 1;
+                document.getElementById('imageCropperZoom').value = 1;
+                document.getElementById('imageCropperWorkspace').style.display = '';
+                document.getElementById('imageCropperUseBtn').disabled = false;
+                applyImageCropperTransform();
+            };
+            img.src = url;
+        }
+
+        // Maps the current pan/zoom onto the <img>'s CSS position/size so the
+        // viewport (fixed at CROP_OUTPUT_WIDTH x CROP_OUTPUT_HEIGHT) always
+        // shows exactly what will be exported - see getImageCropperSourceRect
+        // for the inverse of this same math, used at export time.
+        function applyImageCropperTransform() {
+            if (!cropperNaturalSize) return;
+            const baseScale = Math.max(CROP_OUTPUT_WIDTH / cropperNaturalSize.w, CROP_OUTPUT_HEIGHT / cropperNaturalSize.h);
+            const scale = baseScale * cropperZoom;
+            const displayedW = cropperNaturalSize.w * scale;
+            const displayedH = cropperNaturalSize.h * scale;
+
+            const minLeft = CROP_OUTPUT_WIDTH - displayedW;
+            const minTop = CROP_OUTPUT_HEIGHT - displayedH;
+            let left = (CROP_OUTPUT_WIDTH - displayedW) / 2 + cropperPan.x;
+            let top = (CROP_OUTPUT_HEIGHT - displayedH) / 2 + cropperPan.y;
+            left = Math.min(0, Math.max(minLeft, left));
+            top = Math.min(0, Math.max(minTop, top));
+            // Re-derive pan from the clamped position so dragging past an
+            // edge doesn't accumulate an out-of-bounds offset that suddenly
+            // snaps back once zoom changes.
+            cropperPan.x = left - (CROP_OUTPUT_WIDTH - displayedW) / 2;
+            cropperPan.y = top - (CROP_OUTPUT_HEIGHT - displayedH) / 2;
+
+            const img = document.getElementById('imageCropperImg');
+            img.style.width = displayedW + 'px';
+            img.style.height = displayedH + 'px';
+            img.style.transform = `translate(${left}px, ${top}px)`;
+        }
+
+        function getImageCropperSourceRect() {
+            const baseScale = Math.max(CROP_OUTPUT_WIDTH / cropperNaturalSize.w, CROP_OUTPUT_HEIGHT / cropperNaturalSize.h);
+            const scale = baseScale * cropperZoom;
+            const displayedW = cropperNaturalSize.w * scale;
+            const displayedH = cropperNaturalSize.h * scale;
+            const left = (CROP_OUTPUT_WIDTH - displayedW) / 2 + cropperPan.x;
+            const top = (CROP_OUTPUT_HEIGHT - displayedH) / 2 + cropperPan.y;
+            return {
+                x: -left / scale,
+                y: -top / scale,
+                w: CROP_OUTPUT_WIDTH / scale,
+                h: CROP_OUTPUT_HEIGHT / scale
+            };
+        }
+
+        (function setUpImageCropperDragAndZoom() {
+            const viewport = document.getElementById('imageCropperViewport');
+            viewport.addEventListener('pointerdown', function (e) {
+                if (!cropperNaturalSize) return;
+                cropperDrag = { startX: e.clientX, startY: e.clientY, panX: cropperPan.x, panY: cropperPan.y };
+                viewport.classList.add('dragging');
+                viewport.setPointerCapture(e.pointerId);
+            });
+            viewport.addEventListener('pointermove', function (e) {
+                if (!cropperDrag) return;
+                cropperPan.x = cropperDrag.panX + (e.clientX - cropperDrag.startX);
+                cropperPan.y = cropperDrag.panY + (e.clientY - cropperDrag.startY);
+                applyImageCropperTransform();
+            });
+            const endDrag = function () {
+                cropperDrag = null;
+                viewport.classList.remove('dragging');
+            };
+            viewport.addEventListener('pointerup', endDrag);
+            viewport.addEventListener('pointercancel', endDrag);
+
+            document.getElementById('imageCropperZoom').addEventListener('input', function (e) {
+                cropperZoom = parseFloat(e.target.value) || 1;
+                applyImageCropperTransform();
+            });
+        })();
+
+        function loadScriptOnce(src) {
+            if (document.querySelector(`script[src="${src}"]`)) return Promise.resolve();
+            return new Promise(function (resolve, reject) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = function () { reject(new Error('Failed to load ' + src)); };
+                document.head.appendChild(script);
+            });
+        }
+
+        async function applyImageCrop() {
+            if (!cropperSourceFile || !cropperNaturalSize) return;
+            const statusEl = document.getElementById('imageCropperStatus');
+            const useBtn = document.getElementById('imageCropperUseBtn');
+            const isGif = cropperSourceFile.type === 'image/gif' || /\.gif$/i.test(cropperSourceFile.name || '');
+
+            useBtn.disabled = true;
+            statusEl.textContent = isGif ? 'Cropping animation... this can take a moment.' : 'Cropping...';
+
+            try {
+                const rect = getImageCropperSourceRect();
+                const blob = isGif ? await cropAnimatedGif(cropperSourceFile, rect) : await cropStaticImage(cropperSourceFile, rect);
+                cropperResultBlob = blob;
+
+                const downloadBtn = document.getElementById('imageCropperDownloadBtn');
+                downloadBtn.style.display = '';
+
+                if (cropperReturnToUpload) {
+                    const croppedFile = new File([blob], (cropperSourceFile.name || 'image').replace(/\.[^.]+$/, '') + '-cropped.' + (isGif ? 'gif' : 'png'), { type: blob.type });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(croppedFile);
+                    document.getElementById('imgChestFileInput').files = dataTransfer.files;
+                    showMessage('Cropped image ready to upload.', 'success');
+                    closeImageCropperModal();
+                } else {
+                    statusEl.textContent = 'Cropped! Use Download to save it.';
+                    useBtn.disabled = false;
+                }
+            } catch (err) {
+                statusEl.textContent = 'Crop failed: ' + err.message;
+                useBtn.disabled = false;
+            }
+        }
+
+        function downloadCroppedImage() {
+            if (!cropperResultBlob) return;
+            const isGif = cropperResultBlob.type === 'image/gif';
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(cropperResultBlob);
+            a.download = 'cropped-image.' + (isGif ? 'gif' : 'png');
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        }
+
+        function cropStaticImage(file, rect) {
+            return new Promise(function (resolve, reject) {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = CROP_OUTPUT_WIDTH;
+                    canvas.height = CROP_OUTPUT_HEIGHT;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, CROP_OUTPUT_WIDTH, CROP_OUTPUT_HEIGHT);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob(function (blob) {
+                        if (blob) resolve(blob); else reject(new Error('Could not export the cropped image.'));
+                    }, 'image/png');
+                };
+                img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not load the image.')); };
+                img.src = url;
+            });
+        }
+
+        async function cropAnimatedGif(file, rect) {
+            if (!window.GIF) await loadScriptOnce('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js');
+            const gifuct = window.__gifuctJsModule || (window.__gifuctJsModule = await import('https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm'));
+
+            const buffer = await file.arrayBuffer();
+            const parsed = gifuct.parseGIF(buffer);
+            const frames = gifuct.decompressFrames(parsed, true);
+            if (frames.length === 0) throw new Error('No frames found in that GIF.');
+
+            const gifWidth = parsed.lsd.width;
+            const gifHeight = parsed.lsd.height;
+            const fullCanvas = document.createElement('canvas');
+            fullCanvas.width = gifWidth;
+            fullCanvas.height = gifHeight;
+            const fullCtx = fullCanvas.getContext('2d');
+
+            // gif.js needs a same-origin worker script - a cross-origin CDN
+            // URL passed directly would be blocked, so the script is fetched
+            // and re-served from a blob: URL (which inherits this page's
+            // origin) instead.
+            const workerBlobUrl = await getGifWorkerBlobUrl();
+
+            return new Promise(function (resolve, reject) {
+                const encoder = new window.GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: CROP_OUTPUT_WIDTH,
+                    height: CROP_OUTPUT_HEIGHT,
+                    workerScript: workerBlobUrl
+                });
+                encoder.on('finished', function (blob) { resolve(blob); });
+                encoder.on('abort', function () { reject(new Error('GIF encoding was aborted.')); });
+
+                let previousFrame = null;
+                for (const frame of frames) {
+                    if (previousFrame && previousFrame.disposalType === 2) {
+                        fullCtx.clearRect(previousFrame.dims.left, previousFrame.dims.top, previousFrame.dims.width, previousFrame.dims.height);
+                    }
+                    const patchCanvas = document.createElement('canvas');
+                    patchCanvas.width = frame.dims.width;
+                    patchCanvas.height = frame.dims.height;
+                    patchCanvas.getContext('2d').putImageData(new ImageData(frame.patch, frame.dims.width, frame.dims.height), 0, 0);
+                    fullCtx.drawImage(patchCanvas, frame.dims.left, frame.dims.top);
+
+                    const outCanvas = document.createElement('canvas');
+                    outCanvas.width = CROP_OUTPUT_WIDTH;
+                    outCanvas.height = CROP_OUTPUT_HEIGHT;
+                    outCanvas.getContext('2d').drawImage(fullCanvas, rect.x, rect.y, rect.w, rect.h, 0, 0, CROP_OUTPUT_WIDTH, CROP_OUTPUT_HEIGHT);
+
+                    encoder.addFrame(outCanvas, { delay: frame.delay || 100, copy: true });
+                    previousFrame = frame;
+                }
+
+                encoder.render();
+            });
+        }
+
+        let gifWorkerBlobUrlPromise = null;
+        function getGifWorkerBlobUrl() {
+            if (!gifWorkerBlobUrlPromise) {
+                gifWorkerBlobUrlPromise = fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js')
+                    .then(function (res) { return res.blob(); })
+                    .then(function (blob) { return URL.createObjectURL(blob); });
+            }
+            return gifWorkerBlobUrlPromise;
         }
 
         // Shared "✓ Ran this in Discord" confirm button used by the
@@ -10089,6 +10466,10 @@ ${rouletteBarHTML}
                 version: '2026-08-09',
                 date: 'August 9, 2026',
                 items: [
+                    { type: 'feature', text: 'The <b>$ims image picker</b> (click a character\'s picture) now takes the whole DM Mudae sends - paste it in and pick visually from a thumbnail grid, instead of finding and copying one link out by hand.' },
+                    { type: 'feature', text: 'Picking an image now also shows the matching <code>$c CharacterName$N</code> command, since <code>$ai</code> only adds an image to Mudae\'s pool - <code>$c</code> is what actually makes one active, by its number in the DM.' },
+                    { type: 'feature', text: 'The <b>Upload Image</b> (ImgChest) tool is now tied to a specific character: uploading generates an <code>$ai</code> command scoped to that character, plus a <code>$c</code> command (numbered one past the highest number pasted from <code>$ims</code>) to make the upload active, with a confirm button that applies it here too. It also no longer needs an <code>$ims</code> DM pasted first to work - that\'s only required for the extra <code>$c</code> command.' },
+                    { type: 'feature', text: 'New <b>Image Cropper</b>: crop any image - or an animated GIF, with the animation preserved - to 225&times;350 (the size Mudae\'s own images use), with drag-to-pan and zoom. Reachable from the upload section and feeds the result straight back into it.' },
                     { type: 'feature', text: 'New <b>"No Color Only"</b> filter on the Colors tab\'s character grid, so you can jump straight to keyed characters that don\'t have a color assigned yet.' },
                     { type: 'feature', text: 'The <b>Keys</b> stat on each character card is now clickable - add a key count directly (e.g. after claiming keys in Discord) without pasting a whole fresh <code>$ec</code>-style command, and it keeps the raw input text in sync.' },
                     { type: 'feature', text: 'New <b>What\'s New</b> link next to the title lets you pull up this changelog any time, instead of only ever seeing it once automatically.' },

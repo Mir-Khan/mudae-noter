@@ -14,9 +14,10 @@ Designed for use with the [Mudae bot](https://top.gg/bot/432610292342587392) on 
 - Group and sort characters by series, note, color, keys, kakera, gender, roulette, or owner; filter by kakera/key range, owner, gender, roulette, Imgur status, or disabled-only series.
 - A ranking system to number characters, with drag-and-drop or click-a-badge reordering.
 - Bulk-apply notes or hex colors to entire series or selected groups, or add a key count to one character directly.
-- Click a character's picture to generate a Mudae `$ims` command and paste back the image link you want for them - no full re-parse needed.
-- Upload an image in-app (via [ImgChest](https://imgchest.com/)) and get a link ready for Mudae's `$ai` command.
-- Automatically creates optimized `$n`, `$ec`, `$ai`, `$sm`, `$smpos`, `$smseries`, and `$smnote` commands ready to paste back into Discord.
+- Click a character's picture to generate a Mudae `$ims` command, paste the whole DM back in, and pick visually from a thumbnail grid - each pick generates the matching `$c` command to make it the active image.
+- Upload a new image in-app (via [ImgChest](https://imgchest.com/)) tied to that character - get both the `$ai` command to add it and the `$c` command to activate it, with a confirm button that updates the app once you've run it.
+- Crop an image (including animated GIFs, with the animation preserved) to 225×350 - the size Mudae's own images use - before uploading, with drag-to-pan and zoom.
+- Automatically creates optimized `$n`, `$ec`, `$ai`, `$c`, `$sm`, `$smpos`, `$smseries`, and `$smnote` commands ready to paste back into Discord.
 - Compare two collections, or transfer notes or colors from one collection onto matching characters in another.
 - Reorder your whole collection - drag-and-drop, jump-to-position, or select-and-move multiple at once - with detailed/compact/grid views and search/filtering.
 - Reorder series the same way, with each series pictured by its highest-kakera character.
@@ -63,13 +64,14 @@ On the **Colors** tab, drag inside the wheel (or type a hex code), choose who it
 
 ### 5. Change or add an image
 
-Click the 🖼️ badge on any character's picture to generate an `$ims CharacterName` command - Mudae DMs back a numbered list of image links already claimed for them. Paste the one you want and it updates immediately, no re-parse required.
+Click the 🖼️ badge on any character's picture to generate an `$ims CharacterName` command. Mudae DMs back every image link already claimed for them - paste the whole DM in (numbers and all) and pick one visually from the thumbnail grid. Picking an image updates it here immediately, and shows the matching `$c CharacterName$N` command so you can make it the active image on Mudae too.
 
 ![Pick an Image modal](docs/screenshots/ims-image-picker.png)
 
-Need a brand-new image instead? The **Upload Image** button walks you through a one-time ImgChest token setup, then uploads a file and hands you back a link ready for Mudae's `$ai` command.
+Need a brand-new image instead? The same modal has an upload section - a one-time ImgChest token setup, then upload a file to get both an `$ai` command (adds the image) and a `$c` command (makes it active), with a confirm button that updates the app once you've run them in Discord. There's also a built-in cropper (works on animated GIFs too) to get any image to Mudae's 225×350 size first.
 
-![Upload Image modal](docs/screenshots/upload-image.png)
+![Upload Image section](docs/screenshots/upload-image.png)
+![Crop Image modal](docs/screenshots/image-cropper.png)
 
 ### 6. Track wishlists
 
@@ -128,8 +130,9 @@ Everything below was added on top of [Arczeus's original project](https://github
 - **Quick Notes** - a sidebar of reusable notes/emojis/hex colors for fast copy-paste, reorderable by drag-and-drop, and available as click-to-fill chips in the new-character note prompt too.
 - **Recently Noted panel** - applying a note to your selected characters deselects them afterward (so you can immediately pick the next batch for a different note), and this panel keeps a scrollable, most-recent-first list of who you just tagged, with click-to-jump chips, individual removal, a "Clear" button, and its own scoped `$n` command generator. Also picks up characters noted through the new-character prompt.
 - **Click-to-add Keys** - click the Keys stat on any character card to add to their key count directly, without a `$ec`-style Discord round-trip.
-- **`$ims` image picker** - click a character's picture to generate an `$ims CharacterName` command, then paste the image link you picked straight back in.
-- **Upload Image (ImgChest)** - upload a file in-app and get back a link ready for Mudae's `$ai` command, with guided one-time token setup (Imgur no longer accepts new API app registrations, so this uses ImgChest instead).
+- **`$ims` image picker** - click a character's picture to generate an `$ims CharacterName` command, paste the whole DM back in, and pick visually from a thumbnail grid instead of hunting for one link by hand. Each pick shows the matching `$c CharacterName$N` command, since `$ai` only adds an image to Mudae's pool - `$c` is what actually makes one active, by its number in that DM.
+- **Upload Image (ImgChest)** - tied to whichever character the image picker is open for: upload a file to get an `$ai` command scoped to that character, with guided one-time token setup (Imgur no longer accepts new API app registrations, so this uses ImgChest instead). A confirm button applies the new image locally once you've run the command, and if you'd already pasted that character's `$ims` DM, a `$c` command is generated too (numbered one past the highest number seen), so the upload can be made active right away.
+- **Image Cropper** - crops any image (or animated GIF, with the animation preserved frame-by-frame) to 225×350, the size Mudae's own images use, with drag-to-pan and zoom - reachable from the upload section, feeding straight back into it.
 - **Mobile support** - the whole app is responsive and usable on a phone or tablet, not just desktop.
 - **What's New link** - reopen the full changelog any time from a link next to the title, instead of only ever seeing it once automatically.
 - **`$smseries`/`$smnote` length handling** - `$smseries` has no append/insert/continuation mode (confirmed against the real bot - it only accepts the complete order in one message), so these always generate a single command. If the full order is over Discord's 2,000-character limit but still fits under Nitro's 4,000, you get a warning plus a working command and a confirm button. If it's too long even for Nitro, the command is cut off at the last series/note that fits, with a clear note on how many were left out and a pointer to sort the rest manually.
