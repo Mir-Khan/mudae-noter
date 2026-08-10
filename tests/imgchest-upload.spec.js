@@ -258,12 +258,11 @@ module.exports = [
         }
     },
     {
-        // Regression test for a real report: uploading, then separately
-        // pasting a $imsi- DM and picking a (possibly stale/wrong) thumbnail
-        // from it, silently overwrote the fresh upload - the grid is now
-        // locked while an upload is pending, so that can't happen by
-        // accident.
-        name: 'the $imsi- grid locks while an upload is pending, so a stale pick can\'t silently overwrite it',
+        // The $imsi- grid stays fully usable after an upload (you might
+        // change your mind and want an existing image instead) - it just
+        // shouldn't be the one that wins by DEFAULT, since uploading and
+        // confirming in Discord is the more deliberate of the two actions.
+        name: 'a pending upload wins by default if the grid is never touched afterward',
         async run(page) {
             await page.route('https://api.imgchest.com/v1/post', (route) => {
                 route.fulfill({
@@ -275,24 +274,17 @@ module.exports = [
 
             const { card } = await openUploadSectionForFirstCharacter(page);
 
-            const pasteAreaEnabledBefore = await page.locator('#imsImagePasteArea').isEnabled();
-            assert.ok(pasteAreaEnabledBefore, 'expected the grid to start out enabled');
-
             await page.fill('#imgChestTokenInput', 'my-test-token');
             await page.click('button:has-text("Save Token")');
             await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
             await page.click('#imgChestUploadBtn');
             await page.waitForSelector('#imgChestUploadStatus .command-text');
 
-            const pasteAreaDisabled = await page.locator('#imsImagePasteArea').isDisabled();
-            assert.ok(pasteAreaDisabled, 'expected the $imsi- paste box to be disabled while the upload is pending confirmation');
+            const pasteAreaEnabled = await page.locator('#imsImagePasteArea').isEnabled();
+            assert.ok(pasteAreaEnabled, 'expected the $imsi- grid to stay usable even with a pending upload, in case of a change of mind');
 
-            // Even if a thumbnail existed in the (now locked) grid, pointer
-            // events are off - simulate the failure mode directly instead by
-            // trying to select via JS, and confirm it's blocked at the CSS
-            // layer (still opacity/pointer-events locked).
-            const sectionLocked = await page.locator('#imsImageGridSection').evaluate(el => el.classList.contains('ims-image-grid-disabled'));
-            assert.ok(sectionLocked, 'expected the grid section to carry the locked/disabled styling while an upload is pending');
+            const noteVisible = await page.locator('#imsImageGridDisabledNote').isVisible();
+            assert.ok(noteVisible, 'expected a note explaining the upload is what Save Image will use by default');
 
             await page.click('button:has-text("Save Image")');
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
@@ -302,7 +294,46 @@ module.exports = [
                 const index = parseInt(el.dataset.originalIndex, 10);
                 return AppState.seriesData[series].characters[index].image;
             });
-            assert.strictEqual(charImage, 'https://cdn.imgchest.com/files/fresh-upload.png', 'expected the pending upload to win, since the grid was locked the whole time');
+            assert.strictEqual(charImage, 'https://cdn.imgchest.com/files/fresh-upload.png', 'expected the pending upload to win by default');
+        }
+    },
+    {
+        // Regression test for a real report's follow-up ask: after
+        // uploading, the user should still be able to change their mind and
+        // pick an existing image from the $imsi- grid instead - that pick
+        // should win, overriding the upload default right back.
+        name: 'picking a thumbnail after an upload overrides the upload (changed your mind)',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/unwanted-upload.png' }] } })
+                });
+            });
+
+            const { card } = await openUploadSectionForFirstCharacter(page);
+
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text');
+
+            // Changed my mind - pick an existing image from the grid instead.
+            await page.fill('#imsImagePasteArea', '1. https://mudae.net/uploads/old/actually-wanted.png');
+            await page.waitForSelector('.ims-image-thumb');
+            await page.click('.ims-image-thumb');
+
+            await page.click('button:has-text("Save Image")');
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
+
+            const charImage = await card.evaluate(el => {
+                const series = el.dataset.originalSeries;
+                const index = parseInt(el.dataset.originalIndex, 10);
+                return AppState.seriesData[series].characters[index].image;
+            });
+            assert.strictEqual(charImage, 'https://mudae.net/uploads/old/actually-wanted.png', 'expected the grid pick made after the upload to win, since it was the more recent action');
         }
     },
     {

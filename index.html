@@ -1308,11 +1308,6 @@
             overflow-y: auto;
         }
 
-        #imsImageGridSection.ims-image-grid-disabled {
-            opacity: 0.4;
-            pointer-events: none;
-        }
-
         .ims-image-thumb {
             position: relative;
             border: 2px solid transparent;
@@ -3738,9 +3733,9 @@
                 </div>
                 <div id="imsImageCCommandBox"></div>
             </div>
-            <div id="imsImageGridDisabledNote" class="sort-hint sort-limit-warning" style="display: none; margin: 4px 0 0;">
-                &#9888; You've got an upload waiting to be confirmed below - picking an older image here would overwrite
-                it, so this is locked until that's resolved.</div>
+            <div id="imsImageGridDisabledNote" class="sort-hint" style="display: none; margin: 4px 0 0;">
+                You've got an uploaded image waiting below - that's what <b>Save Image</b> will use by default. Pick a
+                thumbnail here instead if you'd rather use one of the existing images.</div>
 
             <div class="ims-upload-divider">or upload a new image</div>
             <p class="sort-hint">No need to paste a <code>$imsi-</code> DM first - upload a file here to get an
@@ -6394,10 +6389,8 @@ ${rouletteBarHTML}
                 document.getElementById('imgChestCopyLinkBtn').onclick = function () { copyCommand(this, command); };
                 imsImageUploadPending = true;
                 imsImagePendingUploadLink = link;
-                // Locks the $imsi- grid above until this upload is resolved -
-                // picking an older/stale thumbnail from it right now would
-                // silently overwrite this fresh upload with something else.
-                setImsImageGridSectionEnabled(false);
+                imsImageApplySource = 'upload';
+                updateImsImageGridNote();
                 const confirmBtn = document.createElement('button');
                 confirmBtn.type = 'button';
                 confirmBtn.className = 'btn btn-sm confirm-applied-btn';
@@ -8780,22 +8773,20 @@ ${rouletteBarHTML}
         let imsImageMaxNumber = 0;
         // True from a successful ImgChest upload until it's been applied (via
         // either its own "Ran this in Discord" button or the main "Save
-        // Image" button - both do the same thing now). While true, the
-        // $imsi- grid above is locked: picking an older/stale thumbnail from
-        // it would silently overwrite the fresh upload with something else,
-        // which is exactly what happened in a real report (uploaded a
-        // cropped image, then separately pasted a $imsi- DM and picked the
-        // wrong/stale entry from it, clobbering the correct one).
+        // Image" button - both do the same thing now).
         let imsImageUploadPending = false;
         let imsImagePendingUploadLink = null;
+        // Whichever of "upload" or "grid" happened more recently - Save
+        // Image applies that one. A fresh upload defaults to winning (it's
+        // the more deliberate, just-did-it-in-Discord action), but picking a
+        // thumbnail from the grid afterward - if you change your mind and
+        // want an existing image instead - overrides it right back, same as
+        // it would if you'd never uploaded anything at all.
+        let imsImageApplySource = null;
 
-        function setImsImageGridSectionEnabled(enabled) {
-            const section = document.getElementById('imsImageGridSection');
+        function updateImsImageGridNote() {
             const note = document.getElementById('imsImageGridDisabledNote');
-            const pasteArea = document.getElementById('imsImagePasteArea');
-            if (section) section.classList.toggle('ims-image-grid-disabled', !enabled);
-            if (note) note.style.display = enabled ? 'none' : '';
-            if (pasteArea) pasteArea.disabled = !enabled;
+            if (note) note.style.display = imsImageUploadPending ? '' : 'none';
         }
 
         // Entry point for anywhere that already holds a direct character
@@ -8819,7 +8810,8 @@ ${rouletteBarHTML}
             imsImageMaxNumber = 0;
             imsImageUploadPending = false;
             imsImagePendingUploadLink = null;
-            setImsImageGridSectionEnabled(true);
+            imsImageApplySource = null;
+            updateImsImageGridNote();
 
             const command = `$imsi- ${char.name}`;
             document.getElementById('imsImageCommandText').textContent = command;
@@ -8850,6 +8842,7 @@ ${rouletteBarHTML}
             imsImageMaxNumber = 0;
             imsImageUploadPending = false;
             imsImagePendingUploadLink = null;
+            imsImageApplySource = null;
         }
 
         // Pulls every "N. https://..." entry out of a pasted $ims DM, in the
@@ -8930,6 +8923,10 @@ ${rouletteBarHTML}
         function selectImsImageThumb(url, number) {
             imsImageSelectedUrl = url;
             imsImageSelectedNumber = number;
+            // An explicit pick always means "use this instead" - overrides a
+            // pending upload back the other way, same as it would if there
+            // were no pending upload at all.
+            imsImageApplySource = 'grid';
             renderImsImageThumbs();
         }
 
@@ -8983,13 +8980,14 @@ ${rouletteBarHTML}
         function saveImsImagePickerModal() {
             if (!imsImagePickerTarget) return;
 
-            // A pending upload takes priority over a grid pick - it's the
-            // most recent, most deliberate action (you just uploaded and ran
-            // it in Discord), and could still be sitting there stale from
-            // before the upload happened even though the grid is locked
-            // during the upload itself. Save Image should always finish off
-            // whatever you actually just did.
-            const url = imsImagePendingUploadLink || imsImageSelectedUrl;
+            // Whichever happened more recently wins - a fresh upload
+            // defaults to being used (imsImageApplySource is set to
+            // 'upload' as soon as it succeeds), but picking a thumbnail
+            // afterward, if you change your mind and want an existing image
+            // instead, overrides that right back.
+            const url = imsImageApplySource === 'grid'
+                ? (imsImageSelectedUrl || imsImagePendingUploadLink)
+                : (imsImagePendingUploadLink || imsImageSelectedUrl);
             if (!url) {
                 showImsPickerMessage('Pick an image from the grid first, or upload one below.', 'error');
                 return;
