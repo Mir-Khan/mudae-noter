@@ -4,14 +4,8 @@ const fs = require('fs');
 const { loadDemoCollection } = require('./helpers');
 
 const FIXTURE_IMAGE = path.join(__dirname, 'fixtures', 'test-image.png');
+const FIXTURE_GIF = path.join(__dirname, 'fixtures', 'test-animated.gif');
 
-// The animated-GIF crop path (tests/fixtures/test-animated.gif) depends on
-// two real external libraries (gif.js, gifuct-js) fetched from a CDN at
-// crop time - deliberately not exercised here, since every other test in
-// this suite runs fully offline against the local file:// page. That path
-// was verified manually instead: cropping a 100x150, 5-frame test GIF
-// produced a valid 225x350 image/gif Blob with all 5 frames intact
-// (confirmed via ffprobe) and visually correct (non-garbled) content.
 module.exports = [
     {
         name: 'the "Crop this image first" link opens the cropper, pre-loaded with the already-chosen file',
@@ -132,6 +126,44 @@ module.exports = [
             assert.ok(workspaceVisible, 'expected the workspace to reload from the file now sitting in the upload input');
             const downloadBtnVisible = await page.locator('#imageCropperDownloadBtn').isVisible();
             assert.strictEqual(downloadBtnVisible, false, 'expected the Download button from the previous crop to be hidden again until a new crop is made');
+        }
+    },
+    {
+        // Regression test for a real report: clicking "Crop this image
+        // first" a second time re-opened the cropper on the ALREADY-cropped
+        // 225x350 result (since that's what was sitting in the upload file
+        // input), instead of the original source - stacking a second crop
+        // on a shrunk image and doubling the "-cropped" filename suffix.
+        name: 'clicking "Crop this image first" a second time re-crops from the original source, not the previous crop result',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' });
+
+            const firstCropName = await page.evaluate(() => document.getElementById('imgChestFileInput').files[0].name);
+            assert.ok(/^test-image-cropped\.png$/i.test(firstCropName), `expected a single "-cropped" suffix after the first crop, got: "${firstCropName}"`);
+
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            // The fixture is a 1x1 PNG - if the second click re-cropped the
+            // previous 225x350 OUTPUT instead of the original, this would
+            // read 225x350 instead.
+            const naturalSize = await page.evaluate(() => cropperNaturalSize);
+            assert.deepStrictEqual(naturalSize, { w: 1, h: 1 }, `expected the second crop to load the original 1x1 fixture, not the previous 225x350 crop result, got: ${JSON.stringify(naturalSize)}`);
+
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' });
+
+            const secondCropName = await page.evaluate(() => document.getElementById('imgChestFileInput').files[0].name);
+            assert.ok(/^test-image-cropped\.png$/i.test(secondCropName), `expected the second crop to still be sourced from the original (one "-cropped" suffix, not doubled), got: "${secondCropName}"`);
         }
     },
     {
@@ -301,6 +333,86 @@ module.exports = [
             await page.waitForTimeout(150);
             const messageText = await page.locator('#imageCropperMessage').textContent();
             assert.ok(/paste an image link first/i.test(messageText), `expected an error prompting for a link, got: "${messageText}"`);
+        }
+    },
+    {
+        // The GIF crop path (gif.js + gifuct-js) used to be fetched from a
+        // CDN on demand - now vendored locally (vendor/gif.js,
+        // vendor/gif.worker.js, vendor/gifuct-js.js) specifically so ad
+        // blockers/privacy extensions blocking third-party CDN requests
+        // can't silently break it (a real report: cropping a GIF appeared
+        // to do nothing, and the un-cropped original got uploaded instead).
+        // Runs fully offline now, like everything else in this suite.
+        name: 'cropping an animated GIF produces a real 225x350 animated GIF, entirely offline',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.setInputFiles('#imageCropperFileInput', FIXTURE_GIF);
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' }, { timeout: 15000 });
+
+            const uploadFile = await page.evaluate(async () => {
+                const f = document.getElementById('imgChestFileInput').files[0];
+                if (!f) return null;
+                const buf = await f.arrayBuffer();
+                const bytes = new Uint8Array(buf);
+                return {
+                    name: f.name,
+                    type: f.type,
+                    size: f.size,
+                    width: bytes[6] | (bytes[7] << 8),
+                    height: bytes[8] | (bytes[9] << 8),
+                };
+            });
+            assert.ok(uploadFile, 'expected a cropped GIF to be placed into the upload file input');
+            assert.strictEqual(uploadFile.type, 'image/gif', 'expected an animated-GIF crop to still produce a GIF, not a PNG');
+            assert.ok(uploadFile.size > 0, 'expected the cropped GIF to have real content');
+            assert.deepStrictEqual({ width: uploadFile.width, height: uploadFile.height }, { width: 225, height: 350 }, `expected the cropped GIF to be exactly 225x350, got ${JSON.stringify(uploadFile)}`);
+        }
+    },
+    {
+        // Regression test for a real report: after cropping, the modal just
+        // said "Cropped image ready to upload" with no obvious next step -
+        // the user had no idea a separate "Upload" click was still needed,
+        // and "Save Image" (the button that actually stands out) does
+        // something unrelated (applies a picked $imsi- thumbnail). Cropping
+        // now uploads automatically so there's nothing left to get stuck on.
+        name: 'cropping automatically uploads the result and shows the $ai command, with no separate Upload click needed',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/auto-upload-test.png' }] } })
+                });
+            });
+
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.setInputFiles('#imageCropperFileInput', FIXTURE_IMAGE);
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' });
+            await page.waitForSelector('#imgChestUploadStatus .command-text', { timeout: 10000 });
+
+            const commandText = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$ai' }).textContent();
+            assert.ok(commandText.includes('https://cdn.imgchest.com/files/auto-upload-test.png'), `expected the $ai command to use the uploaded link, got: "${commandText}"`);
         }
     }
 ];
