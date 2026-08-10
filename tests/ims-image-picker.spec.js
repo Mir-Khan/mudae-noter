@@ -253,5 +253,71 @@ module.exports = [
             const excludedAfter = await card.evaluate(el => el.classList.contains('excluded'));
             assert.strictEqual(excludedAfter, excludedBefore, 'expected the image-edit badge to not also toggle card selection');
         }
+    },
+    {
+        // Regression test for a real report: the image-edit badge was only
+        // reachable from the Notes tab - this locks in the same badge also
+        // showing on the Sort tab's list, opening the picker for the right
+        // underlying character without also selecting the row.
+        name: 'the Sort tab list also has an image-edit badge on each thumbnail, opening the picker without toggling row selection',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const name = await page.locator('.character-card').first().locator('.character-name').textContent();
+            await page.click('#tab-sort-btn');
+            await page.fill('#sortInput', `${name.trim()} - Dungeon Meshi 1 ka`);
+            await page.click('button:has-text("Parse Sort Input")');
+            await page.waitForSelector('#sortCharacterList .sort-character-item');
+
+            const row = page.locator('#sortCharacterList .sort-character-item').first();
+            const selectedBefore = await row.evaluate(el => el.classList.contains('selected'));
+
+            await row.locator('.sort-item-thumb-edit-badge').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            const commandText = await page.locator('#imsImageCommandText').textContent();
+            assert.strictEqual(commandText, `$ims ${name.trim()}`, `expected the picker to open for the right character, got: "${commandText}"`);
+
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
+            await page.click('.ims-image-thumb');
+            await page.click('button:has-text("Save Image")');
+            await page.waitForTimeout(150);
+
+            const newImage = await row.locator('.sort-item-thumb img').getAttribute('src');
+            assert.strictEqual(newImage, 'https://mudae.net/uploads/3341897/Tp1LMe1~oI9kqRz.gif', 'expected the Sort tab row\'s own thumbnail to update immediately');
+
+            const selectedAfter = await row.evaluate(el => el.classList.contains('selected'));
+            assert.strictEqual(selectedAfter, selectedBefore, 'expected the badge click to not also select/move the row');
+        }
+    },
+    {
+        name: 'the Colors tab grid also has an image-edit badge on each thumbnail, opening the picker without toggling character selection',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            await page.click('#tab-colors-btn');
+            await page.waitForSelector('#colorCharacterGrid .sort-character-item');
+
+            const card = page.locator('#colorCharacterGrid .sort-character-item').first();
+            const name = await card.locator('.sort-item-name').textContent();
+            const selectedBefore = await card.evaluate(el => el.classList.contains('selected'));
+
+            await card.locator('.sort-item-thumb-edit-badge').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            const commandText = await page.locator('#imsImageCommandText').textContent();
+            assert.strictEqual(commandText, `$ims ${name.trim()}`, `expected the picker to open for the right character, got: "${commandText}"`);
+
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
+            await page.click('.ims-image-thumb');
+            await page.click('button:has-text("Save Image")');
+            await page.waitForTimeout(150);
+
+            const newImage = await card.locator('.sort-item-thumb img').getAttribute('src');
+            assert.strictEqual(newImage, 'https://mudae.net/uploads/3341897/Tp1LMe1~oI9kqRz.gif', 'expected the Colors tab card\'s own thumbnail to update immediately');
+
+            const selectedAfter = await card.evaluate(el => el.classList.contains('selected'));
+            assert.strictEqual(selectedAfter, selectedBefore, 'expected the badge click to not also toggle the Colors tab selection');
+        }
     }
 ];

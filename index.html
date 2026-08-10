@@ -1707,6 +1707,7 @@
         }
 
         .sort-item-thumb {
+            position: relative;
             width: 46px;
             height: 64px;
             flex-shrink: 0;
@@ -1720,6 +1721,19 @@
             height: 100%;
             object-fit: cover;
             display: block;
+        }
+
+        .sort-item-thumb-edit-badge {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background-color: rgba(10, 10, 15, 0.8);
+            font-size: 0.6em;
+            line-height: 1;
+            padding: 2px 3px;
+            border-radius: 3px;
+            cursor: pointer;
+            z-index: 2;
         }
 
         .sort-item-thumb-placeholder {
@@ -1830,6 +1844,12 @@
             width: 24px;
             height: 24px;
             border-radius: 50%;
+        }
+
+        /* No room for the badge at this size - the thumbnail itself already
+           shrinks to a 24px circle. */
+        .sort-character-list.compact .sort-item-thumb-edit-badge {
+            display: none;
         }
 
         /* The circle's too small at this size for the full "Unmatched /
@@ -4643,6 +4663,13 @@
             if (sortPanel && sortPanel.style.display !== 'none') {
                 renderSortCharacterList();
                 updateSortInfoBanner();
+            }
+        }
+
+        function refreshColorsGridIfVisible() {
+            const colorsPanel = document.getElementById('colorsTabPanel');
+            if (colorsPanel && colorsPanel.style.display !== 'none') {
+                renderColorCharacterGrid();
             }
         }
 
@@ -7952,6 +7979,12 @@ ${rouletteBarHTML}
 
                 const colorDot = entry.color ? `<span class="sort-color-dot" style="background: ${escapeHTML(entry.color)};"></span>` : '';
                 const noteIcon = entry.note ? `<span class="sort-note-icon" title="${escapeHTML(entry.note)}">📝</span>` : '';
+                // Only matched entries have a real character behind them to
+                // edit - an unmatched entry already offers "click to link" on
+                // its thumbnail instead. Kept as its own overlay (not inline
+                // text in .sort-item-name) so it can't pollute that element's
+                // textContent, which name-matching logic elsewhere relies on.
+                const editImageBadge = entry.matched ? `<div class="sort-item-thumb-edit-badge" data-action="edit-image" title="Change image">🖼️</div>` : '';
                 const noteHtml = entry.note ? `<div class="sort-item-note">${escapeHTML(entry.note)}</div>` : '';
                 const kakeraDisplay = entry.kakera ? Number(entry.kakera).toLocaleString('en-US') : '?';
 
@@ -7959,7 +7992,7 @@ ${rouletteBarHTML}
                     <div class="sort-drag-handle">⠿</div>
                     <div class="sort-select-box" title="Click the card to select">✔</div>
                     <div class="sort-item-rank" title="Click to type an exact position">${index + 1}</div>
-                    <div class="sort-item-thumb">${thumb}</div>
+                    <div class="sort-item-thumb">${thumb}${editImageBadge}</div>
                     <div class="sort-item-info">
                         <div class="sort-item-name">${colorDot}${escapeHTML(entry.name)}${noteIcon}</div>
                         <div class="sort-item-series">${escapeHTML(entry.series)}</div>
@@ -7975,6 +8008,12 @@ ${rouletteBarHTML}
 
                 item.addEventListener('click', function (e) {
                     if (e.target.closest('.sort-item-rank') || e.target.closest('.sort-drag-handle')) return;
+                    if (e.target.closest('[data-action="edit-image"]')) {
+                        const lookup = buildNotesLookupFromSeriesData(AppState.seriesData);
+                        const match = findNotesMatch(entry, lookup);
+                        if (match) openImsImagePickerModalForChar(match.seriesName, match.char);
+                        return;
+                    }
                     if (e.target.closest('[data-action="link-character"]')) {
                         openLinkSortEntryModal(index);
                         return;
@@ -8174,6 +8213,17 @@ ${rouletteBarHTML}
         let imsImageSelectedNumber = null;
         let imsImageMaxNumber = 0;
 
+        // Entry point for anywhere that already holds a direct character
+        // reference rather than a series+index pair (the Sort tab and
+        // Colors tab grids both render from copies/lookups, not the
+        // original array position) - looks the index up once here so the
+        // rest of the picker can keep working off series+index as usual.
+        function openImsImagePickerModalForChar(seriesName, char) {
+            const index = AppState.seriesData[seriesName]?.characters.indexOf(char);
+            if (index === undefined || index === -1) return;
+            openImsImagePickerModal(seriesName, index);
+        }
+
         function openImsImagePickerModal(seriesName, index) {
             const char = AppState.seriesData[seriesName]?.characters[index];
             if (!char) return;
@@ -8329,6 +8379,7 @@ ${rouletteBarHTML}
 
             saveToLocalStorage();
             refreshSortTabIfVisible();
+            refreshColorsGridIfVisible();
             showMessage(`Updated image for "${char.name}".`, 'success');
         }
 
@@ -10241,7 +10292,7 @@ ${rouletteBarHTML}
 
                 el.innerHTML = `
                     <div class="sort-select-box" title="Click the card to select">✔</div>
-                    <div class="sort-item-thumb">${thumb}</div>
+                    <div class="sort-item-thumb">${thumb}<div class="sort-item-thumb-edit-badge" data-action="edit-image" title="Change image">🖼️</div></div>
                     <div class="sort-item-info">
                         <div class="sort-item-name">${colorDot}${escapeHTML(char.name)}</div>
                         <div class="sort-item-series">${escapeHTML(item.seriesName)}</div>
@@ -10249,7 +10300,11 @@ ${rouletteBarHTML}
                     <div class="sort-item-kakera">${keysCount} key${keysCount === 1 ? '' : 's'}</div>
                 `;
 
-                el.addEventListener('click', function () {
+                el.addEventListener('click', function (e) {
+                    if (e.target.closest('[data-action="edit-image"]')) {
+                        openImsImagePickerModalForChar(item.seriesName, char);
+                        return;
+                    }
                     if (colorGridSelection.has(char)) colorGridSelection.delete(char);
                     else colorGridSelection.add(char);
                     renderColorCharacterGrid();
