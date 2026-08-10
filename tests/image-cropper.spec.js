@@ -1,5 +1,6 @@
 const assert = require('assert');
 const path = require('path');
+const fs = require('fs');
 const { loadDemoCollection } = require('./helpers');
 
 const FIXTURE_IMAGE = path.join(__dirname, 'fixtures', 'test-image.png');
@@ -131,6 +132,60 @@ module.exports = [
             assert.ok(workspaceVisible, 'expected the workspace to reload from the file now sitting in the upload input');
             const downloadBtnVisible = await page.locator('#imageCropperDownloadBtn').isVisible();
             assert.strictEqual(downloadBtnVisible, false, 'expected the Download button from the previous crop to be hidden again until a new crop is made');
+        }
+    },
+    {
+        // Regression test for a real report: cropping only ever worked from
+        // a locally-chosen file - pasting an image link in the upload
+        // section's URL field instead left "Crop this image first" with
+        // nothing to crop. It now fetches that link first (the same fetch
+        // the "upload from a link" path already does).
+        name: 'the "Crop this image first" link fetches a pasted image URL first when no file is chosen',
+        async run(page) {
+            await page.route('https://i.imgur.com/removed.png', (route) => {
+                route.fulfill({ status: 200, contentType: 'image/png', body: fs.readFileSync(FIXTURE_IMAGE) });
+            });
+
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.fill('#imgChestUrlInput', 'https://i.imgur.com/removed.png');
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            const useBtnEnabled = await page.locator('#imageCropperUseBtn').isEnabled();
+            assert.ok(useBtnEnabled, 'expected the fetched image to load into the cropper');
+
+            await page.click('#imageCropperUseBtn');
+            await page.waitForFunction(() => document.getElementById('imgChestFileInput').files.length > 0);
+
+            const fileInfo = await page.evaluate(() => {
+                const f = document.getElementById('imgChestFileInput').files[0];
+                return f ? { name: f.name, type: f.type } : null;
+            });
+            assert.ok(fileInfo && /\.png$/i.test(fileInfo.name), `expected the cropped result to land in the file input as a PNG, got: ${JSON.stringify(fileInfo)}`);
+            assert.strictEqual(fileInfo.type, 'image/png');
+
+            const urlInputValue = await page.inputValue('#imgChestUrlInput');
+            assert.strictEqual(urlInputValue, '', 'expected the pasted URL to be cleared once the cropped result replaces it in the file input');
+        }
+    },
+    {
+        name: '"Crop this image first" with neither a file nor a URL opens an empty cropper to pick one manually',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+
+            const workspaceVisible = await page.locator('#imageCropperWorkspace').isVisible();
+            assert.strictEqual(workspaceVisible, false, 'expected no workspace without a file or URL to work from');
         }
     }
 ];

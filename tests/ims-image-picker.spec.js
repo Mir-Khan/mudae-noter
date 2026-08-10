@@ -114,6 +114,36 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: picking a thumbnail for one
+        // character, closing the modal, then opening it again for a
+        // *different* character left the big preview still showing the
+        // previous character's picked image - renderImsImageThumbs()'s
+        // early-return path (hit every time the modal opens fresh, since
+        // the paste box starts empty) skipped resetting the preview.
+        name: 'opening the picker for a different character does not carry over the previous character\'s preview',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const cards = page.locator('.character-card');
+            await cards.nth(0).locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
+            await page.click('.ims-image-thumb');
+            await page.waitForTimeout(150);
+            const previewVisibleForFirst = await page.locator('#imsImageSelectedPreviewWrap').isVisible();
+            assert.ok(previewVisibleForFirst, 'expected the preview to show for the first character\'s pick');
+            await page.click('#imsImagePickerOverlay button:has-text("Cancel")');
+
+            await cards.nth(1).locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.waitForTimeout(150);
+
+            const previewVisibleForSecond = await page.locator('#imsImageSelectedPreviewWrap').isVisible();
+            assert.strictEqual(previewVisibleForSecond, false, 'expected the preview to be hidden/reset when opening the picker for a new character');
+        }
+    },
+    {
         // Regression test for a real report: running $ims on a character
         // with lots of claimed images can come back as several separate
         // DMs - pasting only one of them leaves gaps in the numbering
@@ -243,6 +273,22 @@ module.exports = [
 
             const overlayVisible = await page.locator('#imsImagePickerOverlay').isVisible();
             assert.ok(overlayVisible, 'expected the modal to stay open when nothing was picked');
+
+            // Regression test for a real report: this error used to go
+            // through the global showMessage(), whose target lives in the
+            // underlying tab panel - if the background page was scrolled
+            // (e.g. from scrolling down to find this character), the
+            // message rendered entirely off-screen and looked like the
+            // button silently did nothing. It now has its own message slot
+            // inside the modal itself, always visible regardless of the
+            // page behind it.
+            const messageEl = page.locator('#imsImagePickerMessage');
+            const messageVisible = await messageEl.isVisible();
+            assert.ok(messageVisible, 'expected the error message to be visible inside the modal');
+            const messageText = await messageEl.textContent();
+            assert.ok(/pick an image from the grid/i.test(messageText), `expected a clear error message, got: "${messageText}"`);
+            const insideModal = await messageEl.evaluate(el => !!el.closest('#imsImagePickerOverlay'));
+            assert.ok(insideModal, 'expected the message element to live inside the modal, not the underlying page');
 
             const after = await card.evaluate(el => {
                 const series = el.dataset.originalSeries;

@@ -96,5 +96,37 @@ module.exports = [
             const groupTitles = await page.locator('.series-title').allTextContents();
             assert.deepStrictEqual(groupTitles.slice().sort(), ['Colored', 'No Color'], `expected exactly two color groups, got: ${JSON.stringify(groupTitles)}`);
         }
+    },
+    {
+        // Regression test for a real report: no way to find characters with
+        // a custom (non-mudae.net) image at a glance, e.g. after uploading
+        // one via ImgChest, without scanning every card's URL by hand.
+        name: 'grouping by "Custom Image" splits characters by whether their image is hosted on mudae.net or elsewhere',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            // Every demo character starts with a mudae.net image - give one
+            // a custom host and clear another's entirely, so all three
+            // buckets are populated.
+            await page.evaluate(() => {
+                AppState.seriesData['Dungeon Meshi'].characters[0].image = 'https://cdn.imgchest.com/files/example.png';
+                AppState.seriesData['Dungeon Meshi'].characters[1].image = '';
+            });
+
+            await page.click('#group-customimage-btn');
+            await page.waitForTimeout(150);
+
+            const groupTitles = await page.locator('.series-title').allTextContents();
+            assert.deepStrictEqual(groupTitles.slice().sort(), ['Custom Image', 'Mudae.net Image', 'No Image'], `expected exactly three groups, got: ${JSON.stringify(groupTitles)}`);
+
+            const customGroupCount = await page.evaluate(() => {
+                let n = 0;
+                for (const s in AppState.seriesData) {
+                    AppState.seriesData[s].characters.forEach(c => { if (c.image && !c.image.includes('mudae.net')) n++; });
+                }
+                return n;
+            });
+            assert.strictEqual(customGroupCount, 1, 'expected exactly one character with a custom-hosted image');
+        }
     }
 ];

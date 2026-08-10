@@ -181,6 +181,89 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: Mudae rejects $ai links hosted
+        // on imgchest.com that end in .jpg/.jpeg outright ("The links of
+        // the images hosted with imgchest can't end with '.jpg' or
+        // '.jpeg'"). A JPEG file should be silently re-encoded as a real
+        // PNG before it's ever sent to ImgChest, so the generated link
+        // never hits that restriction.
+        name: 'uploading a JPEG file converts it to a real PNG before sending it to ImgChest',
+        async run(page) {
+            let uploadedFilename = null;
+            let uploadedContentType = null;
+            await page.route('https://api.imgchest.com/v1/post', async (route) => {
+                const request = route.request();
+                const buffer = request.postDataBuffer();
+                const text = buffer.toString('latin1');
+                const filenameMatch = text.match(/filename="([^"]+)"/);
+                const contentTypeMatch = text.match(/Content-Type:\s*([^\r\n]+)/);
+                uploadedFilename = filenameMatch ? filenameMatch[1] : null;
+                uploadedContentType = contentTypeMatch ? contentTypeMatch[1] : null;
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/converted.png' }] } })
+                });
+            });
+
+            await openUploadSectionForFirstCharacter(page);
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+
+            // A tiny but genuinely valid PNG, deliberately mislabeled as a
+            // .jpg/image-jpeg upload - isJpegFile() goes off the declared
+            // type/extension (exactly what a real browser file picker would
+            // report for an actual JPEG), not the underlying bytes.
+            await page.setInputFiles('#imgChestFileInput', {
+                name: 'photo.jpg',
+                mimeType: 'image/jpeg',
+                buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
+            });
+
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text');
+
+            assert.ok(uploadedFilename && /\.png$/i.test(uploadedFilename), `expected the uploaded filename to end in .png, got: "${uploadedFilename}"`);
+            assert.strictEqual(uploadedContentType, 'image/png', `expected the uploaded file's content type to be image/png, got: "${uploadedContentType}"`);
+
+            const commandText = await page.locator('#imgChestUploadStatus .command-text').textContent();
+            assert.ok(commandText.endsWith('.png'), `expected the generated $ai command to reference a .png link, got: "${commandText}"`);
+        }
+    },
+    {
+        // Regression test for a real report: clicking the modal's main
+        // "Save Image" button after uploading (instead of that upload's own
+        // "Ran this in Discord" confirm button) showed a generic "pick from
+        // the grid" error that reads as wrong when you've clearly just
+        // uploaded something - it should point at the actual next step.
+        name: 'clicking Save Image after an upload (before confirming it) explains to use the upload\'s own confirm button instead',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/test123.png' }] } })
+                });
+            });
+
+            await openUploadSectionForFirstCharacter(page);
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text');
+
+            await page.click('button:has-text("Save Image")');
+            await page.waitForTimeout(150);
+
+            const overlayStillOpen = await page.locator('#imsImagePickerOverlay').isVisible();
+            assert.ok(overlayStillOpen, 'expected the modal to stay open, since nothing was actually confirmed');
+
+            const messageText = await page.locator('#imsImagePickerMessage').textContent();
+            assert.ok(/uploaded an image above/i.test(messageText), `expected a message pointing at the upload's own confirm button, got: "${messageText}"`);
+        }
+    },
+    {
         name: 'a failed/blocked upload shows an error and restores the Upload button',
         async run(page) {
             // A non-OK response (e.g. a bad token). Chromium itself always

@@ -1337,6 +1337,56 @@
             padding: 10px 0;
         }
 
+        .imgur-transfer-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            background: #13131a;
+        }
+
+        .imgur-transfer-check {
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+
+        .imgur-transfer-thumb {
+            width: 46px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+            background: #0a0a0f;
+        }
+
+        .imgur-transfer-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .imgur-transfer-name {
+            font-weight: 600;
+            color: #e5e7eb;
+            font-size: 0.9em;
+        }
+
+        .imgur-transfer-series {
+            font-size: 0.75em;
+            color: #9ca3af;
+        }
+
+        .imgur-transfer-status {
+            font-size: 0.8em;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+
+        .imgur-transfer-status .command-item {
+            margin-top: 6px;
+        }
+
         .ims-image-selected-preview-wrap {
             display: flex;
             justify-content: center;
@@ -2883,6 +2933,8 @@
                     Colors</button>
                 <button type="button" id="tab-wishlists-btn" class="app-tab" onclick="switchAppTab('wishlists')">🌟
                     Wishlists</button>
+                <button type="button" id="tab-customimages-btn" class="app-tab"
+                    onclick="switchAppTab('customimages')">🖼️ Custom Images</button>
             </div>
             <div id="mobileUndoDock" class="mobile-undo-dock"></div>
         </div>
@@ -3105,9 +3157,9 @@
                             Generate Colors
                         </button>
 
-                        <button onclick="generateImgurCommands()" id="generateImgurBtn" class="btn btn-primary"
-                            disabled>
-                            Generate Imgur Links
+                        <button onclick="openImgurTransferModal()" id="generateImgurBtn" class="btn btn-primary"
+                            disabled title="Migrate images off Imgur to ImgChest (Imgur no longer accepts new API app registrations)">
+                            Transfer Imgur &rarr; ImgChest
                         </button>
 
                         <button onclick="showPlayerStats()" id="playerStatsBtn" class="btn btn-primary" disabled>
@@ -3146,6 +3198,9 @@
                                 class="btn btn-sm">Roulette</button>
                             <button onclick="setGrouping('owner')" id="group-owner-btn"
                                 class="btn btn-sm">Owner</button>
+                            <button onclick="setGrouping('customimage')" id="group-customimage-btn"
+                                class="btn btn-sm" title="Split by whether the image is hosted on mudae.net or somewhere custom (imgur.com, imgchest.com, etc.)">Custom
+                                Image</button>
                         </div>
                         <div id="kakera-range-container"
                             style="display: none; margin-top: 10px; align-items: center; gap: 10px;">
@@ -3540,6 +3595,19 @@
             </div>
         </div>
 
+        <div id="customImagesTabPanel" style="display: none;">
+            <div id="customImagesMessage"></div>
+            <h2>Custom Images</h2>
+            <p class="sort-hint">Characters currently using an image hosted somewhere other than mudae.net - imgur.com,
+                imgchest.com, or anywhere else - usually because you (or someone) uploaded a custom one via
+                <code>$ai</code>. This is a live view of your actual collection, not a history, so it always reflects
+                what's really set right now. Click a character's 🖼️ badge to change its image.</p>
+            <input type="text" id="customImagesSearchInput" placeholder="Search name or series..."
+                oninput="renderCustomImagesGrid()">
+            <div id="customImagesFilterNote" class="sort-filter-note"></div>
+            <div id="customImagesGrid" class="sort-character-list grid"></div>
+        </div>
+
         <div class="footer">
             <div class="footer-contact">
                 Questions, feedback or bugs? Contact <strong>arczeus</strong> on Discord.
@@ -3680,7 +3748,12 @@
             <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
                 <button onclick="saveImgChestToken()" class="btn btn-sm">Save Token</button>
             </div>
-            <input type="file" id="imgChestFileInput" accept="image/*" style="margin-top: 16px; width: 100%;">
+            <input type="file" id="imgChestFileInput" accept="image/*" style="margin-top: 16px; width: 100%;"
+                oninput="document.getElementById('imgChestUrlInput').value = '';">
+            <div class="ims-upload-divider" style="margin: 10px 0;">or</div>
+            <input type="text" id="imgChestUrlInput" class="color-hex-text-input" style="text-transform: none;"
+                placeholder="...paste an image link instead (no download needed)"
+                oninput="document.getElementById('imgChestFileInput').value = '';">
             <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px; gap: 14px;">
                 <button type="button" id="imgChestUploadBtn" class="btn btn-primary"
                     onclick="uploadImageForCharacter()">Upload</button>
@@ -3689,6 +3762,7 @@
             </div>
             <div id="imgChestUploadStatus" style="margin-top: 12px;"></div>
 
+            <div id="imsImagePickerMessage"></div>
             <div class="add-chars-modal-actions">
                 <button onclick="closeImsImagePickerModal()" class="btn">Cancel</button>
                 <button onclick="saveImsImagePickerModal()" class="btn btn-primary">Save Image</button>
@@ -3718,6 +3792,33 @@
                     style="display: none;">Download</button>
                 <button id="imageCropperUseBtn" onclick="applyImageCrop()" class="btn btn-primary" disabled>Use This
                     Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="imgurTransferOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal" style="max-width: 700px;">
+            <h2>Transfer Imgur &rarr; ImgChest</h2>
+            <p class="sort-hint" style="margin-top: 4px;">Imgur no longer accepts new API app registrations, so
+                images still hosted there are worth moving to ImgChest instead. Every character currently using an
+                imgur.com image is listed below, checked by default - uncheck any you don't want, then transfer the
+                rest. Each one gets its own <code>$ai</code> command to run in Discord, with its own confirm button.</p>
+            <div id="imgurTransferMessage"></div>
+            <input type="text" id="imgurTransferTokenInput" class="color-hex-text-input" style="text-transform: none;"
+                placeholder="Paste your ImgChest personal access token...">
+            <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
+                <button onclick="saveImgurTransferToken()" class="btn btn-sm">Save Token</button>
+            </div>
+            <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 12px; gap: 10px;">
+                <button type="button" class="btn btn-sm" onclick="setAllImgurTransferChecks(true)">Select All</button>
+                <button type="button" class="btn btn-sm" onclick="setAllImgurTransferChecks(false)">Select
+                    None</button>
+            </div>
+            <div id="imgurTransferList" class="ims-image-thumb-grid" style="grid-template-columns: 1fr;"></div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeImgurTransferModal()" class="btn">Close</button>
+                <button id="imgurTransferStartBtn" onclick="startImgurTransfer()" class="btn btn-primary">Transfer
+                    Selected</button>
             </div>
         </div>
     </div>
@@ -3781,7 +3882,7 @@
 
         function setGrouping(method) {
             AppState.ui.grouping = method;
-            const buttons = document.querySelectorAll('#group-series-btn, #group-note-btn, #group-keys-btn, #group-nogroup-btn, #group-kakera-btn, #group-color-btn, #group-gender-btn, #group-roulette-btn, #group-owner-btn');
+            const buttons = document.querySelectorAll('#group-series-btn, #group-note-btn, #group-keys-btn, #group-nogroup-btn, #group-kakera-btn, #group-color-btn, #group-gender-btn, #group-roulette-btn, #group-owner-btn, #group-customimage-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
             document.getElementById(`group-${method}-btn`).classList.add('active');
 
@@ -4696,6 +4797,85 @@
             }
         }
 
+        function refreshCustomImagesGridIfVisible() {
+            const panel = document.getElementById('customImagesTabPanel');
+            if (panel && panel.style.display !== 'none') {
+                renderCustomImagesGrid();
+            }
+        }
+
+        // Live view (not a history/log) - just whoever in the current
+        // collection currently has a non-mudae.net image, computed fresh
+        // each time. Picking a new image via the modal already re-renders
+        // this immediately, same as the Sort/Colors grids.
+        function getCustomImageEntries() {
+            const list = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    if (isCustomHostedImage(char.image)) list.push({ seriesName: seriesName, char: char });
+                });
+            }
+            return list;
+        }
+
+        function renderCustomImagesGrid() {
+            const container = document.getElementById('customImagesGrid');
+            if (!container) return;
+
+            const searchField = document.getElementById('customImagesSearchInput');
+            const query = (searchField ? searchField.value : '').trim().toLowerCase();
+            const entries = getCustomImageEntries();
+            const filterNote = document.getElementById('customImagesFilterNote');
+
+            if (entries.length === 0) {
+                container.innerHTML = Object.keys(AppState.seriesData).length === 0
+                    ? '<p class="sort-empty-hint">No collection parsed yet - head to the Notes tab first.</p>'
+                    : '<p class="sort-empty-hint">No custom-hosted images yet - upload one via a character\'s 🖼️ badge on the Notes tab.</p>';
+                if (filterNote) filterNote.textContent = '';
+                return;
+            }
+
+            const visible = query
+                ? entries.filter(function (item) { return `${item.char.name} ${item.seriesName}`.toLowerCase().includes(query); })
+                : entries;
+
+            if (filterNote) {
+                filterNote.textContent = query
+                    ? `Showing ${visible.length} of ${entries.length}`
+                    : `${entries.length} character${entries.length === 1 ? '' : 's'} with a custom image`;
+            }
+
+            if (visible.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No matches for that search.</p>';
+                return;
+            }
+
+            container.innerHTML = visible.map(function (item) {
+                const char = item.char;
+                const index = AppState.seriesData[item.seriesName].characters.indexOf(char);
+                const thumb = char.image
+                    ? `<img src="${escapeHTML(char.image)}" alt="${escapeHTML(char.name)}" loading="lazy" onerror="handleImageError(this)">`
+                    : `<div class="sort-item-thumb-placeholder">No Image</div>`;
+                return `<div class="sort-character-item" data-original-series="${escapeHTML(item.seriesName)}" data-original-index="${index}">
+    <div class="sort-item-thumb">${thumb}<div class="sort-item-thumb-edit-badge" data-action="edit-image" title="Change image">🖼️</div></div>
+    <div class="sort-item-info">
+        <div class="sort-item-name">${escapeHTML(char.name)}</div>
+        <div class="sort-item-series">${escapeHTML(item.seriesName)}</div>
+    </div>
+</div>`;
+            }).join('');
+
+            container.querySelectorAll('[data-action="edit-image"]').forEach(function (badge) {
+                badge.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const cardEl = badge.closest('.sort-character-item');
+                    const series = cardEl.dataset.originalSeries;
+                    const idx = parseInt(cardEl.dataset.originalIndex, 10);
+                    openImsImagePickerModalForChar(series, AppState.seriesData[series].characters[idx]);
+                });
+            });
+        }
+
         // Edits made directly on the Notes tab (a single character's note,
         // or a series group's "apply note to all/selected") write straight
         // onto the AppState.seriesData character - unlike the confirm-based
@@ -5317,6 +5497,16 @@ ${rouletteBarHTML}
                         case 'owner':
                             groupKey = char.owner ? char.owner : 'No Owner';
                             break;
+                        case 'customimage':
+                            // "Custom" here means hosted anywhere other than
+                            // mudae.net (imgur.com, imgchest.com, or
+                            // anywhere else) - i.e. an image someone
+                            // actually uploaded via $ai, rather than
+                            // whatever Mudae assigned by default.
+                            groupKey = !char.image
+                                ? 'No Image'
+                                : (isCustomHostedImage(char.image) ? 'Custom Image' : 'Mudae.net Image');
+                            break;
                         case 'series':
                             groupKey = seriesName;
                             break;
@@ -5845,62 +6035,6 @@ ${rouletteBarHTML}
             }
         }
 
-        function generateImgurCommands() {
-            const commandsDiv = document.getElementById('commands');
-            commandsDiv.innerHTML = `
- <div class="commands-section">
-  <h2 style="display: flex; justify-content: space-between; align-items: center;">
-   Imgur Links Found
-   <button onclick="scrollToTop()" class="btn btn-sm btn-primary" style="font-size: 0.7em; padding: 6px 12px;">Go to Top ↑</button>
-  </h2>
- </div>`;
-            const container = commandsDiv.querySelector('.commands-section');
-
-            const allSelectedCards = document.querySelectorAll('#seriesGrid .character-card:not(.excluded)');
-
-            const orderedSelectedEntries = Array.from(allSelectedCards).map(card => {
-                const seriesName = card.dataset.originalSeries;
-                const charIndex = parseInt(card.dataset.originalIndex, 10);
-                const char = AppState.seriesData[seriesName] ? AppState.seriesData[seriesName].characters[charIndex] : null;
-                return { seriesName, char };
-            });
-
-            const imgurEntries = orderedSelectedEntries.filter(entry =>
-                entry.char && !entry.char.excluded && entry.char.image && /imgur\.com/i.test(entry.char.image)
-            );
-
-            imgurEntries.forEach(({ seriesName, char }) => {
-                const commandItem = document.createElement('div');
-                commandItem.className = 'command-item';
-
-                const command = `$ai ${char.name}$${char.image}`;
-
-                commandItem.innerHTML = `
-      <div class="command-header">
-       <div class="command-series">${escapeHTML(seriesName)} - ${escapeHTML(char.name)}</div>
-      </div>
-      <div class="command-text">${escapeHTML(command)}</div>
-      <button class="btn btn-sm btn-primary" onclick="copyCommand(this, \`${command.replace(/`/g, '\\`')}\`)">Copy Command</button>
-     `;
-                container.appendChild(commandItem);
-            });
-
-            if (imgurEntries.length === 0) {
-                const p = document.createElement('p');
-                p.style.color = '#6b7280';
-                p.style.padding = '20px';
-                p.textContent = 'No Imgur links found among selected characters.';
-                container.appendChild(p);
-            }
-
-            const imgurCommandsContainer = document.getElementById('commands').querySelector('.command-item');
-            if (imgurCommandsContainer) {
-                document.getElementById('goToCommandsBtn').style.display = 'inline-block';
-            } else {
-                document.getElementById('goToCommandsBtn').style.display = 'none';
-            }
-        }
-
         function scrollToCommands() {
             const commandsSection = document.getElementById('commands');
             if (commandsSection) {
@@ -5935,7 +6069,214 @@ ${rouletteBarHTML}
                 if (token) localStorage.setItem(IMGCHEST_TOKEN_KEY, token);
                 else localStorage.removeItem(IMGCHEST_TOKEN_KEY);
             } catch (e) { }
-            showMessage(token ? 'ImgChest token saved.' : 'ImgChest token cleared.', 'success');
+            showImsPickerMessage(token ? 'ImgChest token saved.' : 'ImgChest token cleared.', 'success');
+        }
+
+        function isJpegFile(file) {
+            return file.type === 'image/jpeg' || /\.jpe?g$/i.test(file.name || '');
+        }
+
+        // Re-encodes a file's actual pixel data as a real PNG (not just a
+        // renamed file - Mudae inspects the link's extension, so a
+        // re-encode is needed, not a rename).
+        function convertImageFileToPng(file) {
+            return new Promise(function (resolve, reject) {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    canvas.getContext('2d').drawImage(img, 0, 0);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob(function (blob) {
+                        if (!blob) { reject(new Error('Could not convert that image to PNG.')); return; }
+                        const pngName = (file.name || 'image').replace(/\.[^.]+$/, '') + '.png';
+                        resolve(new File([blob], pngName, { type: 'image/png' }));
+                    }, 'image/png');
+                };
+                img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not load that image to convert it.')); };
+                img.src = url;
+            });
+        }
+
+        // Core upload primitive shared by the single-character upload
+        // section, the "upload from a link" option, and the bulk
+        // imgur->imgchest transfer - handles the JPEG->PNG safety
+        // conversion once, in one place, regardless of where the file came
+        // from. Returns the resulting CDN link, or throws.
+        async function uploadFileToImgChest(file, token) {
+            if (isJpegFile(file)) {
+                file = await convertImageFileToPng(file);
+            }
+
+            const formData = new FormData();
+            formData.append('images[]', file);
+
+            const response = await fetch('https://api.imgchest.com/v1/post', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('ImgChest responded with status ' + response.status);
+
+            const result = await response.json();
+            const link = result?.data?.images?.[0]?.link;
+            if (!link) throw new Error('No image link in the ImgChest response.');
+            return link;
+        }
+
+        // Fetches an existing image URL (imgur.com, mudae.net, or anywhere
+        // else with permissive CORS) and wraps it as a File, so it can go
+        // through the exact same upload path as a locally-chosen file.
+        async function fetchUrlAsFile(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Could not fetch that image (status ' + response.status + ').');
+            const blob = await response.blob();
+            const name = url.split('/').pop().split('?')[0] || 'image';
+            return new File([blob], name, { type: blob.type || 'image/png' });
+        }
+
+        // ===================== Bulk Imgur -> ImgChest transfer =====================
+        // Imgur no longer accepts new API app registrations, so characters
+        // still pointing at an imgur.com image are worth moving off it
+        // proactively rather than waiting for a link to eventually break.
+        // Each transfer is its own fetch+upload+$ai command, same as the
+        // single-character upload flow, just run for every checked
+        // character in sequence (not in parallel, to keep this predictable
+        // and avoid hammering ImgChest with many simultaneous uploads).
+        function getImgurCharacterEntries() {
+            const list = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    if (char.image && /imgur\.com/i.test(char.image)) list.push({ seriesName: seriesName, char: char });
+                });
+            }
+            return list;
+        }
+
+        function openImgurTransferModal() {
+            const list = document.getElementById('imgurTransferList');
+            const entries = getImgurCharacterEntries();
+
+            let token = '';
+            try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
+            document.getElementById('imgurTransferTokenInput').value = token;
+            document.getElementById('imgurTransferMessage').innerHTML = '';
+
+            if (entries.length === 0) {
+                list.innerHTML = '<p class="ims-image-thumb-empty">No characters currently have an imgur.com image.</p>';
+            } else {
+                list.innerHTML = entries.map(function (item, i) {
+                    const char = item.char;
+                    const index = AppState.seriesData[item.seriesName].characters.indexOf(char);
+                    return `<div class="imgur-transfer-row" data-series="${escapeHTML(item.seriesName)}" data-index="${index}" data-row="${i}">
+    <input type="checkbox" class="imgur-transfer-check" id="imgurTransferCheck${i}" checked>
+    <img class="imgur-transfer-thumb" src="${escapeHTML(char.image)}" alt="" loading="lazy" onerror="handleImageError(this)">
+    <div class="imgur-transfer-info">
+        <div class="imgur-transfer-name">${escapeHTML(char.name)}</div>
+        <div class="imgur-transfer-series">${escapeHTML(item.seriesName)}</div>
+        <div class="imgur-transfer-status" id="imgurTransferStatus${i}"></div>
+    </div>
+</div>`;
+                }).join('');
+            }
+
+            document.getElementById('imgurTransferStartBtn').disabled = entries.length === 0;
+            document.getElementById('imgurTransferOverlay').style.display = 'flex';
+        }
+
+        function closeImgurTransferModal() {
+            document.getElementById('imgurTransferOverlay').style.display = 'none';
+        }
+
+        function saveImgurTransferToken() {
+            const token = document.getElementById('imgurTransferTokenInput').value.trim();
+            const messageEl = document.getElementById('imgurTransferMessage');
+            try {
+                if (token) localStorage.setItem(IMGCHEST_TOKEN_KEY, token);
+                else localStorage.removeItem(IMGCHEST_TOKEN_KEY);
+            } catch (e) { }
+            if (messageEl) {
+                messageEl.className = 'success-message';
+                messageEl.textContent = token ? 'ImgChest token saved.' : 'ImgChest token cleared.';
+                setTimeout(function () { messageEl.innerHTML = ''; messageEl.className = ''; }, 5000);
+            }
+        }
+
+        function setAllImgurTransferChecks(checked) {
+            document.querySelectorAll('.imgur-transfer-check').forEach(function (box) { box.checked = checked; });
+        }
+
+        async function startImgurTransfer() {
+            const token = document.getElementById('imgurTransferTokenInput').value.trim();
+            const messageEl = document.getElementById('imgurTransferMessage');
+            if (!token) {
+                messageEl.className = 'error-message';
+                messageEl.textContent = 'Please save your ImgChest personal access token first.';
+                return;
+            }
+
+            const rows = Array.from(document.querySelectorAll('.imgur-transfer-row')).filter(function (row) {
+                return row.querySelector('.imgur-transfer-check').checked;
+            });
+            if (rows.length === 0) {
+                messageEl.className = 'error-message';
+                messageEl.textContent = 'Select at least one character first.';
+                return;
+            }
+            messageEl.innerHTML = '';
+
+            const startBtn = document.getElementById('imgurTransferStartBtn');
+            startBtn.disabled = true;
+            const originalText = startBtn.textContent;
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const seriesName = row.dataset.series;
+                const index = parseInt(row.dataset.index, 10);
+                const char = AppState.seriesData[seriesName]?.characters[index];
+                const statusEl = row.querySelector('.imgur-transfer-status');
+                row.querySelector('.imgur-transfer-check').disabled = true;
+                startBtn.textContent = `Transferring... (${i + 1}/${rows.length})`;
+                if (!char) { if (statusEl) statusEl.textContent = 'Skipped - character no longer found.'; continue; }
+
+                if (statusEl) statusEl.textContent = 'Fetching image...';
+                try {
+                    const oldUrl = char.image;
+                    const file = await fetchUrlAsFile(oldUrl);
+                    if (statusEl) statusEl.textContent = isJpegFile(file) ? 'Converting to PNG...' : 'Uploading...';
+                    const link = await uploadFileToImgChest(file, token);
+
+                    const command = `$ai ${char.name}$${link}`;
+                    statusEl.innerHTML = `
+<div class="command-item">
+ <div class="command-text">${escapeHTML(command)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="imgurTransferCopy${row.dataset.row}">Copy Command</button>
+</div>`;
+                    document.getElementById(`imgurTransferCopy${row.dataset.row}`).onclick = function () { copyCommand(this, command); };
+                    const confirmBtn = document.createElement('button');
+                    confirmBtn.type = 'button';
+                    confirmBtn.className = 'btn btn-sm confirm-applied-btn';
+                    confirmBtn.textContent = '✓ Ran this in Discord';
+                    confirmBtn.style.marginTop = '6px';
+                    confirmBtn.onclick = function () {
+                        applyNewImageToCharacter(seriesName, index, link);
+                        confirmBtn.textContent = '✓ Applied';
+                        confirmBtn.disabled = true;
+                        confirmBtn.classList.add('confirm-applied-done');
+                    };
+                    statusEl.appendChild(confirmBtn);
+                } catch (err) {
+                    if (statusEl) statusEl.textContent = 'Failed: ' + (err && err.message ? err.message : 'unknown error');
+                }
+            }
+
+            startBtn.disabled = false;
+            startBtn.textContent = originalText;
+            messageEl.className = 'success-message';
+            messageEl.textContent = `Done - processed ${rows.length} character${rows.length === 1 ? '' : 's'}.`;
         }
 
         async function uploadImageForCharacter() {
@@ -5947,14 +6288,16 @@ ${rouletteBarHTML}
             const token = document.getElementById('imgChestTokenInput').value.trim();
             const statusDiv = document.getElementById('imgChestUploadStatus');
             const uploadBtn = document.getElementById('imgChestUploadBtn');
+            const urlInput = document.getElementById('imgChestUrlInput');
+            const pastedUrl = urlInput ? urlInput.value.trim() : '';
 
             if (!token) {
-                showMessage('Please save your ImgChest personal access token first.', 'error');
+                showImsPickerMessage('Please save your ImgChest personal access token first.', 'error');
                 return;
             }
-            const file = document.getElementById('imgChestFileInput').files[0];
-            if (!file) {
-                showMessage('Please choose an image file first.', 'error');
+            let file = document.getElementById('imgChestFileInput').files[0];
+            if (!file && !pastedUrl) {
+                showImsPickerMessage('Please choose an image file, or paste an image link, first.', 'error');
                 return;
             }
 
@@ -5964,20 +6307,20 @@ ${rouletteBarHTML}
             statusDiv.innerHTML = '';
 
             try {
-                const formData = new FormData();
-                formData.append('images[]', file);
+                if (!file) {
+                    uploadBtn.textContent = 'Fetching image...';
+                    file = await fetchUrlAsFile(pastedUrl);
+                }
 
-                const response = await fetch('https://api.imgchest.com/v1/post', {
-                    method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + token },
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error('ImgChest responded with status ' + response.status);
-
-                const result = await response.json();
-                const link = result?.data?.images?.[0]?.link;
-                if (!link) throw new Error('No image link in the ImgChest response.');
+                // Mudae rejects $ai links hosted on imgchest.com that end in
+                // .jpg/.jpeg outright ("The links of the images hosted with
+                // imgchest can't end with '.jpg' or '.jpeg'") - converting
+                // to PNG first (same re-encode canvas uses for cropping)
+                // sidesteps that instead of surfacing a confusing failure
+                // after the fact, once the command's already been generated.
+                if (isJpegFile(file)) uploadBtn.textContent = 'Converting to PNG...';
+                else uploadBtn.textContent = 'Uploading...';
+                const link = await uploadFileToImgChest(file, token);
 
                 // Matches Mudae's actual $ai syntax: "$ai <name>$<link>".
                 const command = `$ai ${char.name}$${link}`;
@@ -5988,12 +6331,14 @@ ${rouletteBarHTML}
  <button type="button" class="btn btn-sm btn-primary" id="imgChestCopyLinkBtn">Copy Command</button>
 </div>`;
                 document.getElementById('imgChestCopyLinkBtn').onclick = function () { copyCommand(this, command); };
+                imsImageUploadPending = true;
                 const confirmBtn = document.createElement('button');
                 confirmBtn.type = 'button';
                 confirmBtn.className = 'btn btn-sm confirm-applied-btn';
                 confirmBtn.textContent = '✓ Ran this in Discord';
                 confirmBtn.onclick = function () {
                     applyImsImagePickerImage(link);
+                    imsImageUploadPending = false;
                     confirmBtn.textContent = '✓ Applied';
                     confirmBtn.disabled = true;
                     confirmBtn.classList.add('confirm-applied-done');
@@ -6027,10 +6372,12 @@ ${rouletteBarHTML}
                     statusDiv.appendChild(hint);
                 }
 
-                showMessage('Image uploaded!', 'success');
+                showImsPickerMessage('Image uploaded!', 'success');
             } catch (err) {
-                statusDiv.innerHTML = '<p class="sort-empty-hint">Upload failed - this can happen if ImgChest blocks requests from this page (CORS). Try uploading directly at imgchest.com instead and pasting the resulting link into the DM paste box above.</p>';
-                showMessage('Image upload failed.', 'error');
+                statusDiv.innerHTML = err && err.message && err.message.indexOf('convert') !== -1
+                    ? `<p class="sort-empty-hint">${escapeHTML(err.message)} Try a different file, or convert it to PNG yourself first.</p>`
+                    : '<p class="sort-empty-hint">Upload failed - this can happen if ImgChest blocks requests from this page (CORS). Try uploading directly at imgchest.com instead and pasting the resulting link into the DM paste box above.</p>';
+                showImsPickerMessage('Image upload failed.', 'error');
             } finally {
                 uploadBtn.disabled = false;
                 uploadBtn.textContent = originalText;
@@ -6059,9 +6406,30 @@ ${rouletteBarHTML}
         let cropperResultBlob = null;
         let cropperReturnToUpload = false;
 
-        function openImageCropperFromUpload() {
+        async function openImageCropperFromUpload() {
             const file = document.getElementById('imgChestFileInput').files[0];
-            openImageCropperModal(file || null, true);
+            if (file) {
+                openImageCropperModal(file, true);
+                return;
+            }
+
+            // No local file chosen - if a link was pasted instead, fetch it
+            // first so there's still something to crop (this is the same
+            // fetch the "upload from a link" path already relies on).
+            const urlInput = document.getElementById('imgChestUrlInput');
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (!url) {
+                openImageCropperModal(null, true);
+                return;
+            }
+
+            showImsPickerMessage('Fetching image to crop...', 'success');
+            try {
+                const fetchedFile = await fetchUrlAsFile(url);
+                openImageCropperModal(fetchedFile, true);
+            } catch (err) {
+                showImsPickerMessage('Could not fetch that image link to crop it: ' + (err && err.message ? err.message : 'unknown error'), 'error');
+            }
         }
 
         function openImageCropperModal(file, returnToUpload) {
@@ -6219,7 +6587,11 @@ ${rouletteBarHTML}
                     const dataTransfer = new DataTransfer();
                     dataTransfer.items.add(croppedFile);
                     document.getElementById('imgChestFileInput').files = dataTransfer.files;
-                    showMessage('Cropped image ready to upload.', 'success');
+                    // The cropped result now lives in the file input - clear
+                    // any pasted link so the upload can't try to use both.
+                    const urlInput = document.getElementById('imgChestUrlInput');
+                    if (urlInput) urlInput.value = '';
+                    showImsPickerMessage('Cropped image ready to upload.', 'success');
                     closeImageCropperModal();
                 } else {
                     statusEl.textContent = 'Cropped! Use Download to save it.';
@@ -6363,7 +6735,7 @@ ${rouletteBarHTML}
             document.getElementById('generateImgurBtn').disabled = true;
             document.getElementById('goToCommandsBtn').style.display = 'none';
 
-            const groupButtons = document.querySelectorAll('#group-series-btn, #group-note-btn, #group-keys-btn, #group-nogroup-btn, #group-kakera-btn, #group-color-btn, #group-gender-btn, #group-roulette-btn, #group-owner-btn');
+            const groupButtons = document.querySelectorAll('#group-series-btn, #group-note-btn, #group-keys-btn, #group-nogroup-btn, #group-kakera-btn, #group-color-btn, #group-gender-btn, #group-roulette-btn, #group-owner-btn, #group-customimage-btn');
             groupButtons.forEach(btn => btn.classList.remove('active'));
             document.getElementById('group-series-btn').classList.add('active');
             document.getElementById('kakera-range-container').style.display = 'none';
@@ -6546,6 +6918,7 @@ ${rouletteBarHTML}
             const seriesPanel = document.getElementById('seriesOrderTabPanel');
             const colorsPanel = document.getElementById('colorsTabPanel');
             const wishlistsPanel = document.getElementById('wishlistsTabPanel');
+            const customImagesPanel = document.getElementById('customImagesTabPanel');
             let messageDiv;
             if (sortPanel && sortPanel.style.display !== 'none') {
                 messageDiv = document.getElementById('sortMessage');
@@ -6555,6 +6928,8 @@ ${rouletteBarHTML}
                 messageDiv = document.getElementById('colorsMessage');
             } else if (wishlistsPanel && wishlistsPanel.style.display !== 'none') {
                 messageDiv = document.getElementById('wishlistsMessage');
+            } else if (customImagesPanel && customImagesPanel.style.display !== 'none') {
+                messageDiv = document.getElementById('customImagesMessage');
             }
             if (!messageDiv) messageDiv = document.getElementById('message');
             messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
@@ -6563,6 +6938,31 @@ ${rouletteBarHTML}
                 messageDiv.innerHTML = '';
                 messageDiv.className = 'empty-message'
             }, 5000);
+        }
+
+        // showMessage() picks a message slot based on which *tab* is
+        // visible, but that slot's actual on-screen position depends on the
+        // underlying page's scroll offset - if a modal was opened after
+        // scrolling down to find a character, the message can render
+        // entirely off-screen above the viewport, behind the modal, making
+        // an action look like it silently did nothing. The Pick an Image
+        // modal is always centered in the viewport regardless of scroll
+        // position, so its own feedback goes here instead.
+        function showImsPickerMessage(text, type) {
+            const el = document.getElementById('imsImagePickerMessage');
+            if (!el) return;
+            el.className = type === 'error' ? 'error-message' : 'success-message';
+            el.textContent = text;
+            setTimeout(function () {
+                el.innerHTML = '';
+                el.className = 'empty-message';
+            }, 5000);
+        }
+
+        // "Custom" = uploaded by someone via $ai rather than whatever Mudae
+        // assigned by default - i.e. not hosted on mudae.net itself.
+        function isCustomHostedImage(url) {
+            return !!url && !/mudae\.net/i.test(url);
         }
 
         function handleImageError(imgElement) {
@@ -7377,11 +7777,13 @@ ${rouletteBarHTML}
             const seriesPanel = document.getElementById('seriesOrderTabPanel');
             const colorsPanel = document.getElementById('colorsTabPanel');
             const wishlistsPanel = document.getElementById('wishlistsTabPanel');
+            const customImagesPanel = document.getElementById('customImagesTabPanel');
             const notesBtn = document.getElementById('tab-notes-btn');
             const sortBtn = document.getElementById('tab-sort-btn');
             const seriesBtn = document.getElementById('tab-series-btn');
             const colorsBtn = document.getElementById('tab-colors-btn');
             const wishlistsBtn = document.getElementById('tab-wishlists-btn');
+            const customImagesBtn = document.getElementById('tab-customimages-btn');
             const notesInstructions = document.getElementById('notesInstructions');
             const sortInstructions = document.getElementById('sortInstructions');
             const seriesInstructions = document.getElementById('seriesInstructions');
@@ -7392,18 +7794,21 @@ ${rouletteBarHTML}
             const showSeries = tab === 'series';
             const showColors = tab === 'colors';
             const showWishlists = tab === 'wishlists';
-            const showNotes = !showSort && !showSeries && !showColors && !showWishlists;
+            const showCustomImages = tab === 'customimages';
+            const showNotes = !showSort && !showSeries && !showColors && !showWishlists && !showCustomImages;
 
             if (notesPanel) notesPanel.style.display = showNotes ? '' : 'none';
             if (sortPanel) sortPanel.style.display = showSort ? '' : 'none';
             if (seriesPanel) seriesPanel.style.display = showSeries ? '' : 'none';
             if (colorsPanel) colorsPanel.style.display = showColors ? '' : 'none';
             if (wishlistsPanel) wishlistsPanel.style.display = showWishlists ? '' : 'none';
+            if (customImagesPanel) customImagesPanel.style.display = showCustomImages ? '' : 'none';
             if (notesBtn) notesBtn.classList.toggle('active', showNotes);
             if (sortBtn) sortBtn.classList.toggle('active', showSort);
             if (seriesBtn) seriesBtn.classList.toggle('active', showSeries);
             if (colorsBtn) colorsBtn.classList.toggle('active', showColors);
             if (wishlistsBtn) wishlistsBtn.classList.toggle('active', showWishlists);
+            if (customImagesBtn) customImagesBtn.classList.toggle('active', showCustomImages);
             if (notesInstructions) notesInstructions.style.display = showNotes ? '' : 'none';
             if (sortInstructions) sortInstructions.style.display = showSort ? '' : 'none';
             if (seriesInstructions) seriesInstructions.style.display = showSeries ? '' : 'none';
@@ -7428,6 +7833,10 @@ ${rouletteBarHTML}
             if (showWishlists) {
                 renderWishlistsList();
                 populateWishlistCompareSelects();
+            }
+
+            if (showCustomImages) {
+                renderCustomImagesGrid();
             }
         }
 
@@ -8235,6 +8644,13 @@ ${rouletteBarHTML}
         let imsImageSelectedUrl = null;
         let imsImageSelectedNumber = null;
         let imsImageMaxNumber = 0;
+        // True from a successful ImgChest upload until its own "Ran this in
+        // Discord" button is confirmed (or the modal closes) - lets the
+        // main Save Image error tell the difference between "nothing
+        // picked yet" and "there's an upload waiting on its own confirm
+        // button", instead of a generic message that reads as wrong when
+        // you've clearly just uploaded something.
+        let imsImageUploadPending = false;
 
         // Entry point for anywhere that already holds a direct character
         // reference rather than a series+index pair (the Sort tab and
@@ -8255,6 +8671,7 @@ ${rouletteBarHTML}
             imsImageSelectedUrl = null;
             imsImageSelectedNumber = null;
             imsImageMaxNumber = 0;
+            imsImageUploadPending = false;
 
             const command = `$ims ${char.name}`;
             document.getElementById('imsImageCommandText').textContent = command;
@@ -8268,7 +8685,9 @@ ${rouletteBarHTML}
             try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
             document.getElementById('imgChestTokenInput').value = token;
             document.getElementById('imgChestFileInput').value = '';
+            document.getElementById('imgChestUrlInput').value = '';
             document.getElementById('imgChestUploadStatus').innerHTML = '';
+            document.getElementById('imsImagePickerMessage').innerHTML = '';
 
             document.getElementById('imsImagePickerOverlay').style.display = 'flex';
             pasteArea.focus();
@@ -8280,6 +8699,7 @@ ${rouletteBarHTML}
             imsImageSelectedUrl = null;
             imsImageSelectedNumber = null;
             imsImageMaxNumber = 0;
+            imsImageUploadPending = false;
         }
 
         // Pulls every "N. https://..." entry out of a pasted $ims DM, in the
@@ -8340,6 +8760,7 @@ ${rouletteBarHTML}
                 grid.innerHTML = text.trim()
                     ? '<p class="ims-image-thumb-empty">No numbered image links found in that text.</p>'
                     : '';
+                renderImsImageSelectedPreview();
                 renderImsImageCCommandBox();
                 return;
             }
@@ -8413,19 +8834,21 @@ ${rouletteBarHTML}
             if (!imsImagePickerTarget) return;
             const url = imsImageSelectedUrl;
             if (!url) {
-                showMessage('Pick an image from the grid first.', 'error');
+                if (imsImageUploadPending) {
+                    showImsPickerMessage('You uploaded an image above - once you\'ve actually run the $ai command in Discord, click its own "Ran this in Discord" button to apply it (Save Image only applies a pick from the grid above).', 'error');
+                } else {
+                    showImsPickerMessage('Pick an image from the grid first.', 'error');
+                }
                 return;
             }
             applyImsImagePickerImage(url);
             closeImsImagePickerModal();
         }
 
-        // Shared by both ways of finalizing this modal's target character's
-        // image: picking a thumbnail + Save Image, and confirming an $ai
-        // upload command was run in Discord.
-        function applyImsImagePickerImage(url) {
-            if (!imsImagePickerTarget) return;
-            const { seriesName, index } = imsImagePickerTarget;
+        // Shared by every way of finalizing a character's image: picking an
+        // $ims thumbnail + Save Image, confirming an $ai upload command was
+        // run in Discord, and confirming one row of the bulk imgur transfer.
+        function applyNewImageToCharacter(seriesName, index, url) {
             const char = AppState.seriesData[seriesName]?.characters[index];
             if (!char) return;
 
@@ -8447,7 +8870,16 @@ ${rouletteBarHTML}
             saveToLocalStorage();
             refreshSortTabIfVisible();
             refreshColorsGridIfVisible();
-            showMessage(`Updated image for "${char.name}".`, 'success');
+            refreshCustomImagesGridIfVisible();
+            return char;
+        }
+
+        function applyImsImagePickerImage(url) {
+            if (!imsImagePickerTarget) return;
+            const { seriesName, index } = imsImagePickerTarget;
+            const char = applyNewImageToCharacter(seriesName, index, url);
+            if (!char) return;
+            showImsPickerMessage(`Updated image for "${char.name}".`, 'success');
         }
 
         // Returns the currently selected entries in their present overall order.
@@ -10582,8 +11014,21 @@ ${rouletteBarHTML}
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-09';
+        const CHANGELOG_VERSION = '2026-08-10';
         const CHANGELOG = [
+            {
+                version: '2026-08-10',
+                date: 'August 10, 2026',
+                items: [
+                    { type: 'feature', text: 'New <b>bulk Imgur &rarr; ImgChest transfer</b>: Imgur no longer accepts new API app registrations, so this replaces the old "Generate Imgur Links" button - it lists every character currently using an imgur.com image (checked by default, deselect any you don\'t want), then transfers each one with its own <code>$ai</code> command and its own confirm button.' },
+                    { type: 'feature', text: 'The image upload tool now accepts a pasted <b>image link</b> as an alternative to choosing a file - no need to download an image first just to re-upload it. Works with the cropper too: "Crop this image first" will fetch a pasted link the same way.' },
+                    { type: 'feature', text: 'New <b>Custom Images</b> tab: a live gallery of every character currently using a non-mudae.net image (imgur.com, imgchest.com, or anywhere else), with search and the same click-to-change-image badge as everywhere else.' },
+                    { type: 'feature', text: 'New <b>"Custom Image"</b> grouping option on the Notes tab, splitting characters into Custom Image / Mudae.net Image / No Image.' },
+                    { type: 'fix', text: 'An error shown inside the image-picker modal (e.g. "pick an image first") could render off-screen behind the modal if the page was scrolled first, making the button look like it silently did nothing - it now always shows inside the modal itself.' },
+                    { type: 'fix', text: 'Clicking "Save Image" right after uploading (instead of that upload\'s own confirm button) showed a generic, confusing error - it now explains to use the upload\'s own "Ran this in Discord" button instead.' },
+                    { type: 'fix', text: 'Mudae rejects ImgChest links ending in .jpg/.jpeg for <code>$ai</code> outright - JPEG uploads are now silently re-encoded as real PNGs first, so this never comes up.' }
+                ]
+            },
             {
                 version: '2026-08-09',
                 date: 'August 9, 2026',
