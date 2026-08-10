@@ -591,6 +591,7 @@
         .main-buttons {
             margin-top: 15px;
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
         }
 
@@ -784,6 +785,20 @@
             font-weight: 700;
             font-size: 0.9em;
             padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 10;
+            cursor: pointer;
+            border: 1px solid #a78bfa;
+        }
+
+        .character-image-edit-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(10, 10, 15, 0.8);
+            font-size: 0.9em;
+            line-height: 1;
+            padding: 3px 5px;
             border-radius: 4px;
             z-index: 10;
             cursor: pointer;
@@ -1282,6 +1297,24 @@
             color: #9ca3af;
             font-size: 0.85em;
             margin-bottom: 10px;
+        }
+
+        .imgchest-token-steps {
+            margin: 0 0 14px;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .imgchest-token-steps li {
+            color: #d1d5db;
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+
+        .imgchest-token-steps a {
+            color: #a78bfa;
         }
 
         .sort-input-actions {
@@ -2913,6 +2946,9 @@
                             Generate Imgur Links
                         </button>
 
+                        <button onclick="openImgChestUploadModal()" id="uploadImageBtn" class="btn btn-primary"
+                            title="Upload an image and get a link to use with Mudae's $ai command">Upload Image</button>
+
                         <button onclick="showPlayerStats()" id="playerStatsBtn" class="btn btn-primary" disabled>
                             Player Stats
                         </button>
@@ -3444,6 +3480,58 @@
         </div>
     </div>
 
+    <div id="imsImagePickerOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2>Pick an Image</h2>
+            <p class="sort-hint" style="margin-top: 4px;">Run the command below in Discord - Mudae will DM you a
+                numbered list of image links already claimed for this character. Paste the one you want below.</p>
+            <div class="command-item" style="margin-bottom: 12px;">
+                <div class="command-text" id="imsImageCommandText"></div>
+                <button type="button" class="btn btn-sm btn-primary" id="imsImageCopyBtn">Copy Command</button>
+            </div>
+            <input type="text" id="imsImageUrlInput" class="color-hex-text-input" style="text-transform: none;"
+                placeholder="Paste the image URL here..." oninput="updateImsImagePreview()">
+            <img id="imsImagePreviewImg" src="" alt="" onerror="handleImageError(this)"
+                style="display: none; max-height: 220px; max-width: 100%; object-fit: contain; border-radius: 8px; margin-top: 10px;">
+            <div class="add-chars-modal-actions">
+                <button onclick="closeImsImagePickerModal()" class="btn">Cancel</button>
+                <button onclick="saveImsImagePickerModal()" class="btn btn-primary">Save Image</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="imgChestUploadOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal">
+            <h2>Upload Image (ImgChest)</h2>
+            <p class="sort-hint" style="margin-top: 4px;">Mudae's <code>$ai</code> command only accepts images
+                hosted on imgur.com or imgchest.com, so uploading here needs a free ImgChest account and a personal
+                access token - a one-time, couple-minute setup. It's saved on this device only, so you (and each
+                friend using this app) only need to do this once per device.</p>
+            <ol class="imgchest-token-steps">
+                <li>Create a free account (or log in) at <a href="https://imgchest.com/" target="_blank"
+                        rel="noopener">imgchest.com</a>.</li>
+                <li>Click your profile icon &rarr; <b>Settings</b> &rarr; the <b>Security</b> tab.</li>
+                <li>Under <b>Personal Access Tokens</b>, click <b>New Token</b> and give it any name (e.g. "Mudae
+                    Noter").</li>
+                <li>Copy the token it gives you - imgchest.com only shows it once - and paste it below.</li>
+            </ol>
+            <input type="text" id="imgChestTokenInput" class="color-hex-text-input" style="text-transform: none;"
+                placeholder="Paste your ImgChest personal access token...">
+            <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
+                <button onclick="saveImgChestToken()" class="btn btn-sm">Save Token</button>
+            </div>
+            <input type="file" id="imgChestFileInput" accept="image/*" style="margin-top: 16px; width: 100%;">
+            <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
+                <button type="button" id="imgChestUploadBtn" class="btn btn-primary"
+                    onclick="uploadImageToImgChest()">Upload</button>
+            </div>
+            <div id="imgChestUploadStatus" style="margin-top: 12px;"></div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeImgChestUploadModal()" class="btn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="wishlistModalOverlay" class="changelog-overlay" style="display: none;">
         <div class="changelog-modal">
             <h2 id="wishlistModalTitle">Add Wishlist</h2>
@@ -3466,6 +3554,11 @@
     <script>
         const COLLECTIONS_META_KEY = 'mudaeCollectionsMeta';
         const LEGACY_STATE_KEY = 'mudaeAppState';
+        // Not part of AppState - a personal ImgChest access token is a
+        // per-browser credential, not per-collection data, and AppState gets
+        // wholesale-rebuilt (with a fresh `ui` block) whenever a new
+        // collection is created.
+        const IMGCHEST_TOKEN_KEY = 'mudaeImgChestToken';
 
         const AppState = {
             seriesData: {},
@@ -3802,9 +3895,16 @@
             const card = target.closest('.character-card');
             const groupCard = target.closest('.series-card');
             const addKeysTarget = target.closest('[data-action="add-keys"]');
+            const imsImageTarget = target.closest('[data-action="edit-image"]');
 
-            if (!action && !addKeysTarget && card) {
+            if (!action && !addKeysTarget && !imsImageTarget && card) {
                 toggleCharacter(card.dataset.originalSeries, parseInt(card.dataset.originalIndex, 10));
+                return;
+            }
+
+            if (card && imsImageTarget) {
+                e.stopPropagation();
+                openImsImagePickerModal(card.dataset.originalSeries, parseInt(card.dataset.originalIndex, 10));
                 return;
             }
 
@@ -4858,6 +4958,7 @@
             return `<div class="${classNames.join(' ')}" data-original-series="${char.originalSeries}" data-original-index="${char.originalIndex}" style="--card-color: ${colorCode};">
 ${AppState.ui.rankingEnabled ? `<div class="character-rank-badge" data-action="edit-rank">${char.rank > 0 ? char.rank : '#'}</div>` : ''}
 <img src="${char.image}" alt="${char.name}" loading="lazy" onerror="handleImageError(this)">
+<div class="character-image-edit-badge" data-action="edit-image" title="Pick a different image">🖼️</div>
 <div class="character-info">
 <div class="character-name" title="${escapeHTML(char.name)}">${escapeHTML(char.name)}</div>
 ${(() => {
@@ -5620,6 +5721,85 @@ ${rouletteBarHTML}
                     btn.style.background = '#7c3aed';
                 }, 2000);
             });
+        }
+
+        // ===================== ImgChest image upload =====================
+        // Mudae's $ai command only accepts imgur.com or imgchest.com links.
+        // Imgur no longer accepts new API app registrations, so this uses
+        // ImgChest instead, authenticated with each user's own personal
+        // access token (there's no shared app secret to embed).
+        function openImgChestUploadModal() {
+            let token = '';
+            try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
+            document.getElementById('imgChestTokenInput').value = token;
+            document.getElementById('imgChestFileInput').value = '';
+            document.getElementById('imgChestUploadStatus').innerHTML = '';
+            document.getElementById('imgChestUploadOverlay').style.display = 'flex';
+        }
+
+        function closeImgChestUploadModal() {
+            document.getElementById('imgChestUploadOverlay').style.display = 'none';
+        }
+
+        function saveImgChestToken() {
+            const token = document.getElementById('imgChestTokenInput').value.trim();
+            try {
+                if (token) localStorage.setItem(IMGCHEST_TOKEN_KEY, token);
+                else localStorage.removeItem(IMGCHEST_TOKEN_KEY);
+            } catch (e) { }
+            showMessage(token ? 'ImgChest token saved.' : 'ImgChest token cleared.', 'success');
+        }
+
+        async function uploadImageToImgChest() {
+            const token = document.getElementById('imgChestTokenInput').value.trim();
+            const statusDiv = document.getElementById('imgChestUploadStatus');
+            const uploadBtn = document.getElementById('imgChestUploadBtn');
+
+            if (!token) {
+                showMessage('Please save your ImgChest personal access token first.', 'error');
+                return;
+            }
+            const file = document.getElementById('imgChestFileInput').files[0];
+            if (!file) {
+                showMessage('Please choose an image file first.', 'error');
+                return;
+            }
+
+            const originalText = uploadBtn.textContent;
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            statusDiv.innerHTML = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('images[]', file);
+
+                const response = await fetch('https://api.imgchest.com/v1/post', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('ImgChest responded with status ' + response.status);
+
+                const result = await response.json();
+                const link = result?.data?.images?.[0]?.link;
+                if (!link) throw new Error('No image link in the ImgChest response.');
+
+                statusDiv.innerHTML = `
+<div class="command-item">
+ <div class="command-text">${escapeHTML(link)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="imgChestCopyLinkBtn">Copy Link</button>
+</div>`;
+                document.getElementById('imgChestCopyLinkBtn').onclick = function () { copyCommand(this, link); };
+                showMessage('Image uploaded!', 'success');
+            } catch (err) {
+                statusDiv.innerHTML = '<p class="sort-empty-hint">Upload failed - this can happen if ImgChest blocks requests from this page (CORS). Try uploading directly at imgchest.com instead and paste the resulting link in manually.</p>';
+                showMessage('Image upload failed.', 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = originalText;
+            }
         }
 
         // Shared "✓ Ran this in Discord" confirm button used by the
@@ -7503,6 +7683,81 @@ ${rouletteBarHTML}
             updateSortInfoBanner();
             saveToLocalStorage();
             showMessage(`Linked "${entry.name}" to "${char.name}" (${seriesName}).`, 'success');
+        }
+
+        // ===================== $ims image picker =====================
+        // Mudae's `$ims [name]` command DMs a numbered list of image links
+        // already claimed for a character - this lets a user generate that
+        // command for one character, then paste back whichever link they
+        // picked to update it here, without a full re-parse.
+        let imsImagePickerTarget = null;
+
+        function openImsImagePickerModal(seriesName, index) {
+            const char = AppState.seriesData[seriesName]?.characters[index];
+            if (!char) return;
+
+            imsImagePickerTarget = { seriesName, index };
+
+            const command = `$ims ${char.name}`;
+            document.getElementById('imsImageCommandText').textContent = command;
+            document.getElementById('imsImageCopyBtn').onclick = function () { copyCommand(this, command); };
+
+            const urlInput = document.getElementById('imsImageUrlInput');
+            urlInput.value = char.image || '';
+            updateImsImagePreview();
+
+            document.getElementById('imsImagePickerOverlay').style.display = 'flex';
+            urlInput.focus();
+        }
+
+        function closeImsImagePickerModal() {
+            document.getElementById('imsImagePickerOverlay').style.display = 'none';
+            imsImagePickerTarget = null;
+        }
+
+        function updateImsImagePreview() {
+            const url = document.getElementById('imsImageUrlInput').value.trim();
+            const preview = document.getElementById('imsImagePreviewImg');
+            if (url) {
+                preview.src = url;
+                preview.style.display = '';
+            } else {
+                preview.style.display = 'none';
+                preview.src = '';
+            }
+        }
+
+        function saveImsImagePickerModal() {
+            if (!imsImagePickerTarget) return;
+            const { seriesName, index } = imsImagePickerTarget;
+            const char = AppState.seriesData[seriesName]?.characters[index];
+            if (!char) return;
+
+            const url = document.getElementById('imsImageUrlInput').value.trim();
+            if (!url) {
+                showMessage('Please paste an image URL first.', 'error');
+                return;
+            }
+
+            char.image = url;
+            syncSortDataForCharacter(seriesName, char);
+
+            // Keeps the raw parse-input textarea round-trippable with the new
+            // image, same as every other in-place character edit (notes,
+            // colors, keys).
+            AppState.rawInput = serializeSeriesDataToText(AppState.seriesData);
+            const mainInputField = document.getElementById('input');
+            if (mainInputField) mainInputField.value = AppState.rawInput;
+
+            const cardImg = document.querySelector(
+                `.character-card[data-original-series="${CSS.escape(seriesName)}"][data-original-index="${index}"] img`
+            );
+            if (cardImg) cardImg.src = url;
+
+            saveToLocalStorage();
+            closeImsImagePickerModal();
+            refreshSortTabIfVisible();
+            showMessage(`Updated image for "${char.name}".`, 'success');
         }
 
         // Returns the currently selected entries in their present overall order.
