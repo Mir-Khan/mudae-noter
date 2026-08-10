@@ -306,6 +306,47 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: pick a thumbnail from the
+        // $imsi- grid first, THEN separately crop/upload a new image and
+        // confirm it - Save Image was still applying the earlier (now
+        // stale) grid pick instead of the upload that was just actually run
+        // in Discord, silently reverting to the wrong image.
+        name: 'a pending upload wins over an earlier grid pick made before the upload happened',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/newer-upload.png' }] } })
+                });
+            });
+
+            const { card } = await openUploadSectionForFirstCharacter(page);
+
+            // Pick a thumbnail from the grid first, before touching upload at all.
+            await page.fill('#imsImagePasteArea', '1. https://mudae.net/uploads/old/stale-pick.png');
+            await page.waitForSelector('.ims-image-thumb');
+            await page.click('.ims-image-thumb');
+
+            // Now upload+confirm a different image entirely.
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text');
+
+            await page.click('button:has-text("Save Image")');
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
+
+            const charImage = await card.evaluate(el => {
+                const series = el.dataset.originalSeries;
+                const index = parseInt(el.dataset.originalIndex, 10);
+                return AppState.seriesData[series].characters[index].image;
+            });
+            assert.strictEqual(charImage, 'https://cdn.imgchest.com/files/newer-upload.png', `expected the pending upload to win over the earlier stale grid pick, got: "${charImage}"`);
+        }
+    },
+    {
         name: 'a failed/blocked upload shows an error and restores the Upload button',
         async run(page) {
             // A non-OK response (e.g. a bad token). Chromium itself always

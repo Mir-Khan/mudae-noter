@@ -8983,12 +8983,13 @@ ${rouletteBarHTML}
         function saveImsImagePickerModal() {
             if (!imsImagePickerTarget) return;
 
-            // Prefers a grid pick, but a pending upload (not yet confirmed
-            // via its own "Ran this in Discord" button) works too now -
-            // there's no real reason Save Image shouldn't also finish that
-            // off, and requiring the small confirm button specifically was
-            // an easy-to-miss extra step.
-            const url = imsImageSelectedUrl || imsImagePendingUploadLink;
+            // A pending upload takes priority over a grid pick - it's the
+            // most recent, most deliberate action (you just uploaded and ran
+            // it in Discord), and could still be sitting there stale from
+            // before the upload happened even though the grid is locked
+            // during the upload itself. Save Image should always finish off
+            // whatever you actually just did.
+            const url = imsImagePendingUploadLink || imsImageSelectedUrl;
             if (!url) {
                 showImsPickerMessage('Pick an image from the grid first, or upload one below.', 'error');
                 return;
