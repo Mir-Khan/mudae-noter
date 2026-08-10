@@ -1337,6 +1337,19 @@
             padding: 10px 0;
         }
 
+        .ims-image-thumb-number {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            background-color: rgba(10, 10, 15, 0.8);
+            color: #a78bfa;
+            font-weight: 700;
+            font-size: 0.7em;
+            padding: 1px 5px;
+            border-radius: 4px;
+            z-index: 2;
+        }
+
         .ims-upload-divider {
             display: flex;
             align-items: center;
@@ -3547,6 +3560,7 @@
             <textarea id="imsImagePasteArea" class="add-chars-textarea" style="min-height: 90px;"
                 placeholder="Paste Mudae's $ims DM here..." oninput="renderImsImageThumbs()"></textarea>
             <div id="imsImageThumbGrid" class="ims-image-thumb-grid"></div>
+            <div id="imsImageCCommandBox"></div>
 
             <div class="ims-upload-divider">or upload a new image</div>
             <p class="sort-hint">Mudae's <code>$ai</code> command only accepts images hosted on imgur.com or
@@ -5850,6 +5864,33 @@ ${rouletteBarHTML}
                 };
                 statusDiv.appendChild(confirmBtn);
 
+                // $ai only adds the image to the pool - it doesn't make it
+                // the active one. $c does that, by index number, and $ai
+                // appends new uploads to the end of the pool, so the new
+                // image's number is one past whatever the highest number
+                // seen in the pasted $ims DM was. Without that DM pasted
+                // first, the current count (and so this number) is unknown,
+                // so the command is skipped rather than guessed at.
+                if (imsImageMaxNumber > 0) {
+                    const newNumber = imsImageMaxNumber + 1;
+                    const cCommand = `$c ${char.name}$${newNumber}`;
+                    const cBlock = document.createElement('div');
+                    cBlock.innerHTML = `
+<p class="sort-hint" style="margin: 10px 0 8px;">This upload should land as image #${newNumber} - run this too, to make it the active image:</p>
+<div class="command-item">
+ <div class="command-text">${escapeHTML(cCommand)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="imgChestCCopyBtn">Copy Command</button>
+</div>`;
+                    statusDiv.appendChild(cBlock);
+                    document.getElementById('imgChestCCopyBtn').onclick = function () { copyCommand(this, cCommand); };
+                } else {
+                    const hint = document.createElement('p');
+                    hint.className = 'sort-hint';
+                    hint.style.marginTop = '10px';
+                    hint.textContent = "Paste this character's $ims DM above first if you also want the $c command to make this new upload the active image.";
+                    statusDiv.appendChild(hint);
+                }
+
                 showMessage('Image uploaded!', 'success');
             } catch (err) {
                 statusDiv.innerHTML = '<p class="sort-empty-hint">Upload failed - this can happen if ImgChest blocks requests from this page (CORS). Try uploading directly at imgchest.com instead and pasting the resulting link into the DM paste box above.</p>';
@@ -7753,6 +7794,8 @@ ${rouletteBarHTML}
         // manually identify and copy a single link out of the DM themselves.
         let imsImagePickerTarget = null;
         let imsImageSelectedUrl = null;
+        let imsImageSelectedNumber = null;
+        let imsImageMaxNumber = 0;
 
         function openImsImagePickerModal(seriesName, index) {
             const char = AppState.seriesData[seriesName]?.characters[index];
@@ -7760,6 +7803,8 @@ ${rouletteBarHTML}
 
             imsImagePickerTarget = { seriesName, index };
             imsImageSelectedUrl = null;
+            imsImageSelectedNumber = null;
+            imsImageMaxNumber = 0;
 
             const command = `$ims ${char.name}`;
             document.getElementById('imsImageCommandText').textContent = command;
@@ -7783,51 +7828,91 @@ ${rouletteBarHTML}
             document.getElementById('imsImagePickerOverlay').style.display = 'none';
             imsImagePickerTarget = null;
             imsImageSelectedUrl = null;
+            imsImageSelectedNumber = null;
+            imsImageMaxNumber = 0;
         }
 
-        // Pulls every http(s) link out of a pasted $ims DM, in the order
-        // they appear - the leading "N." numbering and interleaved "Image"
-        // placeholder lines aren't links themselves, so a plain URL match
-        // already ignores them without needing to parse the numbering at all.
-        function parseImsImageLinks(text) {
-            const matches = text.match(/https?:\/\/\S+/g) || [];
+        // Pulls every "N. https://..." entry out of a pasted $ims DM, in the
+        // order they appear - Discord's interleaved "Image" embed-preview
+        // placeholder lines have no number/link of their own, so they're
+        // skipped automatically by requiring both. The number matters: it's
+        // what Mudae's own $c command uses to actually switch a character's
+        // active image (separately from $ai, which only adds a new image to
+        // the pool without making it active).
+        function parseImsImageEntries(text) {
+            const lines = text.split('\n');
             const seen = new Set();
-            const links = [];
-            matches.forEach(function (raw) {
-                const url = raw.replace(/[.,)\]]+$/, '');
-                if (!seen.has(url)) {
-                    seen.add(url);
-                    links.push(url);
-                }
+            const entries = [];
+            lines.forEach(function (line) {
+                const match = line.match(/^\s*(\d+)\.\s*(https?:\/\/\S+)/);
+                if (!match) return;
+                const number = parseInt(match[1], 10);
+                const url = match[2].replace(/[.,)\]]+$/, '');
+                if (seen.has(url)) return;
+                seen.add(url);
+                entries.push({ number, url });
             });
-            return links;
+            return entries;
         }
 
         function renderImsImageThumbs() {
             const text = document.getElementById('imsImagePasteArea').value;
-            const links = parseImsImageLinks(text);
+            const entries = parseImsImageEntries(text);
             const grid = document.getElementById('imsImageThumbGrid');
 
-            if (imsImageSelectedUrl && links.indexOf(imsImageSelectedUrl) === -1) imsImageSelectedUrl = null;
+            imsImageMaxNumber = entries.reduce(function (max, e) { return Math.max(max, e.number); }, 0);
 
-            if (links.length === 0) {
+            const stillPresent = entries.some(function (e) { return e.url === imsImageSelectedUrl; });
+            if (imsImageSelectedUrl && !stillPresent) {
+                imsImageSelectedUrl = null;
+                imsImageSelectedNumber = null;
+            }
+
+            if (entries.length === 0) {
                 grid.innerHTML = text.trim()
-                    ? '<p class="ims-image-thumb-empty">No image links found in that text.</p>'
+                    ? '<p class="ims-image-thumb-empty">No numbered image links found in that text.</p>'
                     : '';
+                renderImsImageCCommandBox();
                 return;
             }
 
-            grid.innerHTML = links.map(function (url) {
-                const selected = url === imsImageSelectedUrl;
-                return `<button type="button" class="ims-image-thumb${selected ? ' selected' : ''}" data-url="${escapeHTML(url)}" onclick="selectImsImageThumb(this.dataset.url)" title="${escapeHTML(url)}">
-    <img src="${escapeHTML(url)}" alt="" loading="lazy" onerror="handleImageError(this)">
+            grid.innerHTML = entries.map(function (entry) {
+                const selected = entry.url === imsImageSelectedUrl;
+                return `<button type="button" class="ims-image-thumb${selected ? ' selected' : ''}" data-url="${escapeHTML(entry.url)}" data-number="${entry.number}" onclick="selectImsImageThumb(this.dataset.url, parseInt(this.dataset.number, 10))" title="${escapeHTML(entry.url)}">
+    <span class="ims-image-thumb-number">#${entry.number}</span>
+    <img src="${escapeHTML(entry.url)}" alt="" loading="lazy" onerror="handleImageError(this)">
 </button>`;
             }).join('');
+
+            renderImsImageCCommandBox();
         }
 
-        function selectImsImageThumb(url) {
+        function selectImsImageThumb(url, number) {
             imsImageSelectedUrl = url;
+            imsImageSelectedNumber = number;
             renderImsImageThumbs();
+        }
+
+        // Shows the $c command (the one that actually switches Mudae's
+        // active image) for whichever thumbnail is currently selected.
+        function renderImsImageCCommandBox() {
+            const box = document.getElementById('imsImageCCommandBox');
+            if (!box) return;
+            if (!imsImagePickerTarget || imsImageSelectedNumber === null) {
+                box.innerHTML = '';
+                return;
+            }
+            const char = AppState.seriesData[imsImagePickerTarget.seriesName]?.characters[imsImagePickerTarget.index];
+            if (!char) return;
+
+            const command = `$c ${char.name}$${imsImageSelectedNumber}`;
+            box.innerHTML = `
+<p class="sort-hint" style="margin: 10px 0 8px;">Picking an image here updates this app - run this in Discord too, to actually make it the active image on Mudae:</p>
+<div class="command-item">
+ <div class="command-text">${escapeHTML(command)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="imsImageCCopyBtn">Copy Command</button>
+</div>`;
+            document.getElementById('imsImageCCopyBtn').onclick = function () { copyCommand(this, command); };
         }
 
         function saveImsImagePickerModal() {

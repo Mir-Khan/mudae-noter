@@ -127,6 +127,60 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: $ai only adds the upload to the
+        // pool, it doesn't make it active - $c does that, by number. $ai
+        // appends to the end, so the new image's number is the highest
+        // number seen in the pasted $ims DM, plus one.
+        name: 'a successful upload also shows a $c command using one past the highest number pasted from $ims',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/test123.png' }] } })
+                });
+            });
+
+            const { name } = await openUploadSectionForFirstCharacter(page);
+
+            await page.fill('#imsImagePasteArea', '5. https://mudae.net/uploads/1/a.png\n3. https://mudae.net/uploads/1/b.png');
+            await page.waitForSelector('.ims-image-thumb');
+
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text:has-text("$c")');
+
+            const cCommandText = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$c' }).textContent();
+            assert.strictEqual(cCommandText, `$c ${name}$6`, `expected the $c command to use the highest pasted number (5) plus one, got: "${cCommandText}"`);
+        }
+    },
+    {
+        name: 'a successful upload with no $ims DM pasted first shows a hint instead of guessing a $c command',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/test123.png' }] } })
+                });
+            });
+
+            await openUploadSectionForFirstCharacter(page);
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text');
+
+            const cCommandCount = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$c' }).count();
+            assert.strictEqual(cCommandCount, 0, 'expected no $c command to be guessed at without a pasted $ims DM');
+            const statusText = await page.locator('#imgChestUploadStatus').textContent();
+            assert.ok(/paste this character's \$ims dm/i.test(statusText), `expected a hint pointing at pasting the $ims DM first, got: "${statusText}"`);
+        }
+    },
+    {
         name: 'a failed/blocked upload shows an error and restores the Upload button',
         async run(page) {
             // A non-OK response (e.g. a bad token). Chromium itself always

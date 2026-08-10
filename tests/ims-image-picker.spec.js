@@ -74,6 +74,32 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: $ai only adds an image to
+        // Mudae's pool, it doesn't make it active - $c does that, by the
+        // number shown next to each image in the $ims DM.
+        name: 'clicking a thumbnail shows the matching $c command using that image\'s number',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const card = page.locator('.character-card').first();
+            const name = (await card.locator('.character-name').textContent()).trim();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.fill('#imsImagePasteArea', SAMPLE_DM);
+            await page.waitForSelector('.ims-image-thumb');
+
+            const numberBadge = await page.locator('.ims-image-thumb').first().locator('.ims-image-thumb-number').textContent();
+            assert.strictEqual(numberBadge, '#3', `expected the first thumbnail (highest-numbered in the DM) to show "#3", got: "${numberBadge}"`);
+
+            const pickedUrl = 'https://mudae.net/uploads/3341897/9IdP3Ys~QcpkGJn.gif';
+            await page.click(`.ims-image-thumb[data-url="${pickedUrl}"]`);
+
+            const cCommandText = await page.locator('#imsImageCCommandBox .command-text').textContent();
+            assert.strictEqual(cCommandText, `$c ${name}$2`, `expected the $c command to use that thumbnail's own number (2), got: "${cCommandText}"`);
+        }
+    },
+    {
         name: 'clicking a thumbnail and saving updates the character, the card, the raw input, and its Sort tab entry',
         async run(page) {
             await loadDemoCollection(page);
@@ -154,6 +180,24 @@ module.exports = [
                 return AppState.seriesData[series].characters[index].image;
             });
             assert.strictEqual(after, before, 'expected the character\'s image to be untouched');
+        }
+    },
+    {
+        // The number prefix is required (not just any URL) since it's what
+        // the generated $c command relies on - a stray link with no number
+        // attached (e.g. someone pasting a single link instead of the DM)
+        // can't be turned into a working $c command, so it's not offered.
+        name: 'a link with no leading "N." number is not picked up as a thumbnail',
+        async run(page) {
+            await loadDemoCollection(page);
+
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            await page.fill('#imsImagePasteArea', 'https://mudae.net/uploads/3341897/Tp1LMe1~oI9kqRz.gif');
+            const thumbCount = await page.locator('.ims-image-thumb').count();
+            assert.strictEqual(thumbCount, 0, 'expected an un-numbered link to be ignored');
         }
     },
     {
