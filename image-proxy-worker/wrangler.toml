@@ -1,0 +1,3 @@
+name = "mudae-noter-image-proxy"
+main = "src/index.js"
+compatibility_date = "2025-01-01"

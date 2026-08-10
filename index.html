@@ -6136,22 +6136,50 @@ ${rouletteBarHTML}
             return link;
         }
 
-        // Fetches an existing image URL (imgur.com, mudae.net, or anywhere
-        // else with permissive CORS) and wraps it as a File, so it can go
-        // through the exact same upload path as a locally-chosen file.
+        // Small Cloudflare Worker (image-proxy-worker/) that fetches a URL
+        // server-side and streams the bytes back with permissive CORS -
+        // used as a fallback when fetching an image link directly from the
+        // browser fails, which can happen for two unrelated reasons: the
+        // host's own server not sending a CORS header that'd allow this at
+        // all (true for some hosts, e.g. Pinterest), or an ad
+        // blocker/privacy extension intercepting the request client-side
+        // (fetch() calls to known third-party CDN domains - imgur.com
+        // included, on some filter lists - even when the host itself would
+        // allow it fine). A server-to-server fetch is immune to both.
+        const IMAGE_PROXY_URL = 'https://mudae-noter-image-proxy.mirkhan1497-1b6.workers.dev';
+
+        // Fetches an existing image URL and wraps it as a File, so it can go
+        // through the exact same upload path as a locally-chosen file. Tries
+        // directly first (fast, and keeps load off the proxy for the common
+        // case where nothing's blocking it), then falls back to the proxy
+        // silently - the caller only sees an error if both fail.
         async function fetchUrlAsFile(url) {
-            let response;
             try {
-                response = await fetch(url);
-            } catch (err) {
-                // A thrown (rather than merely non-OK) fetch almost always
-                // means the host's server didn't send the CORS header
-                // that'd let another site read its images - imgur.com and
-                // mudae.net both do; plenty of others (Pinterest included)
-                // don't, and there's no client-side way around that.
-                throw new Error("Couldn't load that link - this image host may not allow other sites to fetch its images directly (this happens with some hosts, e.g. Pinterest). Try downloading the image and uploading the file instead.");
+                return await fetchUrlAsFileDirect(url);
+            } catch (directErr) {
+                try {
+                    return await fetchUrlAsFileViaProxy(url);
+                } catch (proxyErr) {
+                    throw new Error("Couldn't load that link, even through the backup proxy - " + (proxyErr && proxyErr.message ? proxyErr.message : 'an unknown error occurred') + '. Try downloading the image and uploading the file instead.');
+                }
             }
+        }
+
+        async function fetchUrlAsFileDirect(url) {
+            const response = await fetch(url);
             if (!response.ok) throw new Error('Could not fetch that image (status ' + response.status + ').');
+            const blob = await response.blob();
+            const name = url.split('/').pop().split('?')[0] || 'image';
+            return new File([blob], name, { type: blob.type || 'image/png' });
+        }
+
+        async function fetchUrlAsFileViaProxy(url) {
+            const proxied = IMAGE_PROXY_URL + '?url=' + encodeURIComponent(url);
+            const response = await fetch(proxied);
+            if (!response.ok) {
+                const text = await response.text().catch(function () { return ''; });
+                throw new Error(text || ('proxy responded with status ' + response.status));
+            }
             const blob = await response.blob();
             const name = url.split('/').pop().split('?')[0] || 'image';
             return new File([blob], name, { type: blob.type || 'image/png' });

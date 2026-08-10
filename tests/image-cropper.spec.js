@@ -219,14 +219,26 @@ module.exports = [
         }
     },
     {
-        // Regression test for a real report: pasting a link from a host
-        // that doesn't allow cross-origin fetches (e.g. Pinterest's CDN)
-        // failed with no clear explanation of why - it should say what
-        // happened and suggest the manual-upload fallback, not just error
-        // silently or with a generic message.
-        name: 'a link from a host that blocks cross-origin fetches shows a clear, actionable error',
+        // Regression test for a real report: an ad blocker/privacy
+        // extension can block a *direct* fetch to a third-party CDN (imgur
+        // included, on some filter lists) even though the host itself
+        // allows it fine - a plain <img> tag loading the same URL still
+        // works, only the script-initiated fetch gets caught. The image
+        // proxy Worker (image-proxy-worker/) fetches server-side instead,
+        // immune to both that and true CORS blocks - this simulates the
+        // "direct fetch fails, proxy recovers" path without depending on a
+        // real extension or the live Worker being reachable.
+        name: 'when a direct image fetch fails, it silently retries through the proxy Worker and still succeeds',
         async run(page) {
-            await page.route('https://i.pinimg.com/blocked.jpg', (route) => route.abort('failed'));
+            const targetUrl = 'https://i.imgur.com/blocked-by-extension.jpg';
+            await page.route(targetUrl, (route) => route.abort('failed'));
+            await page.route(/mudae-noter-image-proxy.mirkhan1497-1b6.workers.dev/, (route) => {
+                // The browser enforces real CORS rules on mocked responses
+                // too - fulfilling a route doesn't bypass that, so the mock
+                // needs the same access-control header a real proxy
+                // response would send.
+                route.fulfill({ status: 200, contentType: 'image/png', headers: { 'Access-Control-Allow-Origin': '*' }, body: fs.readFileSync(FIXTURE_IMAGE) });
+            });
 
             await loadDemoCollection(page);
             const card = page.locator('.character-card').first();
@@ -235,16 +247,42 @@ module.exports = [
             await page.click('button:has-text("Crop this image first")');
             await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
 
-            await page.fill('#imageCropperUrlInput', 'https://i.pinimg.com/blocked.jpg');
+            await page.fill('#imageCropperUrlInput', targetUrl);
+            await page.click('button:has-text("Load this link")');
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            const useBtnEnabled = await page.locator('#imageCropperUseBtn').isEnabled();
+            assert.ok(useBtnEnabled, 'expected the proxy fallback to successfully load the image despite the direct fetch failing');
+
+            page._consoleErrors = page._consoleErrors.filter(e => !e.includes('Failed to load resource'));
+        }
+    },
+    {
+        name: 'when both the direct fetch and the proxy fallback fail, the error explains both were tried',
+        async run(page) {
+            const targetUrl = 'https://i.pinimg.com/blocked.jpg';
+            await page.route(targetUrl, (route) => route.abort('failed'));
+            await page.route(/mudae-noter-image-proxy.mirkhan1497-1b6.workers.dev/, (route) => {
+                route.fulfill({ status: 502, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Upstream responded with status 404' });
+            });
+
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+
+            await page.fill('#imageCropperUrlInput', targetUrl);
             await page.click('button:has-text("Load this link")');
             await page.waitForTimeout(300);
 
             const messageText = await page.locator('#imageCropperMessage').textContent();
-            assert.ok(/may not allow other sites to fetch/i.test(messageText), `expected a clear explanation of the likely cause, got: "${messageText}"`);
+            assert.ok(/backup proxy/i.test(messageText), `expected the error to mention the proxy fallback was also tried, got: "${messageText}"`);
             assert.ok(/download.*upload/i.test(messageText), `expected a suggested fallback, got: "${messageText}"`);
 
             const workspaceVisible = await page.locator('#imageCropperWorkspace').isVisible();
-            assert.strictEqual(workspaceVisible, false, 'expected no workspace to appear after a failed fetch');
+            assert.strictEqual(workspaceVisible, false, 'expected no workspace to appear after both attempts fail');
 
             page._consoleErrors = page._consoleErrors.filter(e => !e.includes('Failed to load resource'));
         }
