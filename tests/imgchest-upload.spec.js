@@ -106,7 +106,7 @@ module.exports = [
             assert.notStrictEqual(beforeConfirm, 'https://cdn.imgchest.com/files/test123.png', 'expected the image to NOT be applied before confirming');
 
             await page.click('#imgChestUploadStatus button:has-text("Ran this in Discord")');
-            await page.waitForTimeout(150);
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
 
             const charImage = await card.evaluate(el => {
                 const series = el.dataset.originalSeries;
@@ -117,13 +117,6 @@ module.exports = [
 
             const cardImgSrc = await card.locator('img').getAttribute('src');
             assert.strictEqual(cardImgSrc, 'https://cdn.imgchest.com/files/test123.png', 'expected the rendered card image to update immediately');
-
-            const confirmBtnState = await page.locator('#imgChestUploadStatus button:has-text("Applied")').evaluate(el => el.disabled);
-            assert.strictEqual(confirmBtnState, true, 'expected the confirm button to disable itself after being applied');
-
-            const uploadBtnState = await page.locator('#imgChestUploadBtn').evaluate(el => ({ disabled: el.disabled, text: el.textContent }));
-            assert.strictEqual(uploadBtnState.disabled, false, 'expected the Upload button to be re-enabled after success');
-            assert.strictEqual(uploadBtnState.text, 'Upload', 'expected the Upload button to restore its normal label');
         }
     },
     {

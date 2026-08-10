@@ -6390,9 +6390,12 @@ ${rouletteBarHTML}
                 confirmBtn.onclick = function () {
                     applyImsImagePickerImage(link);
                     imsImageUploadPending = false;
-                    confirmBtn.textContent = '✓ Applied';
-                    confirmBtn.disabled = true;
-                    confirmBtn.classList.add('confirm-applied-done');
+                    // The image is fully applied at this point - staying
+                    // open just left "Save Image" as a dead end (nothing
+                    // left to pick, so it showed a confusing error). Closing
+                    // here matches picking a thumbnail + Save Image, which
+                    // already closes immediately too.
+                    closeImsImagePickerModal();
                 };
                 statusDiv.appendChild(confirmBtn);
 
