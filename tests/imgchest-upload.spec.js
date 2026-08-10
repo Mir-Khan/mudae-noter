@@ -177,7 +177,7 @@ module.exports = [
             const cCommandCount = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$c' }).count();
             assert.strictEqual(cCommandCount, 0, 'expected no $c command to be guessed at without a pasted $ims DM');
             const statusText = await page.locator('#imgChestUploadStatus').textContent();
-            assert.ok(/paste this character's \$ims dm/i.test(statusText), `expected a hint pointing at pasting the $ims DM first, got: "${statusText}"`);
+            assert.ok(/paste this character's \$imsi- dm/i.test(statusText), `expected a hint pointing at pasting the $imsi- DM first, got: "${statusText}"`);
         }
     },
     {

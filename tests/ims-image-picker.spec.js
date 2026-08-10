@@ -29,11 +29,11 @@ module.exports = [
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
 
             const commandText = await page.locator('#imsImageCommandText').textContent();
-            assert.strictEqual(commandText, `$ims ${name}`, `expected the exact $ims command for "${name}", got: "${commandText}"`);
+            assert.strictEqual(commandText, `$imsi- ${name}`, `expected the exact $imsi- command for "${name}", got: "${commandText}"`);
         }
     },
     {
-        name: 'Copy Command copies the exact $ims command',
+        name: 'Copy Command copies the exact $imsi- command',
         async run(page) {
             await loadDemoCollection(page);
 
@@ -49,7 +49,7 @@ module.exports = [
 
             await page.click('#imsImageCopyBtn');
             const copied = await page.evaluate(() => window.__copiedText);
-            assert.strictEqual(copied, `$ims ${name}`, `expected the copied text to be the exact $ims command, got: "${copied}"`);
+            assert.strictEqual(copied, `$imsi- ${name}`, `expected the copied text to be the exact $imsi- command, got: "${copied}"`);
         }
     },
     {
@@ -391,7 +391,7 @@ module.exports = [
             await row.locator('.sort-item-thumb-edit-badge').click();
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
             const commandText = await page.locator('#imsImageCommandText').textContent();
-            assert.strictEqual(commandText, `$ims ${name.trim()}`, `expected the picker to open for the right character, got: "${commandText}"`);
+            assert.strictEqual(commandText, `$imsi- ${name.trim()}`, `expected the picker to open for the right character, got: "${commandText}"`);
 
             await page.fill('#imsImagePasteArea', SAMPLE_DM);
             await page.waitForSelector('.ims-image-thumb');
@@ -421,7 +421,7 @@ module.exports = [
             await card.locator('.sort-item-thumb-edit-badge').click();
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
             const commandText = await page.locator('#imsImageCommandText').textContent();
-            assert.strictEqual(commandText, `$ims ${name.trim()}`, `expected the picker to open for the right character, got: "${commandText}"`);
+            assert.strictEqual(commandText, `$imsi- ${name.trim()}`, `expected the picker to open for the right character, got: "${commandText}"`);
 
             await page.fill('#imsImagePasteArea', SAMPLE_DM);
             await page.waitForSelector('.ims-image-thumb');

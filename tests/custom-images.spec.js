@@ -77,7 +77,7 @@ module.exports = [
             await page.click('.sort-item-thumb-edit-badge');
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
             const commandText = await page.locator('#imsImageCommandText').textContent();
-            assert.strictEqual(commandText, '$ims Marcille Donato', `expected the picker to open for the right character, got: "${commandText}"`);
+            assert.strictEqual(commandText, '$imsi- Marcille Donato', `expected the picker to open for the right character, got: "${commandText}"`);
         }
     },
     {

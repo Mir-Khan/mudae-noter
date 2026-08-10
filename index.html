@@ -3602,8 +3602,10 @@
                 imgchest.com, or anywhere else - usually because you (or someone) uploaded a custom one via
                 <code>$ai</code>. This is a live view of your actual collection, not a history, so it always reflects
                 what's really set right now. Click a character's 🖼️ badge to change its image.</p>
-            <input type="text" id="customImagesSearchInput" placeholder="Search name or series..."
-                oninput="renderCustomImagesGrid()">
+            <div class="sort-toolbar">
+                <input type="text" id="customImagesSearchInput" placeholder="Search name, series or note..."
+                    oninput="renderCustomImagesGrid()">
+            </div>
             <div id="customImagesFilterNote" class="sort-filter-note"></div>
             <div id="customImagesGrid" class="sort-character-list grid"></div>
         </div>
@@ -3722,7 +3724,7 @@
                 <button type="button" class="btn btn-sm btn-primary" id="imsImageCopyBtn">Copy Command</button>
             </div>
             <textarea id="imsImagePasteArea" class="add-chars-textarea" style="min-height: 90px;"
-                placeholder="Paste Mudae's $ims DM here..." oninput="renderImsImageThumbs()"></textarea>
+                placeholder="Paste Mudae's $imsi- DM here..." oninput="renderImsImageThumbs()"></textarea>
             <div id="imsImageGapWarning"></div>
             <div id="imsImageThumbGrid" class="ims-image-thumb-grid"></div>
             <div id="imsImageSelectedPreviewWrap" class="ims-image-selected-preview-wrap" style="display: none;">
@@ -3731,7 +3733,7 @@
             <div id="imsImageCCommandBox"></div>
 
             <div class="ims-upload-divider">or upload a new image</div>
-            <p class="sort-hint">No need to paste a <code>$ims</code> DM first - upload a file here to get an
+            <p class="sort-hint">No need to paste a <code>$imsi-</code> DM first - upload a file here to get an
                 <code>$ai</code> command for it right away. Mudae's <code>$ai</code> command only accepts images
                 hosted on imgur.com or imgchest.com, so uploading here needs a free ImgChest account and a personal
                 access token - a one-time, couple-minute setup, saved on this device only.</p>
@@ -4845,7 +4847,7 @@
             }
 
             const visible = query
-                ? entries.filter(function (item) { return `${item.char.name} ${item.seriesName}`.toLowerCase().includes(query); })
+                ? entries.filter(function (item) { return `${item.char.name} ${item.seriesName} ${item.char.note || ''}`.toLowerCase().includes(query); })
                 : entries;
 
             if (filterNote) {
@@ -4865,11 +4867,13 @@
                 const thumb = char.image
                     ? `<img src="${escapeHTML(char.image)}" alt="${escapeHTML(char.name)}" loading="lazy" onerror="handleImageError(this)">`
                     : `<div class="sort-item-thumb-placeholder">No Image</div>`;
+                const noteHtml = char.note ? `<div class="sort-item-note">${escapeHTML(char.note)}</div>` : '';
                 return `<div class="sort-character-item" data-original-series="${escapeHTML(item.seriesName)}" data-original-index="${index}">
     <div class="sort-item-thumb">${thumb}<div class="sort-item-thumb-edit-badge" data-action="edit-image" title="Change image">🖼️</div></div>
     <div class="sort-item-info">
         <div class="sort-item-name">${escapeHTML(char.name)}</div>
         <div class="sort-item-series">${escapeHTML(item.seriesName)}</div>
+        ${noteHtml}
     </div>
 </div>`;
             }).join('');
@@ -6415,7 +6419,7 @@ ${rouletteBarHTML}
                     const hint = document.createElement('p');
                     hint.className = 'sort-hint';
                     hint.style.marginTop = '10px';
-                    hint.textContent = "Paste this character's $ims DM above first if you also want the $c command to make this new upload the active image.";
+                    hint.textContent = "Paste this character's $imsi- DM above first if you also want the $c command to make this new upload the active image.";
                     statusDiv.appendChild(hint);
                 }
 
@@ -8708,10 +8712,10 @@ ${rouletteBarHTML}
         }
 
         // ===================== $ims image picker =====================
-        // Mudae's `$ims [name]` command DMs every image link already
-        // claimed for a character, mixed in with plain "Image" placeholder
-        // lines (Discord's embed preview, which has no text of its own) and
-        // numbering that isn't meaningful here - this lets a user generate
+        // Mudae's `$imsi- [name]` command ($im + the s/DM flag + the i-
+        // flag, which suppresses images on a DM'd list) DMs every image
+        // link already claimed for a character as plain numbered text, with
+        // no Discord embed previews popping up - this lets a user generate
         // that command for one character, paste the whole DM back in, and
         // pick the one they want from a thumbnail grid instead of having to
         // manually identify and copy a single link out of the DM themselves.
@@ -8748,7 +8752,7 @@ ${rouletteBarHTML}
             imsImageMaxNumber = 0;
             imsImageUploadPending = false;
 
-            const command = `$ims ${char.name}`;
+            const command = `$imsi- ${char.name}`;
             document.getElementById('imsImageCommandText').textContent = command;
             document.getElementById('imsImageCopyBtn').onclick = function () { copyCommand(this, command); };
 
