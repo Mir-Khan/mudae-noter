@@ -1308,6 +1308,11 @@
             overflow-y: auto;
         }
 
+        #imsImageGridSection.ims-image-grid-disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
         .ims-image-thumb {
             position: relative;
             border: 2px solid transparent;
@@ -3714,23 +3719,28 @@
     <div id="imsImagePickerOverlay" class="changelog-overlay" style="display: none;">
         <div class="changelog-modal">
             <h2>Pick an Image</h2>
-            <p class="sort-hint" style="margin-top: 4px;">Run the command below in Discord - Mudae will DM you every
-                image link already claimed for this character. Paste the whole DM below (numbers and all - anything
-                that isn't a link is ignored) and click one to pick it. <span class="sort-limit-warning">&#9888;
-                    Characters with a lot of claimed images can come back as several separate DMs</span> - paste all
-                of them in together (any order is fine) so nothing's missing.</p>
-            <div class="command-item" style="margin-bottom: 12px;">
-                <div class="command-text" id="imsImageCommandText"></div>
-                <button type="button" class="btn btn-sm btn-primary" id="imsImageCopyBtn">Copy Command</button>
+            <div id="imsImageGridSection">
+                <p class="sort-hint" style="margin-top: 4px;">Run the command below in Discord - Mudae will DM you every
+                    image link already claimed for this character. Paste the whole DM below (numbers and all - anything
+                    that isn't a link is ignored) and click one to pick it. <span class="sort-limit-warning">&#9888;
+                        Characters with a lot of claimed images can come back as several separate DMs</span> - paste all
+                    of them in together (any order is fine) so nothing's missing.</p>
+                <div class="command-item" style="margin-bottom: 12px;">
+                    <div class="command-text" id="imsImageCommandText"></div>
+                    <button type="button" class="btn btn-sm btn-primary" id="imsImageCopyBtn">Copy Command</button>
+                </div>
+                <textarea id="imsImagePasteArea" class="add-chars-textarea" style="min-height: 90px;"
+                    placeholder="Paste Mudae's $imsi- DM here..." oninput="renderImsImageThumbs()"></textarea>
+                <div id="imsImageGapWarning"></div>
+                <div id="imsImageThumbGrid" class="ims-image-thumb-grid"></div>
+                <div id="imsImageSelectedPreviewWrap" class="ims-image-selected-preview-wrap" style="display: none;">
+                    <img id="imsImageSelectedPreview" alt="" onerror="handleImageError(this)">
+                </div>
+                <div id="imsImageCCommandBox"></div>
             </div>
-            <textarea id="imsImagePasteArea" class="add-chars-textarea" style="min-height: 90px;"
-                placeholder="Paste Mudae's $imsi- DM here..." oninput="renderImsImageThumbs()"></textarea>
-            <div id="imsImageGapWarning"></div>
-            <div id="imsImageThumbGrid" class="ims-image-thumb-grid"></div>
-            <div id="imsImageSelectedPreviewWrap" class="ims-image-selected-preview-wrap" style="display: none;">
-                <img id="imsImageSelectedPreview" alt="" onerror="handleImageError(this)">
-            </div>
-            <div id="imsImageCCommandBox"></div>
+            <div id="imsImageGridDisabledNote" class="sort-hint sort-limit-warning" style="display: none; margin: 4px 0 0;">
+                &#9888; You've got an upload waiting to be confirmed below - picking an older image here would overwrite
+                it, so this is locked until that's resolved.</div>
 
             <div class="ims-upload-divider">or upload a new image</div>
             <p class="sort-hint">No need to paste a <code>$imsi-</code> DM first - upload a file here to get an
@@ -6383,6 +6393,11 @@ ${rouletteBarHTML}
 </div>`;
                 document.getElementById('imgChestCopyLinkBtn').onclick = function () { copyCommand(this, command); };
                 imsImageUploadPending = true;
+                imsImagePendingUploadLink = link;
+                // Locks the $imsi- grid above until this upload is resolved -
+                // picking an older/stale thumbnail from it right now would
+                // silently overwrite this fresh upload with something else.
+                setImsImageGridSectionEnabled(false);
                 const confirmBtn = document.createElement('button');
                 confirmBtn.type = 'button';
                 confirmBtn.className = 'btn btn-sm confirm-applied-btn';
@@ -6390,6 +6405,7 @@ ${rouletteBarHTML}
                 confirmBtn.onclick = function () {
                     applyImsImagePickerImage(link);
                     imsImageUploadPending = false;
+                    imsImagePendingUploadLink = null;
                     // The image is fully applied at this point - staying
                     // open just left "Save Image" as a dead end (nothing
                     // left to pick, so it showed a confusing error). Closing
@@ -8762,13 +8778,25 @@ ${rouletteBarHTML}
         let imsImageSelectedUrl = null;
         let imsImageSelectedNumber = null;
         let imsImageMaxNumber = 0;
-        // True from a successful ImgChest upload until its own "Ran this in
-        // Discord" button is confirmed (or the modal closes) - lets the
-        // main Save Image error tell the difference between "nothing
-        // picked yet" and "there's an upload waiting on its own confirm
-        // button", instead of a generic message that reads as wrong when
-        // you've clearly just uploaded something.
+        // True from a successful ImgChest upload until it's been applied (via
+        // either its own "Ran this in Discord" button or the main "Save
+        // Image" button - both do the same thing now). While true, the
+        // $imsi- grid above is locked: picking an older/stale thumbnail from
+        // it would silently overwrite the fresh upload with something else,
+        // which is exactly what happened in a real report (uploaded a
+        // cropped image, then separately pasted a $imsi- DM and picked the
+        // wrong/stale entry from it, clobbering the correct one).
         let imsImageUploadPending = false;
+        let imsImagePendingUploadLink = null;
+
+        function setImsImageGridSectionEnabled(enabled) {
+            const section = document.getElementById('imsImageGridSection');
+            const note = document.getElementById('imsImageGridDisabledNote');
+            const pasteArea = document.getElementById('imsImagePasteArea');
+            if (section) section.classList.toggle('ims-image-grid-disabled', !enabled);
+            if (note) note.style.display = enabled ? 'none' : '';
+            if (pasteArea) pasteArea.disabled = !enabled;
+        }
 
         // Entry point for anywhere that already holds a direct character
         // reference rather than a series+index pair (the Sort tab and
@@ -8790,6 +8818,8 @@ ${rouletteBarHTML}
             imsImageSelectedNumber = null;
             imsImageMaxNumber = 0;
             imsImageUploadPending = false;
+            imsImagePendingUploadLink = null;
+            setImsImageGridSectionEnabled(true);
 
             const command = `$imsi- ${char.name}`;
             document.getElementById('imsImageCommandText').textContent = command;
@@ -8819,6 +8849,7 @@ ${rouletteBarHTML}
             imsImageSelectedNumber = null;
             imsImageMaxNumber = 0;
             imsImageUploadPending = false;
+            imsImagePendingUploadLink = null;
         }
 
         // Pulls every "N. https://..." entry out of a pasted $ims DM, in the
@@ -8951,16 +8982,20 @@ ${rouletteBarHTML}
 
         function saveImsImagePickerModal() {
             if (!imsImagePickerTarget) return;
-            const url = imsImageSelectedUrl;
+
+            // Prefers a grid pick, but a pending upload (not yet confirmed
+            // via its own "Ran this in Discord" button) works too now -
+            // there's no real reason Save Image shouldn't also finish that
+            // off, and requiring the small confirm button specifically was
+            // an easy-to-miss extra step.
+            const url = imsImageSelectedUrl || imsImagePendingUploadLink;
             if (!url) {
-                if (imsImageUploadPending) {
-                    showImsPickerMessage('You uploaded an image above - once you\'ve actually run the $ai command in Discord, click its own "Ran this in Discord" button to apply it (Save Image only applies a pick from the grid above).', 'error');
-                } else {
-                    showImsPickerMessage('Pick an image from the grid first.', 'error');
-                }
+                showImsPickerMessage('Pick an image from the grid first, or upload one below.', 'error');
                 return;
             }
             applyImsImagePickerImage(url);
+            imsImageUploadPending = false;
+            imsImagePendingUploadLink = null;
             closeImsImagePickerModal();
         }
 

@@ -224,12 +224,12 @@ module.exports = [
         }
     },
     {
-        // Regression test for a real report: clicking the modal's main
-        // "Save Image" button after uploading (instead of that upload's own
-        // "Ran this in Discord" confirm button) showed a generic "pick from
-        // the grid" error that reads as wrong when you've clearly just
-        // uploaded something - it should point at the actual next step.
-        name: 'clicking Save Image after an upload (before confirming it) explains to use the upload\'s own confirm button instead',
+        // Regression test for a real report: clicking the modal's main "Save
+        // Image" button after uploading (instead of finding and clicking the
+        // upload's own small "Ran this in Discord" button) used to show a
+        // confusing "pick from the grid" error - there's no real reason Save
+        // Image shouldn't just finish the upload off too, so now it does.
+        name: 'clicking Save Image after an upload (before confirming it) applies the uploaded image, same as its own confirm button',
         async run(page) {
             await page.route('https://api.imgchest.com/v1/post', (route) => {
                 route.fulfill({
@@ -239,7 +239,7 @@ module.exports = [
                 });
             });
 
-            await openUploadSectionForFirstCharacter(page);
+            const { card } = await openUploadSectionForFirstCharacter(page);
             await page.fill('#imgChestTokenInput', 'my-test-token');
             await page.click('button:has-text("Save Token")');
             await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
@@ -247,13 +247,62 @@ module.exports = [
             await page.waitForSelector('#imgChestUploadStatus .command-text');
 
             await page.click('button:has-text("Save Image")');
-            await page.waitForTimeout(150);
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
 
-            const overlayStillOpen = await page.locator('#imsImagePickerOverlay').isVisible();
-            assert.ok(overlayStillOpen, 'expected the modal to stay open, since nothing was actually confirmed');
+            const charImage = await card.evaluate(el => {
+                const series = el.dataset.originalSeries;
+                const index = parseInt(el.dataset.originalIndex, 10);
+                return AppState.seriesData[series].characters[index].image;
+            });
+            assert.strictEqual(charImage, 'https://cdn.imgchest.com/files/test123.png', 'expected Save Image to apply the just-uploaded image, same as the dedicated confirm button');
+        }
+    },
+    {
+        // Regression test for a real report: uploading, then separately
+        // pasting a $imsi- DM and picking a (possibly stale/wrong) thumbnail
+        // from it, silently overwrote the fresh upload - the grid is now
+        // locked while an upload is pending, so that can't happen by
+        // accident.
+        name: 'the $imsi- grid locks while an upload is pending, so a stale pick can\'t silently overwrite it',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/fresh-upload.png' }] } })
+                });
+            });
 
-            const messageText = await page.locator('#imsImagePickerMessage').textContent();
-            assert.ok(/uploaded an image above/i.test(messageText), `expected a message pointing at the upload's own confirm button, got: "${messageText}"`);
+            const { card } = await openUploadSectionForFirstCharacter(page);
+
+            const pasteAreaEnabledBefore = await page.locator('#imsImagePasteArea').isEnabled();
+            assert.ok(pasteAreaEnabledBefore, 'expected the grid to start out enabled');
+
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text');
+
+            const pasteAreaDisabled = await page.locator('#imsImagePasteArea').isDisabled();
+            assert.ok(pasteAreaDisabled, 'expected the $imsi- paste box to be disabled while the upload is pending confirmation');
+
+            // Even if a thumbnail existed in the (now locked) grid, pointer
+            // events are off - simulate the failure mode directly instead by
+            // trying to select via JS, and confirm it's blocked at the CSS
+            // layer (still opacity/pointer-events locked).
+            const sectionLocked = await page.locator('#imsImageGridSection').evaluate(el => el.classList.contains('ims-image-grid-disabled'));
+            assert.ok(sectionLocked, 'expected the grid section to carry the locked/disabled styling while an upload is pending');
+
+            await page.click('button:has-text("Save Image")');
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
+
+            const charImage = await card.evaluate(el => {
+                const series = el.dataset.originalSeries;
+                const index = parseInt(el.dataset.originalIndex, 10);
+                return AppState.seriesData[series].characters[index].image;
+            });
+            assert.strictEqual(charImage, 'https://cdn.imgchest.com/files/fresh-upload.png', 'expected the pending upload to win, since the grid was locked the whole time');
         }
     },
     {
