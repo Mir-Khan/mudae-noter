@@ -187,5 +187,82 @@ module.exports = [
             const workspaceVisible = await page.locator('#imageCropperWorkspace').isVisible();
             assert.strictEqual(workspaceVisible, false, 'expected no workspace without a file or URL to work from');
         }
+    },
+    {
+        // Regression test for a real report: the cropper only ever accepted
+        // a locally-chosen file - there was no way to paste a link directly
+        // into the cropper itself (only indirectly, via the upload
+        // section's own URL field before opening it).
+        name: 'the cropper has its own URL field, independent of the upload section\'s',
+        async run(page) {
+            await page.route('https://i.imgur.com/removed.png', (route) => {
+                route.fulfill({ status: 200, contentType: 'image/png', body: fs.readFileSync(FIXTURE_IMAGE) });
+            });
+
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+
+            // Open the cropper with nothing chosen anywhere yet.
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            const workspaceVisibleBefore = await page.locator('#imageCropperWorkspace').isVisible();
+            assert.strictEqual(workspaceVisibleBefore, false, 'expected nothing loaded yet');
+
+            await page.fill('#imageCropperUrlInput', 'https://i.imgur.com/removed.png');
+            await page.click('button:has-text("Load this link")');
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            const useBtnEnabled = await page.locator('#imageCropperUseBtn').isEnabled();
+            assert.ok(useBtnEnabled, 'expected the fetched link to load into the cropper and enable cropping');
+        }
+    },
+    {
+        // Regression test for a real report: pasting a link from a host
+        // that doesn't allow cross-origin fetches (e.g. Pinterest's CDN)
+        // failed with no clear explanation of why - it should say what
+        // happened and suggest the manual-upload fallback, not just error
+        // silently or with a generic message.
+        name: 'a link from a host that blocks cross-origin fetches shows a clear, actionable error',
+        async run(page) {
+            await page.route('https://i.pinimg.com/blocked.jpg', (route) => route.abort('failed'));
+
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+
+            await page.fill('#imageCropperUrlInput', 'https://i.pinimg.com/blocked.jpg');
+            await page.click('button:has-text("Load this link")');
+            await page.waitForTimeout(300);
+
+            const messageText = await page.locator('#imageCropperMessage').textContent();
+            assert.ok(/may not allow other sites to fetch/i.test(messageText), `expected a clear explanation of the likely cause, got: "${messageText}"`);
+            assert.ok(/download.*upload/i.test(messageText), `expected a suggested fallback, got: "${messageText}"`);
+
+            const workspaceVisible = await page.locator('#imageCropperWorkspace').isVisible();
+            assert.strictEqual(workspaceVisible, false, 'expected no workspace to appear after a failed fetch');
+
+            page._consoleErrors = page._consoleErrors.filter(e => !e.includes('Failed to load resource'));
+        }
+    },
+    {
+        name: 'clicking "Load this link" with nothing pasted shows an error instead of doing nothing',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+
+            await page.click('button:has-text("Load this link")');
+            await page.waitForTimeout(150);
+            const messageText = await page.locator('#imageCropperMessage').textContent();
+            assert.ok(/paste an image link first/i.test(messageText), `expected an error prompting for a link, got: "${messageText}"`);
+        }
     }
 ];

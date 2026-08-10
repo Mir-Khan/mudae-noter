@@ -3775,7 +3775,16 @@
             <h2>Crop Image</h2>
             <p class="sort-hint" style="margin-top: 4px;">Crops to <b>225&times;350</b> - the size Mudae's own
                 images use. Works on GIFs too, animation included. Drag to reposition, use the slider to zoom.</p>
-            <input type="file" id="imageCropperFileInput" accept="image/*" style="margin-bottom: 12px; width: 100%;">
+            <input type="file" id="imageCropperFileInput" accept="image/*"
+                oninput="document.getElementById('imageCropperUrlInput').value = '';" style="width: 100%;">
+            <div class="ims-upload-divider" style="margin: 10px 0;">or</div>
+            <input type="text" id="imageCropperUrlInput" class="color-hex-text-input" style="text-transform: none; margin-bottom: 12px;"
+                placeholder="...paste an image link instead"
+                oninput="document.getElementById('imageCropperFileInput').value = '';">
+            <div class="add-chars-modal-actions" style="justify-content: flex-start; margin: -6px 0 12px;">
+                <button type="button" class="ims-crop-link" onclick="loadImageCropperFromUrl()">Load this link</button>
+            </div>
+            <div id="imageCropperMessage"></div>
             <div id="imageCropperWorkspace" style="display: none;">
                 <div id="imageCropperViewport" class="image-cropper-viewport">
                     <img id="imageCropperImg" alt="" draggable="false">
@@ -6131,7 +6140,17 @@ ${rouletteBarHTML}
         // else with permissive CORS) and wraps it as a File, so it can go
         // through the exact same upload path as a locally-chosen file.
         async function fetchUrlAsFile(url) {
-            const response = await fetch(url);
+            let response;
+            try {
+                response = await fetch(url);
+            } catch (err) {
+                // A thrown (rather than merely non-OK) fetch almost always
+                // means the host's server didn't send the CORS header
+                // that'd let another site read its images - imgur.com and
+                // mudae.net both do; plenty of others (Pinterest included)
+                // don't, and there's no client-side way around that.
+                throw new Error("Couldn't load that link - this image host may not allow other sites to fetch its images directly (this happens with some hosts, e.g. Pinterest). Try downloading the image and uploading the file instead.");
+            }
             if (!response.ok) throw new Error('Could not fetch that image (status ' + response.status + ').');
             const blob = await response.blob();
             const name = url.split('/').pop().split('?')[0] || 'image';
@@ -6406,6 +6425,32 @@ ${rouletteBarHTML}
         let cropperResultBlob = null;
         let cropperReturnToUpload = false;
 
+        function showImageCropperMessage(text, type) {
+            const el = document.getElementById('imageCropperMessage');
+            if (!el) return;
+            el.className = type === 'error' ? 'error-message' : 'success-message';
+            el.textContent = text;
+        }
+
+        // Lets the cropper be used standalone with a pasted link, not just
+        // via the upload section's own URL field.
+        async function loadImageCropperFromUrl() {
+            const urlInput = document.getElementById('imageCropperUrlInput');
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (!url) {
+                showImageCropperMessage('Paste an image link first.', 'error');
+                return;
+            }
+            showImageCropperMessage('Fetching image...', 'success');
+            try {
+                const file = await fetchUrlAsFile(url);
+                document.getElementById('imageCropperMessage').innerHTML = '';
+                loadImageIntoCropper(file);
+            } catch (err) {
+                showImageCropperMessage(err && err.message ? err.message : 'Could not load that image.', 'error');
+            }
+        }
+
         async function openImageCropperFromUpload() {
             const file = document.getElementById('imgChestFileInput').files[0];
             if (file) {
@@ -6428,7 +6473,7 @@ ${rouletteBarHTML}
                 const fetchedFile = await fetchUrlAsFile(url);
                 openImageCropperModal(fetchedFile, true);
             } catch (err) {
-                showImsPickerMessage('Could not fetch that image link to crop it: ' + (err && err.message ? err.message : 'unknown error'), 'error');
+                showImsPickerMessage(err && err.message ? err.message : 'Could not fetch that image link to crop it.', 'error');
             }
         }
 
@@ -6455,6 +6500,8 @@ ${rouletteBarHTML}
             cropperResultBlob = null;
             cropperReturnToUpload = false;
             document.getElementById('imageCropperFileInput').value = '';
+            document.getElementById('imageCropperUrlInput').value = '';
+            document.getElementById('imageCropperMessage').innerHTML = '';
             document.getElementById('imageCropperWorkspace').style.display = 'none';
             document.getElementById('imageCropperZoom').value = 1;
             document.getElementById('imageCropperStatus').textContent = '';
