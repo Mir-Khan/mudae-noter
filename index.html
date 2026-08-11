@@ -3162,6 +3162,11 @@
                             Transfer Imgur &rarr; ImgChest
                         </button>
 
+                        <button onclick="openAntidisableModal()" id="generateAntidisableBtn" class="btn btn-primary"
+                            disabled title="Build a $antidisable command from your currently fully-disabled series">
+                            Generate $antidisable
+                        </button>
+
                         <button onclick="showPlayerStats()" id="playerStatsBtn" class="btn btn-primary" disabled>
                             Player Stats
                         </button>
@@ -3608,6 +3613,32 @@
             </div>
             <div id="customImagesFilterNote" class="sort-filter-note"></div>
             <div id="customImagesGrid" class="sort-character-list grid"></div>
+
+            <div class="control-group" style="margin-top: 20px;">
+                <h3>Upload a New Image</h3>
+                <p class="sort-hint">Upload or crop an image first, then search for a character to assign it to
+                    afterward - handy for prepping images before deciding who gets what. Needs a free ImgChest
+                    account and a personal access token (same one used everywhere else in this app).</p>
+                <input type="text" id="customImageUploadTokenInput" class="color-hex-text-input"
+                    style="text-transform: none;" placeholder="Paste your ImgChest personal access token...">
+                <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
+                    <button onclick="saveCustomImageUploadToken()" class="btn btn-sm">Save ImgChest Token</button>
+                </div>
+                <input type="file" id="customImageUploadFileInput" accept="image/*"
+                    style="margin-top: 16px; width: 100%;"
+                    oninput="document.getElementById('customImageUploadUrlInput').value = ''; customImageUploadOriginalFile = this.files[0] || null;">
+                <div class="ims-upload-divider" style="margin: 10px 0;">or</div>
+                <input type="text" id="customImageUploadUrlInput" class="color-hex-text-input"
+                    style="text-transform: none;" placeholder="...paste an image link instead (no download needed)"
+                    oninput="document.getElementById('customImageUploadFileInput').value = ''; customImageUploadOriginalFile = null;">
+                <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px; gap: 14px;">
+                    <button type="button" id="customImageUploadBtn" class="btn btn-primary"
+                        onclick="uploadCustomImageStandalone()">Upload</button>
+                    <button type="button" class="ims-crop-link" onclick="cropCustomImageStandalone()">✂️ Crop before
+                        uploading</button>
+                </div>
+                <div id="customImageUploadStatus" style="margin-top: 12px;"></div>
+            </div>
         </div>
 
         <div class="footer">
@@ -3777,7 +3808,7 @@
         </div>
     </div>
 
-    <div id="imageCropperOverlay" class="changelog-overlay" style="display: none;">
+    <div id="imageCropperOverlay" class="changelog-overlay" style="display: none; z-index: 2100;">
         <div class="changelog-modal">
             <h2>Crop Image</h2>
             <p class="sort-hint" style="margin-top: 4px;">Crops to <b>225&times;350</b> - the size Mudae's own
@@ -3835,6 +3866,27 @@
                 <button onclick="closeImgurTransferModal()" class="btn">Close</button>
                 <button id="imgurTransferStartBtn" onclick="startImgurTransfer()" class="btn btn-primary">Transfer
                     Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="antidisableOverlay" class="changelog-overlay" style="display: none;">
+        <div class="changelog-modal" style="max-width: 600px;">
+            <h2>Generate $antidisable</h2>
+            <p class="sort-hint" style="margin-top: 4px;">Series where every character is currently disabled, checked
+                by default - uncheck any you don't want re-enabled, then generate a single
+                <code>$antidisable series1$series2$...</code> command for the rest.</p>
+            <div id="antidisableMessage"></div>
+            <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 10px;">
+                <button type="button" class="btn btn-sm" onclick="setAllAntidisableChecks(true)">Check All</button>
+                <button type="button" class="btn btn-sm" onclick="setAllAntidisableChecks(false)">Check None</button>
+            </div>
+            <div id="antidisableList" class="ims-image-thumb-grid" style="grid-template-columns: 1fr;"></div>
+            <div id="antidisableOutput"></div>
+            <div class="add-chars-modal-actions">
+                <button onclick="closeAntidisableModal()" class="btn">Close</button>
+                <button id="antidisableGenerateBtn" onclick="generateAntidisableCommand()"
+                    class="btn btn-primary">Generate Command</button>
             </div>
         </div>
     </div>
@@ -4934,6 +4986,7 @@
             document.getElementById('generateBtn').disabled = false;
             document.getElementById('generateColorBtn').disabled = false;
             document.getElementById('generateImgurBtn').disabled = false;
+            document.getElementById('generateAntidisableBtn').disabled = false;
             document.getElementById('playerStatsBtn').disabled = false;
         }
 
@@ -6212,9 +6265,16 @@ ${rouletteBarHTML}
             return list;
         }
 
+        // Keyed by each row's stable data-row index (not the filtered/checked
+        // subset index startImgurTransfer() loops over) - holds a cropped
+        // File for any row the user cropped, to be uploaded instead of
+        // re-fetching that row's original imgur image.
+        let imgurTransferCroppedFiles = {};
+
         function openImgurTransferModal() {
             const list = document.getElementById('imgurTransferList');
             const entries = getImgurCharacterEntries();
+            imgurTransferCroppedFiles = {};
 
             let token = '';
             try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
@@ -6233,6 +6293,7 @@ ${rouletteBarHTML}
     <div class="imgur-transfer-info">
         <div class="imgur-transfer-name">${escapeHTML(char.name)}</div>
         <div class="imgur-transfer-series">${escapeHTML(item.seriesName)}</div>
+        <button type="button" class="ims-crop-link" onclick="cropImgurTransferRow(${i})">✂️ Crop first</button>
         <div class="imgur-transfer-status" id="imgurTransferStatus${i}"></div>
     </div>
 </div>`;
@@ -6241,6 +6302,34 @@ ${rouletteBarHTML}
 
             document.getElementById('imgurTransferStartBtn').disabled = entries.length === 0;
             document.getElementById('imgurTransferOverlay').style.display = 'flex';
+        }
+
+        // Always re-fetches from the character's ORIGINAL imgur image, never
+        // from a previously-cropped file, so cropping the same row twice
+        // doesn't stack a second crop on top of the first (same principle
+        // as cropperUploadOriginalFile above, applied per-row here).
+        async function cropImgurTransferRow(i) {
+            const row = document.querySelector(`.imgur-transfer-row[data-row="${i}"]`);
+            if (!row) return;
+            const seriesName = row.dataset.series;
+            const index = parseInt(row.dataset.index, 10);
+            const char = AppState.seriesData[seriesName]?.characters[index];
+            const statusEl = row.querySelector('.imgur-transfer-status');
+            if (!char) return;
+
+            if (statusEl) statusEl.textContent = 'Fetching image to crop...';
+            try {
+                const file = await fetchUrlAsFile(char.image);
+                openImageCropperModal(file, function (croppedFile) {
+                    imgurTransferCroppedFiles[i] = croppedFile;
+                    const thumb = row.querySelector('.imgur-transfer-thumb');
+                    if (thumb) thumb.src = URL.createObjectURL(croppedFile);
+                    if (statusEl) statusEl.textContent = '✓ Cropped - this version will be uploaded instead of the original.';
+                });
+                if (statusEl) statusEl.textContent = '';
+            } catch (err) {
+                if (statusEl) statusEl.textContent = 'Could not fetch that image to crop: ' + (err && err.message ? err.message : 'unknown error');
+            }
         }
 
         function closeImgurTransferModal() {
@@ -6295,13 +6384,17 @@ ${rouletteBarHTML}
                 const char = AppState.seriesData[seriesName]?.characters[index];
                 const statusEl = row.querySelector('.imgur-transfer-status');
                 row.querySelector('.imgur-transfer-check').disabled = true;
+                const cropBtn = row.querySelector('.ims-crop-link');
+                if (cropBtn) cropBtn.disabled = true;
                 startBtn.textContent = `Transferring... (${i + 1}/${rows.length})`;
                 if (!char) { if (statusEl) statusEl.textContent = 'Skipped - character no longer found.'; continue; }
 
                 if (statusEl) statusEl.textContent = 'Fetching image...';
                 try {
                     const oldUrl = char.image;
-                    const file = await fetchUrlAsFile(oldUrl);
+                    // A cropped row uses its stashed file straight away -
+                    // otherwise this fetches the original, same as before.
+                    const file = imgurTransferCroppedFiles[row.dataset.row] || await fetchUrlAsFile(oldUrl);
                     if (statusEl) statusEl.textContent = isJpegFile(file) ? 'Converting to PNG...' : 'Uploading...';
                     const link = await uploadFileToImgChest(file, token);
 
@@ -6333,6 +6426,73 @@ ${rouletteBarHTML}
             startBtn.textContent = originalText;
             messageEl.className = 'success-message';
             messageEl.textContent = `Done - processed ${rows.length} character${rows.length === 1 ? '' : 's'}.`;
+        }
+
+        // ===================== $antidisable command builder =====================
+        // Same "every character in the series is disabled" definition
+        // already used by the Notes tab's "Disabled Only" series filter.
+        function getDisabledSeriesNames() {
+            const names = [];
+            for (const seriesName in AppState.seriesData) {
+                const chars = AppState.seriesData[seriesName].characters;
+                if (chars.length > 0 && chars.every(function (c) { return c.isDisabled; })) names.push(seriesName);
+            }
+            return names.sort(function (a, b) { return a.localeCompare(b); });
+        }
+
+        function openAntidisableModal() {
+            const list = document.getElementById('antidisableList');
+            const names = getDisabledSeriesNames();
+
+            document.getElementById('antidisableMessage').innerHTML = '';
+            document.getElementById('antidisableOutput').innerHTML = '';
+
+            if (names.length === 0) {
+                list.innerHTML = '<p class="ims-image-thumb-empty">No fully-disabled series in your collection right now.</p>';
+            } else {
+                list.innerHTML = names.map(function (name, i) {
+                    return `<label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px;">
+    <input type="checkbox" class="antidisable-check" id="antidisableCheck${i}" data-series="${escapeHTML(name)}" checked>
+    ${escapeHTML(name)}
+</label>`;
+                }).join('');
+            }
+
+            document.getElementById('antidisableGenerateBtn').disabled = names.length === 0;
+            document.getElementById('antidisableOverlay').style.display = 'flex';
+        }
+
+        function closeAntidisableModal() {
+            document.getElementById('antidisableOverlay').style.display = 'none';
+        }
+
+        function setAllAntidisableChecks(checked) {
+            document.querySelectorAll('.antidisable-check').forEach(function (box) { box.checked = checked; });
+        }
+
+        function generateAntidisableCommand() {
+            const messageEl = document.getElementById('antidisableMessage');
+            const names = Array.from(document.querySelectorAll('.antidisable-check'))
+                .filter(function (box) { return box.checked; })
+                .map(function (box) { return box.dataset.series; });
+
+            if (names.length === 0) {
+                messageEl.className = 'error-message';
+                messageEl.textContent = 'Select at least one series first.';
+                return;
+            }
+            messageEl.innerHTML = '';
+
+            const command = `$antidisable ${names.join('$')}`;
+            const overLimit = command.length > 2000;
+            const output = document.getElementById('antidisableOutput');
+            output.innerHTML = `
+<p class="sort-hint" style="margin: 10px 0 8px;">${names.length.toLocaleString('en-US')} series, ${command.length.toLocaleString('en-US')} chars.${overLimit ? ' <span class="sort-limit-warning">⚠ Over Discord\'s 2,000 character limit.</span>' : ''}</p>
+<div class="command-item">
+ <div class="command-text">${escapeHTML(command)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="antidisableCopyBtn">Copy Command</button>
+</div>`;
+            document.getElementById('antidisableCopyBtn').onclick = function () { copyCommand(this, command); };
         }
 
         async function uploadImageForCharacter() {
@@ -6491,7 +6651,12 @@ ${rouletteBarHTML}
         let cropperZoom = 1;
         let cropperDrag = null;
         let cropperResultBlob = null;
-        let cropperReturnToUpload = false;
+        // Called with the cropped File once a crop succeeds, letting the
+        // opener decide what happens next (write it into the ims picker's
+        // upload section, stash it for one row of a batch transfer, etc.) -
+        // null means "just offer a Download button" (the cropper's own
+        // fallback behavior when opened with nothing else to do with it).
+        let cropperOnCropped = null;
 
         function showImageCropperMessage(text, type) {
             const el = document.getElementById('imageCropperMessage');
@@ -6530,16 +6695,34 @@ ${rouletteBarHTML}
         // handlers below) or the picker modal opens fresh.
         let cropperUploadOriginalFile = null;
 
+        // Writes a cropped result into the ims picker's upload section and
+        // kicks the upload off immediately, instead of leaving the cropped
+        // file sitting in the input waiting for a second, easy-to-miss
+        // "Upload" click - this was a real reported dead end (crop
+        // succeeds, nothing visibly happens next). uploadImageForCharacter()
+        // already handles a missing token/file with its own clear message,
+        // so this is safe to call unconditionally.
+        async function applyCroppedFileToImsPickerUpload(croppedFile) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(croppedFile);
+            document.getElementById('imgChestFileInput').files = dataTransfer.files;
+            // The cropped result now lives in the file input - clear any
+            // pasted link so the upload can't try to use both.
+            const urlInput = document.getElementById('imgChestUrlInput');
+            if (urlInput) urlInput.value = '';
+            await uploadImageForCharacter();
+        }
+
         async function openImageCropperFromUpload() {
             if (cropperUploadOriginalFile) {
-                openImageCropperModal(cropperUploadOriginalFile, true);
+                openImageCropperModal(cropperUploadOriginalFile, applyCroppedFileToImsPickerUpload);
                 return;
             }
 
             const file = document.getElementById('imgChestFileInput').files[0];
             if (file) {
                 cropperUploadOriginalFile = file;
-                openImageCropperModal(file, true);
+                openImageCropperModal(file, applyCroppedFileToImsPickerUpload);
                 return;
             }
 
@@ -6549,7 +6732,7 @@ ${rouletteBarHTML}
             const urlInput = document.getElementById('imgChestUrlInput');
             const url = urlInput ? urlInput.value.trim() : '';
             if (!url) {
-                openImageCropperModal(null, true);
+                openImageCropperModal(null, applyCroppedFileToImsPickerUpload);
                 return;
             }
 
@@ -6557,15 +6740,214 @@ ${rouletteBarHTML}
             try {
                 const fetchedFile = await fetchUrlAsFile(url);
                 cropperUploadOriginalFile = fetchedFile;
-                openImageCropperModal(fetchedFile, true);
+                openImageCropperModal(fetchedFile, applyCroppedFileToImsPickerUpload);
             } catch (err) {
                 showImsPickerMessage(err && err.message ? err.message : 'Could not fetch that image link to crop it.', 'error');
             }
         }
 
-        function openImageCropperModal(file, returnToUpload) {
+        // ===================== Standalone Custom Images upload+assign =====================
+        // Lets a new image be cropped/uploaded to ImgChest before deciding
+        // which character it belongs to - the per-character picker (above)
+        // requires picking a character first, which doesn't fit prepping a
+        // batch of images ahead of time. Mirrors that picker's upload/crop
+        // code closely, just without a character chosen until after upload.
+        let customImageUploadOriginalFile = null;
+        let customImageUploadedLink = null;
+
+        function saveCustomImageUploadToken() {
+            const token = document.getElementById('customImageUploadTokenInput').value.trim();
+            try {
+                if (token) localStorage.setItem(IMGCHEST_TOKEN_KEY, token);
+                else localStorage.removeItem(IMGCHEST_TOKEN_KEY);
+            } catch (e) { }
+            showMessage(token ? 'ImgChest token saved.' : 'ImgChest token cleared.', 'success');
+        }
+
+        async function applyCroppedFileToCustomImageUpload(croppedFile) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(croppedFile);
+            document.getElementById('customImageUploadFileInput').files = dataTransfer.files;
+            const urlInput = document.getElementById('customImageUploadUrlInput');
+            if (urlInput) urlInput.value = '';
+            await uploadCustomImageStandalone();
+        }
+
+        async function cropCustomImageStandalone() {
+            if (customImageUploadOriginalFile) {
+                openImageCropperModal(customImageUploadOriginalFile, applyCroppedFileToCustomImageUpload);
+                return;
+            }
+
+            const file = document.getElementById('customImageUploadFileInput').files[0];
+            if (file) {
+                customImageUploadOriginalFile = file;
+                openImageCropperModal(file, applyCroppedFileToCustomImageUpload);
+                return;
+            }
+
+            const urlInput = document.getElementById('customImageUploadUrlInput');
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (!url) {
+                openImageCropperModal(null, applyCroppedFileToCustomImageUpload);
+                return;
+            }
+
+            showMessage('Fetching image to crop...', 'success');
+            try {
+                const fetchedFile = await fetchUrlAsFile(url);
+                customImageUploadOriginalFile = fetchedFile;
+                openImageCropperModal(fetchedFile, applyCroppedFileToCustomImageUpload);
+            } catch (err) {
+                showMessage(err && err.message ? err.message : 'Could not fetch that image link to crop it.', 'error');
+            }
+        }
+
+        async function uploadCustomImageStandalone() {
+            const token = document.getElementById('customImageUploadTokenInput').value.trim();
+            const statusDiv = document.getElementById('customImageUploadStatus');
+            const uploadBtn = document.getElementById('customImageUploadBtn');
+            const urlInput = document.getElementById('customImageUploadUrlInput');
+            const pastedUrl = urlInput ? urlInput.value.trim() : '';
+
+            if (!token) {
+                showMessage('Please save your ImgChest personal access token first.', 'error');
+                return;
+            }
+            let file = document.getElementById('customImageUploadFileInput').files[0];
+            if (!file && !pastedUrl) {
+                showMessage('Please choose an image file, or paste an image link, first.', 'error');
+                return;
+            }
+
+            const originalText = uploadBtn.textContent;
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            statusDiv.innerHTML = '';
+
+            try {
+                if (!file) {
+                    uploadBtn.textContent = 'Fetching image...';
+                    file = await fetchUrlAsFile(pastedUrl);
+                }
+                uploadBtn.textContent = isJpegFile(file) ? 'Converting to PNG...' : 'Uploading...';
+                const link = await uploadFileToImgChest(file, token);
+                customImageUploadedLink = link;
+
+                statusDiv.innerHTML = `
+<p class="sort-hint" style="margin: 0 0 8px;">Uploaded! Search for the character this belongs to below.</p>
+<div class="command-item">
+ <div class="command-text">${escapeHTML(link)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="customImageCopyLinkBtn">Copy Link</button>
+</div>
+<input type="text" id="customImageAssignSearchInput" class="color-hex-text-input"
+    style="text-transform: none; margin-top: 12px;" placeholder="Search name or series to assign this image to..."
+    oninput="renderCustomImageAssignResults()">
+<div class="link-sort-entry-results" id="customImageAssignResults"></div>
+<div id="customImageAssignConfirmBox"></div>`;
+                document.getElementById('customImageCopyLinkBtn').onclick = function () { copyCommand(this, link); };
+                renderCustomImageAssignResults();
+                document.getElementById('customImageAssignSearchInput').focus();
+                showMessage('Image uploaded!', 'success');
+            } catch (err) {
+                statusDiv.innerHTML = err && err.message && err.message.indexOf('convert') !== -1
+                    ? `<p class="sort-empty-hint">${escapeHTML(err.message)} Try a different file, or convert it to PNG yourself first.</p>`
+                    : '<p class="sort-empty-hint">Upload failed - this can happen if ImgChest blocks requests from this page (CORS). Try uploading directly at imgchest.com instead.</p>';
+                showMessage('Image upload failed.', 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = originalText;
+            }
+        }
+
+        function renderCustomImageAssignResults() {
+            const container = document.getElementById('customImageAssignResults');
+            if (!container) return;
+
+            const query = (document.getElementById('customImageAssignSearchInput') || {}).value || '';
+            const normalizedQuery = query.trim().toLowerCase();
+
+            const candidates = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const haystack = `${char.name} ${seriesName}`.toLowerCase();
+                    if (normalizedQuery && !haystack.includes(normalizedQuery)) return;
+                    candidates.push({ seriesName: seriesName, char: char });
+                });
+            }
+            candidates.sort(function (a, b) { return a.char.name.localeCompare(b.char.name); });
+
+            if (candidates.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No characters match that search.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            candidates.slice(0, 200).forEach(function (candidate) {
+                const item = document.createElement('div');
+                item.className = 'link-sort-entry-result-item';
+                item.innerHTML = `
+                    <span class="link-sort-entry-result-name">${escapeHTML(candidate.char.name)}</span>
+                    <span class="link-sort-entry-result-meta">${escapeHTML(candidate.seriesName)} - ${candidate.char.kakera ? Number(candidate.char.kakera).toLocaleString('en-US') : '?'} ka</span>
+                `;
+                item.addEventListener('click', function () {
+                    renderCustomImageAiConfirm(candidate.seriesName, candidate.char);
+                });
+                container.appendChild(item);
+            });
+        }
+
+        // Shows the $ai command for whichever character was just picked,
+        // with its own confirm button - same convention as the per-character
+        // upload flow (the app doesn't sync its local image until you
+        // confirm you actually ran the command in Discord). No $c command
+        // here - unlike the per-character picker, there's no pasted $imsi-
+        // DM in this flow to compute the next image number from.
+        function renderCustomImageAiConfirm(seriesName, char) {
+            const box = document.getElementById('customImageAssignConfirmBox');
+            if (!box || !customImageUploadedLink) return;
+            const link = customImageUploadedLink;
+            const command = `$ai ${char.name}$${link}`;
+            box.innerHTML = `
+<p class="sort-hint" style="margin: 10px 0 8px;">Assigning to <b>${escapeHTML(char.name)}</b> - run this in Discord,
+    then confirm below to update it here too:</p>
+<div class="command-item">
+ <div class="command-text">${escapeHTML(command)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="customImageAssignCopyBtn">Copy Command</button>
+</div>
+<p class="sort-hint" style="margin: 8px 0 0;">Want a <code>$c</code> command too, to make this the active image?
+    Use this character's own 🖼️ picker afterward and paste its <code>$imsi-</code> DM.</p>`;
+            document.getElementById('customImageAssignCopyBtn').onclick = function () { copyCommand(this, command); };
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.type = 'button';
+            confirmBtn.className = 'btn btn-sm confirm-applied-btn';
+            confirmBtn.style.marginTop = '8px';
+            confirmBtn.textContent = '✓ Ran this in Discord';
+            confirmBtn.onclick = function () {
+                const index = AppState.seriesData[seriesName]?.characters.indexOf(char);
+                if (index === undefined || index === -1) return;
+                applyNewImageToCharacter(seriesName, index, link);
+                showMessage(`Assigned the new image to "${char.name}".`, 'success');
+                resetCustomImageUploadSection();
+            };
+            box.appendChild(confirmBtn);
+        }
+
+        function resetCustomImageUploadSection() {
+            customImageUploadOriginalFile = null;
+            customImageUploadedLink = null;
+            const fileInput = document.getElementById('customImageUploadFileInput');
+            const urlInput = document.getElementById('customImageUploadUrlInput');
+            const statusDiv = document.getElementById('customImageUploadStatus');
+            if (fileInput) fileInput.value = '';
+            if (urlInput) urlInput.value = '';
+            if (statusDiv) statusDiv.innerHTML = '';
+        }
+
+        function openImageCropperModal(file, onCropped) {
             resetImageCropperState();
-            cropperReturnToUpload = !!returnToUpload;
+            cropperOnCropped = typeof onCropped === 'function' ? onCropped : null;
             document.getElementById('imageCropperOverlay').style.display = 'flex';
             if (file) loadImageIntoCropper(file);
         }
@@ -6584,7 +6966,7 @@ ${rouletteBarHTML}
             cropperPan = { x: 0, y: 0 };
             cropperZoom = 1;
             cropperResultBlob = null;
-            cropperReturnToUpload = false;
+            cropperOnCropped = null;
             document.getElementById('imageCropperFileInput').value = '';
             document.getElementById('imageCropperUrlInput').value = '';
             document.getElementById('imageCropperMessage').innerHTML = '';
@@ -6715,24 +7097,11 @@ ${rouletteBarHTML}
                 const downloadBtn = document.getElementById('imageCropperDownloadBtn');
                 downloadBtn.style.display = '';
 
-                if (cropperReturnToUpload) {
+                if (cropperOnCropped) {
                     const croppedFile = new File([blob], (cropperSourceFile.name || 'image').replace(/\.[^.]+$/, '') + '-cropped.' + (isGif ? 'gif' : 'png'), { type: blob.type });
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(croppedFile);
-                    document.getElementById('imgChestFileInput').files = dataTransfer.files;
-                    // The cropped result now lives in the file input - clear
-                    // any pasted link so the upload can't try to use both.
-                    const urlInput = document.getElementById('imgChestUrlInput');
-                    if (urlInput) urlInput.value = '';
+                    const onCropped = cropperOnCropped;
                     closeImageCropperModal();
-                    // Kicks the upload off immediately instead of leaving the
-                    // cropped file sitting in the input waiting for a second,
-                    // easy-to-miss "Upload" click - this was a real reported
-                    // dead end (crop succeeds, nothing visibly happens next).
-                    // uploadImageForCharacter() already handles a missing
-                    // token/file with its own clear message, so this is safe
-                    // to call unconditionally.
-                    await uploadImageForCharacter();
+                    await onCropped(croppedFile);
                 } else {
                     statusEl.textContent = 'Cropped! Use Download to save it.';
                     useBtn.disabled = false;
@@ -6884,6 +7253,7 @@ ${rouletteBarHTML}
             document.getElementById('playerStatsBtn').disabled = true;
             document.getElementById('generateColorBtn').disabled = true;
             document.getElementById('generateImgurBtn').disabled = true;
+            document.getElementById('generateAntidisableBtn').disabled = true;
             document.getElementById('goToCommandsBtn').style.display = 'none';
 
             const groupButtons = document.querySelectorAll('#group-series-btn, #group-note-btn, #group-keys-btn, #group-nogroup-btn, #group-kakera-btn, #group-color-btn, #group-gender-btn, #group-roulette-btn, #group-owner-btn, #group-customimage-btn');
@@ -7988,6 +8358,10 @@ ${rouletteBarHTML}
 
             if (showCustomImages) {
                 renderCustomImagesGrid();
+                let token = '';
+                try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
+                const tokenInput = document.getElementById('customImageUploadTokenInput');
+                if (tokenInput) tokenInput.value = token;
             }
         }
 
@@ -10470,6 +10844,7 @@ ${rouletteBarHTML}
             document.getElementById('generateBtn').disabled = !hasSeriesData;
             document.getElementById('generateColorBtn').disabled = !hasSeriesData;
             document.getElementById('generateImgurBtn').disabled = !hasSeriesData;
+            document.getElementById('generateAntidisableBtn').disabled = !hasSeriesData;
             document.getElementById('playerStatsBtn').disabled = !hasSeriesData;
 
             const sortInputField = document.getElementById('sortInput');
@@ -11197,6 +11572,9 @@ ${rouletteBarHTML}
                 version: '2026-08-10',
                 date: 'August 10, 2026',
                 items: [
+                    { type: 'feature', text: 'New <b>$antidisable</b> command builder: lists every series in your collection where all characters are currently disabled (checked by default), and generates a single <code>$antidisable series1$series2$...</code> command to re-enable whichever ones you pick.' },
+                    { type: 'feature', text: 'New <b>Crop &amp; Upload</b> section on the Custom Images tab: crop and upload an image before deciding who it belongs to, then search for a character to assign it to afterward - handy for prepping a batch of images ahead of time.' },
+                    { type: 'feature', text: 'The <b>Imgur &rarr; ImgChest transfer</b> list now has an optional "Crop first" button on each row - untouched rows still transfer automatically, but any row can be cropped to Mudae\'s 225&times;350 before it uploads.' },
                     { type: 'feature', text: 'New <b>bulk Imgur &rarr; ImgChest transfer</b>: Imgur no longer accepts new API app registrations, so this replaces the old "Generate Imgur Links" button - it lists every character currently using an imgur.com image (checked by default, deselect any you don\'t want), then transfers each one with its own <code>$ai</code> command and its own confirm button.' },
                     { type: 'feature', text: 'The image upload tool now accepts a pasted <b>image link</b> as an alternative to choosing a file - no need to download an image first just to re-upload it. Works with the cropper too: "Crop this image first" will fetch a pasted link the same way.' },
                     { type: 'feature', text: 'New <b>Custom Images</b> tab: a live gallery of every character currently using a non-mudae.net image (imgur.com, imgchest.com, or anywhere else), with search and the same click-to-change-image badge as everywhere else.' },

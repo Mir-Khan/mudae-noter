@@ -1,5 +1,9 @@
 const assert = require('assert');
+const path = require('path');
+const fs = require('fs');
 const { loadDemoCollection } = require('./helpers');
+
+const FIXTURE_IMAGE = path.join(__dirname, 'fixtures', 'test-image.png');
 
 async function setUpImgurCharacters(page) {
     await loadDemoCollection(page);
@@ -7,6 +11,16 @@ async function setUpImgurCharacters(page) {
         AppState.seriesData['Dungeon Meshi'].characters[0].image = 'https://i.imgur.com/removed.png';
         AppState.seriesData['One Piece'].characters[0].image = 'https://i.imgur.com/removed.png';
     });
+}
+
+// Finds a PNG's width/height straight out of a raw multipart upload body -
+// the IHDR chunk's dimensions sit 16/20 bytes after the PNG signature,
+// regardless of anything else surrounding it in the multipart body.
+function findPngDimsInBuffer(buffer) {
+    const sig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const idx = buffer.indexOf(sig);
+    if (idx === -1) return null;
+    return { width: buffer.readUInt32BE(idx + 16), height: buffer.readUInt32BE(idx + 20) };
 }
 
 module.exports = [
@@ -144,6 +158,50 @@ module.exports = [
             assert.ok(/no characters currently have an imgur/i.test(emptyMessage), `expected an empty-state message, got: "${emptyMessage}"`);
             const disabled = await page.locator('#imgurTransferStartBtn').isDisabled();
             assert.ok(disabled, 'expected the Transfer Selected button to be disabled with nothing to transfer');
+        }
+    },
+    {
+        // New feature: cropping is optional per row - cropping one row
+        // shouldn't affect any other row's transfer.
+        name: 'cropping one row uploads the cropped 225x350 version for that row only, others stay untouched',
+        async run(page) {
+            await page.route('https://i.imgur.com/removed.png', (route) => {
+                route.fulfill({ status: 200, contentType: 'image/png', body: fs.readFileSync(FIXTURE_IMAGE) });
+            });
+
+            const uploadedDims = [];
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                const dims = findPngDimsInBuffer(route.request().postDataBuffer());
+                uploadedDims.push(dims);
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/x' + uploadedDims.length + '.png' }] } })
+                });
+            });
+
+            await setUpImgurCharacters(page);
+            await page.click('#generateImgurBtn');
+            await page.waitForSelector('#imgurTransferOverlay', { state: 'visible' });
+
+            // Crop only the first row (Marcille).
+            await page.click('.imgur-transfer-row:nth-child(1) button:has-text("Crop first")');
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' });
+
+            const rowStatus = await page.locator('.imgur-transfer-row:nth-child(1) .imgur-transfer-status').textContent();
+            assert.ok(/cropped/i.test(rowStatus), `expected the row to show it was cropped, got: "${rowStatus}"`);
+
+            await page.fill('#imgurTransferTokenInput', 'test-token');
+            await page.click('#imgurTransferOverlay button:has-text("Save Token")');
+            await page.click('#imgurTransferStartBtn');
+            await page.waitForSelector('.imgur-transfer-status .command-text');
+            await page.waitForTimeout(300);
+
+            assert.strictEqual(uploadedDims.length, 2, 'expected both rows to upload');
+            assert.deepStrictEqual(uploadedDims[0], { width: 225, height: 350 }, `expected the cropped row's upload to be 225x350, got ${JSON.stringify(uploadedDims[0])}`);
+            assert.deepStrictEqual(uploadedDims[1], { width: 1, height: 1 }, `expected the un-cropped row's upload to stay the original 1x1 fixture, got ${JSON.stringify(uploadedDims[1])}`);
         }
     }
 ];

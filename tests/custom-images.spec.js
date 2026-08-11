@@ -1,5 +1,8 @@
 const assert = require('assert');
+const path = require('path');
 const { loadDemoCollection } = require('./helpers');
+
+const FIXTURE_IMAGE = path.join(__dirname, 'fixtures', 'test-image.png');
 
 module.exports = [
     {
@@ -88,6 +91,108 @@ module.exports = [
             await page.waitForTimeout(150);
             const text = await page.locator('#customImagesGrid').textContent();
             assert.ok(/no custom-hosted images yet/i.test(text), `expected an empty-state hint, got: "${text}"`);
+        }
+    },
+    {
+        // New feature: crop/upload an image before deciding which character
+        // it belongs to, then search and assign it afterward.
+        name: 'uploading a new image on the Custom Images tab shows a link and a character search',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/standalone.png' }] } })
+                });
+            });
+
+            await loadDemoCollection(page);
+            await page.click('#tab-customimages-btn');
+            await page.fill('#customImageUploadTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save ImgChest Token")');
+            await page.setInputFiles('#customImageUploadFileInput', FIXTURE_IMAGE);
+            await page.click('#customImageUploadBtn');
+            await page.waitForSelector('#customImageUploadStatus .command-text');
+
+            const linkText = await page.locator('#customImageUploadStatus .command-text').textContent();
+            assert.strictEqual(linkText, 'https://cdn.imgchest.com/files/standalone.png');
+
+            const searchVisible = await page.locator('#customImageAssignSearchInput').isVisible();
+            assert.ok(searchVisible, 'expected a character search box to appear after upload');
+
+            const resultCount = await page.locator('#customImageAssignResults .link-sort-entry-result-item').count();
+            assert.ok(resultCount > 0, 'expected the search results to list characters by default');
+        }
+    },
+    {
+        name: 'searching narrows the assign list, and picking + confirming assigns the image and resets the section',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/standalone.png' }] } })
+                });
+            });
+
+            await loadDemoCollection(page);
+            await page.click('#tab-customimages-btn');
+            await page.fill('#customImageUploadTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save ImgChest Token")');
+            await page.setInputFiles('#customImageUploadFileInput', FIXTURE_IMAGE);
+            await page.click('#customImageUploadBtn');
+            await page.waitForSelector('#customImageAssignSearchInput');
+
+            await page.fill('#customImageAssignSearchInput', 'Marcille');
+            await page.waitForTimeout(150);
+            const namesShown = await page.locator('#customImageAssignResults .link-sort-entry-result-name').allTextContents();
+            assert.deepStrictEqual(namesShown, ['Marcille Donato'], `expected the search to narrow to just Marcille Donato, got: ${JSON.stringify(namesShown)}`);
+
+            await page.click('.link-sort-entry-result-item');
+            await page.waitForSelector('#customImageAssignConfirmBox .command-text');
+            const command = await page.locator('#customImageAssignConfirmBox .command-text').textContent();
+            assert.strictEqual(command, '$ai Marcille Donato$https://cdn.imgchest.com/files/standalone.png');
+
+            const imageBefore = await page.evaluate(() => AppState.seriesData['Dungeon Meshi'].characters[0].image);
+            assert.notStrictEqual(imageBefore, 'https://cdn.imgchest.com/files/standalone.png', 'expected the image to NOT be applied before confirming');
+
+            await page.click('#customImageAssignConfirmBox button:has-text("Ran this in Discord")');
+            await page.waitForTimeout(150);
+
+            const imageAfter = await page.evaluate(() => AppState.seriesData['Dungeon Meshi'].characters[0].image);
+            assert.strictEqual(imageAfter, 'https://cdn.imgchest.com/files/standalone.png', 'expected confirming to apply the image to the picked character');
+
+            const statusCleared = await page.locator('#customImageUploadStatus').innerHTML();
+            assert.strictEqual(statusCleared.trim(), '', 'expected the upload section to reset after assigning');
+        }
+    },
+    {
+        name: 'cropping first still produces a 225x350 upload ready to assign',
+        async run(page) {
+            let uploadedBuffer = null;
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                uploadedBuffer = route.request().postDataBuffer();
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/cropped-standalone.png' }] } })
+                });
+            });
+
+            await loadDemoCollection(page);
+            await page.click('#tab-customimages-btn');
+            await page.fill('#customImageUploadTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save ImgChest Token")');
+            await page.setInputFiles('#customImageUploadFileInput', FIXTURE_IMAGE);
+            await page.click('button:has-text("Crop before uploading")');
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#customImageUploadStatus .command-text');
+
+            const sig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+            const idx = uploadedBuffer.indexOf(sig);
+            const dims = { width: uploadedBuffer.readUInt32BE(idx + 16), height: uploadedBuffer.readUInt32BE(idx + 20) };
+            assert.deepStrictEqual(dims, { width: 225, height: 350 }, `expected the cropped upload to be 225x350, got ${JSON.stringify(dims)}`);
         }
     }
 ];
