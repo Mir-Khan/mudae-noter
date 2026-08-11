@@ -2056,6 +2056,40 @@
             background: rgba(10, 10, 15, 0.75);
         }
 
+        /* Custom Images tab: the gallery scrolls in its own bounded area so
+           the crop/upload panel below it never gets scrolled out of view -
+           it's meant to be found immediately, not discovered after scrolling
+           past a potentially long grid of characters. */
+        .custom-images-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .custom-images-scroll-area {
+            overflow-y: auto;
+            max-height: 30vh;
+            padding-right: 4px;
+        }
+
+        .custom-images-grid.sort-character-list {
+            max-height: none;
+            overflow-y: visible;
+        }
+
+        .custom-images-crop-panel {
+            flex-shrink: 0;
+            margin-top: 16px;
+            padding: 16px;
+            background: #17171f;
+            border: 1px solid #7c3aed;
+            border-radius: 10px;
+        }
+
+        .custom-images-crop-panel h3 {
+            margin-top: 0;
+            color: #a78bfa;
+        }
+
         .sort-toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -2934,7 +2968,7 @@
                 <button type="button" id="tab-wishlists-btn" class="app-tab" onclick="switchAppTab('wishlists')">🌟
                     Wishlists</button>
                 <button type="button" id="tab-customimages-btn" class="app-tab"
-                    onclick="switchAppTab('customimages')">🖼️ Custom Images</button>
+                    onclick="switchAppTab('customimages')">🖼️ Custom Images &amp; Cropper</button>
             </div>
             <div id="mobileUndoDock" class="mobile-undo-dock"></div>
         </div>
@@ -3600,22 +3634,25 @@
             </div>
         </div>
 
-        <div id="customImagesTabPanel" style="display: none;">
-            <div id="customImagesMessage"></div>
-            <h2>Custom Images</h2>
-            <p class="sort-hint">Characters currently using an image hosted somewhere other than mudae.net - imgur.com,
-                imgchest.com, or anywhere else - usually because you (or someone) uploaded a custom one via
-                <code>$ai</code>. This is a live view of your actual collection, not a history, so it always reflects
-                what's really set right now. Click a character's 🖼️ badge to change its image.</p>
-            <div class="sort-toolbar">
-                <input type="text" id="customImagesSearchInput" placeholder="Search name, series or note..."
-                    oninput="renderCustomImagesGrid()">
+        <div id="customImagesTabPanel" class="custom-images-panel" style="display: none;">
+            <div class="custom-images-scroll-area">
+                <div id="customImagesMessage"></div>
+                <h2>Custom Images</h2>
+                <p class="sort-hint">Characters currently using an image hosted somewhere other than mudae.net -
+                    imgur.com, imgchest.com, or anywhere else - usually because you (or someone) uploaded a custom
+                    one via <code>$ai</code>. This is a live view of your actual collection, not a history, so it
+                    always reflects what's really set right now. Click a character's 🖼️ badge to change its
+                    image.</p>
+                <div class="sort-toolbar">
+                    <input type="text" id="customImagesSearchInput" placeholder="Search name, series or note..."
+                        oninput="renderCustomImagesGrid()">
+                </div>
+                <div id="customImagesFilterNote" class="sort-filter-note"></div>
+                <div id="customImagesGrid" class="sort-character-list grid custom-images-grid"></div>
             </div>
-            <div id="customImagesFilterNote" class="sort-filter-note"></div>
-            <div id="customImagesGrid" class="sort-character-list grid"></div>
 
-            <div class="control-group" style="margin-top: 20px;">
-                <h3>Upload a New Image</h3>
+            <div class="custom-images-crop-panel">
+                <h3>✂️ Crop &amp; Upload</h3>
                 <p class="sort-hint">Upload or crop an image first, then search for a character to assign it to
                     afterward - handy for prepping images before deciding who gets what. Needs a free ImgChest
                     account and a personal access token (same one used everywhere else in this app).</p>
