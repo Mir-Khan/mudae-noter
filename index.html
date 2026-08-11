@@ -805,6 +805,60 @@
             border: 1px solid #a78bfa;
         }
 
+        /* Bottom-right, away from the rank badge (top-left) and image-edit
+           badge (top-right) so a mistimed tap can't easily land on the wrong
+           one. Starts as a plain 🗑️; .armed is the "landed once, tap again
+           to actually delete" state - deliberately loud so a stray first tap
+           reads as obviously reversible, not as "did that just do something?" */
+        .character-delete-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background-color: rgba(10, 10, 15, 0.8);
+            font-size: 0.9em;
+            line-height: 1;
+            padding: 3px 5px;
+            border-radius: 4px;
+            z-index: 10;
+            cursor: pointer;
+            border: 1px solid #7c3aed;
+        }
+
+        .character-delete-badge.armed {
+            background-color: #dc2626;
+            border-color: #dc2626;
+            color: #fff;
+            font-weight: 700;
+            padding: 3px 6px;
+        }
+
+        /* Bottom-left - a dedicated multi-select for bulk delete, kept
+           visually and functionally separate from the whole-card
+           click-to-exclude toggle. */
+        .character-select-box {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(10, 10, 15, 0.8);
+            border: 1px solid #6b7280;
+            border-radius: 4px;
+            z-index: 10;
+            cursor: pointer;
+            color: transparent;
+            font-size: 0.8em;
+        }
+
+        .character-select-box.selected {
+            background-color: #7c3aed;
+            border-color: #7c3aed;
+            color: #fff;
+        }
+
         .rank-input {
             position: absolute;
             top: 5px;
@@ -1801,6 +1855,34 @@
             border-radius: 3px;
             cursor: pointer;
             z-index: 2;
+        }
+
+        /* Its own class (not shared with .sort-item-thumb-edit-badge, even
+           though it looks the same) so existing "the edit-image badge"
+           locators keep matching exactly one element. Opposite corner from
+           that badge; same tap-to-arm / tap-again-to-confirm behavior as the
+           Notes tab's delete badge. */
+        .sort-item-delete-badge {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            background-color: rgba(10, 10, 15, 0.8);
+            font-size: 0.6em;
+            line-height: 1;
+            padding: 2px 3px;
+            border-radius: 3px;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .sort-character-list.compact .sort-item-delete-badge {
+            display: none;
+        }
+
+        .sort-item-delete-badge.armed {
+            background-color: #dc2626;
+            color: #fff;
+            font-weight: 700;
         }
 
         .sort-item-thumb-placeholder {
@@ -3419,6 +3501,16 @@
             <div id="notesSearchNoteTop" class="sort-filter-note"></div>
         </div>
         <div id="recentlyNotedPanel" class="recently-noted-panel" style="display: none;"></div>
+        <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 10px; margin-bottom: 8px;">
+            <button type="button" class="btn btn-sm" onclick="selectAllShownNotesForDeletion()">Select Shown for
+                Delete</button>
+            <button type="button" class="btn btn-sm" onclick="clearNotesDeleteSelection()">Clear Delete Selection</button>
+        </div>
+        <div id="notesDeleteSelectionBar" class="sort-selection-bar" style="display: none;">
+            <span id="notesDeleteSelectionCount" class="sort-selection-count"></span>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSelectedNotesCharacters()">🗑️ Delete
+                Selected</button>
+        </div>
         <div id="seriesGrid" class="series-grid"></div>
         <div id="commands"></div>
         </div>
@@ -3491,6 +3583,8 @@
                 <span style="color: #9ca3af; font-size: 0.85em;">Move to position</span>
                 <input type="number" id="sortMoveToPosition" min="1" placeholder="#">
                 <button type="button" class="btn btn-sm btn-primary" onclick="moveSortSelectionToTypedPosition()">Go</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="deleteSelectedSortEntries()">🗑️ Delete
+                    Selected</button>
                 <span id="sortSelectionHint" style="color: #9ca3af; font-size: 0.8em;"></span>
             </div>
 
@@ -4292,8 +4386,10 @@
             const groupCard = target.closest('.series-card');
             const addKeysTarget = target.closest('[data-action="add-keys"]');
             const imsImageTarget = target.closest('[data-action="edit-image"]');
+            const deleteTarget = target.closest('[data-action="delete-character"]');
+            const selectBoxTarget = target.closest('[data-action="toggle-delete-select"]');
 
-            if (!action && !addKeysTarget && !imsImageTarget && card) {
+            if (!action && !addKeysTarget && !imsImageTarget && !deleteTarget && !selectBoxTarget && card) {
                 toggleCharacter(card.dataset.originalSeries, parseInt(card.dataset.originalIndex, 10));
                 return;
             }
@@ -4301,6 +4397,22 @@
             if (card && imsImageTarget) {
                 e.stopPropagation();
                 openImsImagePickerModal(card.dataset.originalSeries, parseInt(card.dataset.originalIndex, 10));
+                return;
+            }
+
+            if (card && deleteTarget) {
+                e.stopPropagation();
+                const seriesName = card.dataset.originalSeries;
+                const char = AppState.seriesData[seriesName]?.characters[parseInt(card.dataset.originalIndex, 10)];
+                if (char) handleDeleteBadgeClick(deleteTarget, () => deleteCharacters([{ seriesName, char }]));
+                return;
+            }
+
+            if (card && selectBoxTarget) {
+                e.stopPropagation();
+                const seriesName = card.dataset.originalSeries;
+                const char = AppState.seriesData[seriesName]?.characters[parseInt(card.dataset.originalIndex, 10)];
+                if (char) toggleNotesDeleteSelection(char, seriesName, e.shiftKey);
                 return;
             }
 
@@ -5257,6 +5369,17 @@
         const RECENTLY_NOTED_MAX = 50;
         let recentlyNotedEntries = [];
 
+        // Ephemeral (not part of AppState), Notes-tab-only multi-select used
+        // solely for bulk delete - kept fully separate from char.excluded,
+        // which already means something unrelated ("disabled from bulk
+        // note/color commands") and would be unsafe to double up here.
+        // A Map (char -> seriesName), not a Set - the real character objects
+        // living in AppState.seriesData never carry an .originalSeries field
+        // themselves (only the render-time copies createCharacterCardHTML
+        // works from do), so the series has to be captured alongside each
+        // selection instead of read back off the character afterward.
+        let notesSelectedForDeletion = new Map();
+
         function addToRecentlyNoted(entries) {
             entries.forEach(function (item) {
                 recentlyNotedEntries = recentlyNotedEntries.filter(function (e) { return e.char !== item.char; });
@@ -5444,6 +5567,8 @@
 ${AppState.ui.rankingEnabled ? `<div class="character-rank-badge" data-action="edit-rank">${char.rank > 0 ? char.rank : '#'}</div>` : ''}
 <img src="${char.image}" alt="${char.name}" loading="lazy" onerror="handleImageError(this)">
 <div class="character-image-edit-badge" data-action="edit-image" title="Pick a different image">🖼️</div>
+<div class="character-delete-badge" data-action="delete-character" title="Delete this character">🗑️</div>
+<div class="character-select-box${notesSelectedForDeletion.has(char) ? ' selected' : ''}" data-action="toggle-delete-select" title="Select for bulk delete">✔</div>
 <div class="character-info">
 <div class="character-name" title="${escapeHTML(char.name)}">${escapeHTML(char.name)}</div>
 ${(() => {
@@ -8979,6 +9104,7 @@ ${rouletteBarHTML}
                 // text in .sort-item-name) so it can't pollute that element's
                 // textContent, which name-matching logic elsewhere relies on.
                 const editImageBadge = entry.matched ? `<div class="sort-item-thumb-edit-badge" data-action="edit-image" title="Change image">🖼️</div>` : '';
+                const deleteBadge = `<div class="sort-item-delete-badge" data-action="delete-character" title="Delete this character">🗑️</div>`;
                 const noteHtml = entry.note ? `<div class="sort-item-note">${escapeHTML(entry.note)}</div>` : '';
                 const kakeraDisplay = entry.kakera ? Number(entry.kakera).toLocaleString('en-US') : '?';
 
@@ -8986,7 +9112,7 @@ ${rouletteBarHTML}
                     <div class="sort-drag-handle">⠿</div>
                     <div class="sort-select-box" title="Click the card to select">✔</div>
                     <div class="sort-item-rank" title="Click to type an exact position">${index + 1}</div>
-                    <div class="sort-item-thumb">${thumb}${editImageBadge}</div>
+                    <div class="sort-item-thumb">${thumb}${editImageBadge}${deleteBadge}</div>
                     <div class="sort-item-info">
                         <div class="sort-item-name">${colorDot}${escapeHTML(entry.name)}${noteIcon}</div>
                         <div class="sort-item-series">${escapeHTML(entry.series)}</div>
@@ -9010,6 +9136,19 @@ ${rouletteBarHTML}
                     }
                     if (e.target.closest('[data-action="link-character"]')) {
                         openLinkSortEntryModal(index);
+                        return;
+                    }
+                    const deleteBadgeTarget = e.target.closest('[data-action="delete-character"]');
+                    if (deleteBadgeTarget) {
+                        handleDeleteBadgeClick(deleteBadgeTarget, () => {
+                            if (entry.matched) {
+                                const lookup = buildNotesLookupFromSeriesData(AppState.seriesData);
+                                const match = findNotesMatch(entry, lookup);
+                                if (match) deleteCharacters([{ seriesName: match.seriesName, char: match.char }]);
+                            } else {
+                                deleteUnmatchedSortEntries([entry]);
+                            }
+                        });
                         return;
                     }
                     handleSortItemClick(e, index, visibleIndices);
@@ -9043,6 +9182,27 @@ ${rouletteBarHTML}
                     ? 'Selected characters move together, keeping their relative order.'
                     : '';
             }
+        }
+
+        function deleteSelectedSortEntries() {
+            const entries = Array.from(selectedSortEntries);
+            if (!entries.length) return;
+            if (!confirm(`Delete ${entries.length} character(s)? This can be undone with the Undo button.`)) return;
+
+            const lookup = buildNotesLookupFromSeriesData(AppState.seriesData);
+            const matchedRefs = [];
+            entries.forEach(entry => {
+                const match = entry.matched && findNotesMatch(entry, lookup);
+                if (match) matchedRefs.push({ seriesName: match.seriesName, char: match.char });
+            });
+            if (matchedRefs.length) deleteCharacters(matchedRefs);
+            // Anything still left over (unmatched entries) wasn't touched by
+            // deleteCharacters - drop those directly.
+            const stillSelected = entries.filter(e => (AppState.sortData || []).includes(e));
+            if (stillSelected.length) deleteUnmatchedSortEntries(stillSelected);
+
+            selectedSortEntries.clear();
+            updateSortSelectionUI((AppState.sortData || []).length);
         }
 
         // Click toggles selection; shift-click selects the range between the
@@ -9468,6 +9628,164 @@ ${rouletteBarHTML}
             const char = applyNewImageToCharacter(seriesName, index, url);
             if (!char) return;
             showImsPickerMessage(`Updated image for "${char.name}".`, 'success');
+        }
+
+        // ===================== Deleting characters =====================
+        // charRefs: [{ seriesName, char }, ...] - direct object references, so
+        // this is correct whether it's deleting one character or a large bulk
+        // selection, and regardless of how many are being removed from the
+        // same series. A series left with zero characters is removed
+        // entirely, rather than lingering as an empty series-card.
+        function deleteCharacters(charRefs) {
+            if (!charRefs.length) return;
+
+            const byKey = new Set(charRefs.map(r => normalizeMatchPart(r.seriesName) + '::' + normalizeMatchPart(r.char.name)));
+            const bySeries = {};
+            charRefs.forEach(r => { (bySeries[r.seriesName] = bySeries[r.seriesName] || new Set()).add(r.char); });
+
+            for (const seriesName in bySeries) {
+                const toDelete = bySeries[seriesName];
+                const series = AppState.seriesData[seriesName];
+                if (!series) continue;
+                series.characters = series.characters.filter(c => !toDelete.has(c));
+                if (series.characters.length === 0) delete AppState.seriesData[seriesName];
+            }
+
+            // sortData entries aren't object-linked to characters - match by
+            // the same normalized series::name key findNotesMatch already uses.
+            AppState.sortData = (AppState.sortData || []).filter(
+                e => !byKey.has(normalizeMatchPart(e.series) + '::' + normalizeMatchPart(e.name))
+            );
+
+            recentlyNotedEntries = recentlyNotedEntries.filter(
+                e => !charRefs.some(r => r.char === e.char)
+            );
+
+            AppState.rawInput = serializeSeriesDataToText(AppState.seriesData);
+            const mainInputField = document.getElementById('input');
+            if (mainInputField) mainInputField.value = AppState.rawInput;
+
+            saveToLocalStorage();
+            displaySeries();
+            updateStats();
+            refreshSortTabIfVisible();
+            refreshColorsGridIfVisible();
+            refreshCustomImagesGridIfVisible();
+        }
+
+        // For a Sort-tab entry with no matching Notes-tab character at all
+        // (entry.matched === false) - nothing to remove from seriesData, just
+        // drop the stray sortData row itself.
+        function deleteUnmatchedSortEntries(entries) {
+            if (!entries.length) return;
+            const toDelete = new Set(entries);
+            AppState.sortData = (AppState.sortData || []).filter(e => !toDelete.has(e));
+            saveToLocalStorage();
+            refreshSortTabIfVisible();
+        }
+
+        // Tracks whichever single delete badge is currently armed (only one
+        // at a time - arming a new one, or any other interaction, disarms the
+        // last one). A native confirm() dialog is a speed bump after an
+        // accidental click/tap, not a guard against it, and just as easy to
+        // reflex-tap through on mobile - this two-phase arm/confirm
+        // interaction keeps the badge fully visible while making a single
+        // stray tap harmless; only a second, deliberate tap on the
+        // now-very-different-looking badge actually deletes.
+        let armedDeleteBadge = null;
+        let armedDeleteBadgeTimeout = null;
+
+        function handleDeleteBadgeClick(badgeEl, onConfirm) {
+            if (armedDeleteBadge === badgeEl) {
+                clearTimeout(armedDeleteBadgeTimeout);
+                armedDeleteBadge = null;
+                onConfirm();
+                return;
+            }
+            if (armedDeleteBadge) disarmDeleteBadge();
+            armedDeleteBadge = badgeEl;
+            badgeEl.classList.add('armed');
+            badgeEl.textContent = '⚠️ Confirm?';
+            armedDeleteBadgeTimeout = setTimeout(disarmDeleteBadge, 3000);
+        }
+
+        function disarmDeleteBadge() {
+            if (armedDeleteBadge) {
+                armedDeleteBadge.classList.remove('armed');
+                armedDeleteBadge.textContent = '🗑️';
+            }
+            clearTimeout(armedDeleteBadgeTimeout);
+            armedDeleteBadge = null;
+        }
+
+        // Click toggles selection; shift-click selects the range between the
+        // last clicked card and this one, in current on-screen (DOM) order -
+        // Notes-tab cards are grouped (by series/note/etc, not one flat
+        // list), so "range" is defined by however they're actually laid out
+        // right now rather than by an index into AppState.seriesData.
+        let lastNotesDeleteClickChar = null;
+
+        function toggleNotesDeleteSelection(char, seriesName, isShiftKey) {
+            if (isShiftKey && lastNotesDeleteClickChar) {
+                const cards = Array.from(document.querySelectorAll('#seriesGrid .character-card'));
+                const cardChar = (card) => AppState.seriesData[card.dataset.originalSeries]?.characters[parseInt(card.dataset.originalIndex, 10)];
+                const fromPos = cards.findIndex(c => cardChar(c) === lastNotesDeleteClickChar);
+                const toPos = cards.findIndex(c => cardChar(c) === char);
+                if (fromPos !== -1 && toPos !== -1) {
+                    const start = Math.min(fromPos, toPos);
+                    const end = Math.max(fromPos, toPos);
+                    for (let i = start; i <= end; i++) {
+                        const c = cardChar(cards[i]);
+                        if (c) notesSelectedForDeletion.set(c, cards[i].dataset.originalSeries);
+                    }
+                    displaySeries();
+                    updateNotesDeleteSelectionUI();
+                    return;
+                }
+            }
+
+            if (notesSelectedForDeletion.has(char)) notesSelectedForDeletion.delete(char);
+            else notesSelectedForDeletion.set(char, seriesName);
+            lastNotesDeleteClickChar = char;
+            displaySeries();
+            updateNotesDeleteSelectionUI();
+        }
+
+        function selectAllShownNotesForDeletion() {
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    if (characterIsShownInNotes(char)) notesSelectedForDeletion.set(char, seriesName);
+                });
+            }
+            displaySeries();
+            updateNotesDeleteSelectionUI();
+        }
+
+        function clearNotesDeleteSelection() {
+            notesSelectedForDeletion.clear();
+            lastNotesDeleteClickChar = null;
+            displaySeries();
+            updateNotesDeleteSelectionUI();
+        }
+
+        function updateNotesDeleteSelectionUI() {
+            const bar = document.getElementById('notesDeleteSelectionBar');
+            const count = document.getElementById('notesDeleteSelectionCount');
+            if (!bar) return;
+            const selectedCount = notesSelectedForDeletion.size;
+            bar.style.display = selectedCount > 0 ? 'flex' : 'none';
+            if (count) count.textContent = `${selectedCount} selected`;
+        }
+
+        function deleteSelectedNotesCharacters() {
+            const refs = Array.from(notesSelectedForDeletion.entries()).map(([char, seriesName]) => ({ seriesName, char }));
+            if (!refs.length) return;
+            if (confirm(`Delete ${refs.length} character(s)? This can be undone with the Undo button.`)) {
+                deleteCharacters(refs);
+                notesSelectedForDeletion.clear();
+                lastNotesDeleteClickChar = null;
+                updateNotesDeleteSelectionUI();
+            }
         }
 
         // Returns the currently selected entries in their present overall order.
