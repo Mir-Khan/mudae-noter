@@ -4120,6 +4120,10 @@
                     <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 10px; margin-top: 8px;">
                         <button type="button" class="btn btn-sm" onclick="resetEmbedToDefault()">Reset to
                             Default</button>
+                        <button type="button" id="embedUndoBtn" class="btn btn-sm" disabled
+                            title="Undo the last change to this command's text/chips" onclick="embedUndo()">↶ Undo</button>
+                        <button type="button" id="embedRedoBtn" class="btn btn-sm" disabled
+                            title="Redo" onclick="embedRedo()">↷ Redo</button>
                     </div>
                     <div id="embedCommandOutput" style="margin-top: 12px;"></div>
                 </div>
@@ -12673,6 +12677,20 @@ ${rouletteBarHTML}
         let embedCanvasChips = [];
         let embedDragPayload = null;
 
+        // A small, separate undo/redo scoped to the draft text/chips being
+        // edited for the ACTIVE command, mirroring the main app's
+        // saveToLocalStorage()-based approach (snapshot-on-change, whole
+        // value rather than a diff) but kept fully independent - embed
+        // layouts are deliberately NOT part of AppState (see
+        // EMBED_LAYOUTS_KEY above), so they can't share the global
+        // Undo/Redo widget, which only ever snapshots AppState. Each
+        // command keeps its own stack, same as it keeps its own draft text.
+        const EMBED_MAX_UNDO_STEPS = 40;
+        let embedUndoStacks = {};
+        let embedRedoStacks = {};
+        let embedLastSnapshot = {};
+        let embedIsRestoring = false;
+
         function initEmbedCustomizer() {
             if (!embedCustomizerInitialized) {
                 renderEmbedCommandTabs();
@@ -12715,6 +12733,7 @@ ${rouletteBarHTML}
                 renderEmbedCanvas();
             }
             updateEmbedPreview();
+            updateEmbedUndoRedoButtons();
             renderEmbedSavedList();
             const shareOutput = document.getElementById('embedShareOutput');
             if (shareOutput) shareOutput.innerHTML = '';
@@ -12909,7 +12928,68 @@ ${rouletteBarHTML}
             const textarea = document.getElementById('embedTextInput');
             if (!textarea) return;
             embedDraftText[embedActiveCommand] = textarea.value;
+            recordEmbedHistory(embedActiveCommand, textarea.value);
             updateEmbedPreview();
+        }
+
+        // ===================== Embeds: draft-text Undo/Redo =====================
+        function recordEmbedHistory(key, text) {
+            if (embedIsRestoring) return;
+            if (!embedUndoStacks[key]) embedUndoStacks[key] = [];
+            if (!embedRedoStacks[key]) embedRedoStacks[key] = [];
+            const prev = embedLastSnapshot[key];
+            if (prev !== undefined && prev !== text) {
+                embedUndoStacks[key].push(prev);
+                if (embedUndoStacks[key].length > EMBED_MAX_UNDO_STEPS) embedUndoStacks[key].shift();
+                embedRedoStacks[key] = [];
+            }
+            embedLastSnapshot[key] = text;
+            updateEmbedUndoRedoButtons();
+        }
+
+        function updateEmbedUndoRedoButtons() {
+            const undoBtn = document.getElementById('embedUndoBtn');
+            const redoBtn = document.getElementById('embedRedoBtn');
+            const key = embedActiveCommand;
+            if (undoBtn) undoBtn.disabled = !embedUndoStacks[key] || embedUndoStacks[key].length === 0;
+            if (redoBtn) redoBtn.disabled = !embedRedoStacks[key] || embedRedoStacks[key].length === 0;
+        }
+
+        function applyEmbedDraftText(key, text) {
+            embedIsRestoring = true;
+            embedDraftText[key] = text;
+            const textarea = document.getElementById('embedTextInput');
+            if (textarea) textarea.value = text;
+            if (embedBuilderMode === 'visual') {
+                embedCanvasChips = tokenizeEmbedText(EMBED_COMMANDS[key], text);
+                renderEmbedCanvas();
+            }
+            updateEmbedPreview();
+            embedIsRestoring = false;
+            embedLastSnapshot[key] = text;
+            updateEmbedUndoRedoButtons();
+        }
+
+        function embedUndo() {
+            const key = embedActiveCommand;
+            const stack = embedUndoStacks[key];
+            if (!stack || stack.length === 0) return;
+            const prevText = stack.pop();
+            if (!embedRedoStacks[key]) embedRedoStacks[key] = [];
+            embedRedoStacks[key].push(embedLastSnapshot[key]);
+            if (embedRedoStacks[key].length > EMBED_MAX_UNDO_STEPS) embedRedoStacks[key].shift();
+            applyEmbedDraftText(key, prevText);
+        }
+
+        function embedRedo() {
+            const key = embedActiveCommand;
+            const stack = embedRedoStacks[key];
+            if (!stack || stack.length === 0) return;
+            const nextText = stack.pop();
+            if (!embedUndoStacks[key]) embedUndoStacks[key] = [];
+            embedUndoStacks[key].push(embedLastSnapshot[key]);
+            if (embedUndoStacks[key].length > EMBED_MAX_UNDO_STEPS) embedUndoStacks[key].shift();
+            applyEmbedDraftText(key, nextText);
         }
 
         // Text mode's equivalent of the Visual canvas's right-click chip
@@ -12991,6 +13071,7 @@ ${rouletteBarHTML}
             const textarea = document.getElementById('embedTextInput');
             if (textarea) textarea.value = cmd.defaultText;
             embedDraftText[embedActiveCommand] = cmd.defaultText;
+            recordEmbedHistory(embedActiveCommand, cmd.defaultText);
             if (embedBuilderMode === 'visual') {
                 embedCanvasChips = tokenizeEmbedText(cmd, cmd.defaultText);
                 renderEmbedCanvas();
@@ -13136,6 +13217,7 @@ ${rouletteBarHTML}
             embedCanvasChips = ensureEmbedSamelineBetweenCategories(cmd, embedCanvasChips);
             const text = serializeEmbedChips(cmd, embedCanvasChips);
             embedDraftText[embedActiveCommand] = text;
+            recordEmbedHistory(embedActiveCommand, text);
             const textarea = document.getElementById('embedTextInput');
             if (textarea) textarea.value = text;
             updateEmbedPreview();

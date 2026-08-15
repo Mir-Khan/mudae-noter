@@ -534,5 +534,80 @@ module.exports = [
             await page.click('#embed-tab-profilearrange-btn');
             assert.strictEqual(await page.locator('#embedFormatHint').isVisible(), false, 'expected the hint hidden on $profilearrange');
         }
+    },
+    {
+        name: 'Undo/Redo in Text mode step back and forward through draft-text edits, and disable at each end of the stack',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-tuarrange-btn');
+            await page.fill('#embedTextInput', '');
+            assert.strictEqual(await page.locator('#embedUndoBtn').isDisabled(), true, 'expected Undo disabled with no edits yet');
+
+            await page.click('#embedPalette button:has-text("claim")');
+            await page.waitForTimeout(100);
+            await page.click('#embedPalette button:has-text("rolls")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim rolls');
+            assert.strictEqual(await page.locator('#embedUndoBtn').isDisabled(), false);
+
+            await page.click('#embedUndoBtn');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim');
+
+            await page.click('#embedUndoBtn');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), '');
+            assert.strictEqual(await page.locator('#embedUndoBtn').isDisabled(), true, 'expected Undo disabled at the bottom of the stack');
+
+            await page.click('#embedRedoBtn');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim');
+        }
+    },
+    {
+        name: 'each command keeps its own separate undo history',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-tuarrange-btn');
+            await page.fill('#embedTextInput', '');
+            await page.click('#embedPalette button:has-text("claim")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.locator('#embedUndoBtn').isDisabled(), false);
+
+            await page.click('#embed-tab-arrangeim-btn');
+            assert.strictEqual(await page.locator('#embedUndoBtn').isDisabled(), true, 'expected a fresh, untouched command to have no undo history of its own');
+
+            await page.click('#embed-tab-tuarrange-btn');
+            assert.strictEqual(await page.locator('#embedUndoBtn').isDisabled(), false, 'expected switching back to restore that command\'s own undo history');
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim');
+        }
+    },
+    {
+        name: 'Undo/Redo also covers Visual-mode canvas edits and Reset to Default',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-tuarrange-btn');
+            await page.fill('#embedTextInput', 'claim');
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+
+            await page.click('#embedPalette button:has-text("daily")');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim daily');
+
+            await page.click('#embedUndoBtn');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim');
+            assert.strictEqual(await page.locator('#embedCanvas .embed-chip').count(), 1, 'expected the canvas to re-render to match the restored text');
+
+            await page.click('button:has-text("Reset to Default")');
+            await page.waitForTimeout(150);
+            const afterReset = await page.inputValue('#embedTextInput');
+            assert.notStrictEqual(afterReset, 'claim');
+
+            await page.click('#embedUndoBtn');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim', 'expected Reset to Default itself to be undoable');
+        }
     }
 ];
