@@ -4444,14 +4444,32 @@
     <div id="antidisableOverlay" class="changelog-overlay" style="display: none;">
         <div class="changelog-modal" style="max-width: 600px;">
             <h2>Generate $antidisable</h2>
-            <p class="sort-hint" style="margin-top: 4px;">Series where every character is currently disabled, checked
-                by default - uncheck any you don't want re-enabled, then generate a single
-                <code>$antidisable series1$series2$...</code> command for the rest.</p>
+            <div class="control-group" style="margin-top: 4px;">
+                <h3 style="margin-top: 0;">Game Mode</h3>
+                <p class="sort-hint" style="margin-top: 0;">Disabling works differently in each - pick whichever your
+                    server actually runs (check with <code>$serverinfo</code> or a mod if you're not sure).</p>
+                <div class="button-group">
+                    <button type="button" id="antidisableMode1Btn" class="btn btn-sm" onclick="setAntidisableGameMode(1)">Mode 1</button>
+                    <button type="button" id="antidisableMode2Btn" class="btn btn-sm" onclick="setAntidisableGameMode(2)">Mode 2</button>
+                </div>
+                <p class="sort-hint" style="margin-top: 8px;"><span class="sort-limit-warning">⚠</span> Switching this
+                    doesn't refresh your data - who's disabled below is still whatever your last collection paste
+                    said. Re-paste your collection (Notes tab) after switching so it reflects the mode you actually
+                    picked.</p>
+            </div>
+            <div class="button-group" id="antidisableGranularityToggle" style="display: none; margin-top: 4px;">
+                <button type="button" id="antidisableGranSeriesBtn" class="btn btn-sm" onclick="setAntidisableGranularity('series')">By Series</button>
+                <button type="button" id="antidisableGranCharacterBtn" class="btn btn-sm" onclick="setAntidisableGranularity('character')">By Character</button>
+            </div>
+            <p class="sort-hint" id="antidisableHint" style="margin-top: 10px;"></p>
             <div id="antidisableMessage"></div>
             <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 10px;">
                 <button type="button" class="btn btn-sm" onclick="setAllAntidisableChecks(true)">Check All</button>
                 <button type="button" class="btn btn-sm" onclick="setAllAntidisableChecks(false)">Check None</button>
             </div>
+            <input type="text" id="antidisableSearchInput" class="color-hex-text-input"
+                style="display: none; text-transform: none; margin-top: 8px;" placeholder="Search characters or series..."
+                oninput="renderAntidisableList()">
             <div id="antidisableList" class="ims-image-thumb-grid" style="grid-template-columns: 1fr;"></div>
             <div id="antidisableOutput"></div>
             <div class="add-chars-modal-actions">
@@ -4691,7 +4709,8 @@
                 fitToScreen: false,
                 sortCompactView: false,
                 sortViewMode: 'detailed',
-                seriesViewMode: 'list'
+                seriesViewMode: 'list',
+                gameMode: 1
             }
         };
 
@@ -5422,7 +5441,19 @@
 
                         if (namePart.includes('🚫')) {
                             isDisabled = true;
-                            namePart = namePart.replace('🚫', '').trim();
+                            // Mudae doesn't always just show a bare 🚫 - when the
+                            // note itself already exists, it appends "🚫 $xx
+                            // DISABLED" right after it (once per roulette the
+                            // character is disabled in, so this can repeat -
+                            // e.g. disabled in both $wa and $hg at once), which
+                            // a plain '🚫' strip left sitting in the note text
+                            // verbatim instead of being recognized as status,
+                            // not content.
+                            namePart = namePart
+                                .replace(/🚫\s*\$[a-zA-Z]{2}\s*DISABLED/gi, '')
+                                .replace(/🚫/g, '')
+                                .replace(/\s{2,}/g, ' ')
+                                .trim();
                         }
 
                         const pipeIndex = namePart.indexOf('|');
@@ -7211,8 +7242,19 @@ ${rouletteBarHTML}
         }
 
         // ===================== $antidisable command builder =====================
-        // Same "every character in the series is disabled" definition
-        // already used by the Notes tab's "Disabled Only" series filter.
+        // Mudae's two server-wide game modes change what "disabled" means:
+        // in Mode 1, disabling actually shrinks your rollable pool, so
+        // $antidisable is how you recover from that, series at a time. In
+        // Mode 2, $limroul caps each roulette to a fixed pool size by global
+        // rank - disabling a series there doesn't shrink anything (an
+        // equally-popular character is auto-enabled to backfill it), and
+        // characters below the rank cutoff show as disabled the same way.
+        // $antidisable in Mode 2 is instead how you guarantee a specific
+        // series - or, Mode 2 only, an individual character - always stays
+        // rollable regardless of that cutoff. Either way, Mudae marks a
+        // disabled character with the same 🚫 in collection paste output
+        // no matter which mode caused it, so char.isDisabled already
+        // reflects both cases - only the UI needs to be mode-aware.
         function getDisabledSeriesNames() {
             const names = [];
             for (const seriesName in AppState.seriesData) {
@@ -7222,26 +7264,113 @@ ${rouletteBarHTML}
             return names.sort(function (a, b) { return a.localeCompare(b); });
         }
 
-        function openAntidisableModal() {
-            const list = document.getElementById('antidisableList');
-            const names = getDisabledSeriesNames();
+        // Individual disabled characters (regardless of whether their whole
+        // series is disabled) - only meaningful in Mode 2, where
+        // $antidisable can target one character instead of a whole series.
+        function getDisabledCharacterEntries() {
+            const entries = [];
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (c) {
+                    if (c.isDisabled) entries.push({ name: c.displayName || c.name, series: seriesName });
+                });
+            }
+            return entries.sort(function (a, b) {
+                return a.series.localeCompare(b.series) || a.name.localeCompare(b.name);
+            });
+        }
 
+        // Granularity is a one-off choice about the command being built
+        // right now, not a durable preference - it always resets to
+        // 'series' when the modal (re)opens, unlike the game mode itself.
+        let antidisableGranularity = 'series';
+
+        function openAntidisableModal() {
             document.getElementById('antidisableMessage').innerHTML = '';
             document.getElementById('antidisableOutput').innerHTML = '';
+            const searchInput = document.getElementById('antidisableSearchInput');
+            if (searchInput) searchInput.value = '';
+            antidisableGranularity = 'series';
 
-            if (names.length === 0) {
-                list.innerHTML = '<p class="ims-image-thumb-empty">No fully-disabled series in your collection right now.</p>';
-            } else {
-                list.innerHTML = names.map(function (name, i) {
-                    return `<label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px;">
+            const mode = AppState.ui.gameMode === 2 ? 2 : 1;
+            document.getElementById('antidisableMode1Btn').classList.toggle('active', mode === 1);
+            document.getElementById('antidisableMode2Btn').classList.toggle('active', mode === 2);
+            document.getElementById('antidisableGranularityToggle').style.display = mode === 2 ? 'flex' : 'none';
+            document.getElementById('antidisableGranSeriesBtn').classList.toggle('active', true);
+            document.getElementById('antidisableGranCharacterBtn').classList.toggle('active', false);
+
+            renderAntidisableList();
+            document.getElementById('antidisableOverlay').style.display = 'flex';
+        }
+
+        function setAntidisableGameMode(mode) {
+            AppState.ui.gameMode = mode;
+            saveToLocalStorage();
+            document.getElementById('antidisableMode1Btn').classList.toggle('active', mode === 1);
+            document.getElementById('antidisableMode2Btn').classList.toggle('active', mode === 2);
+            document.getElementById('antidisableGranularityToggle').style.display = mode === 2 ? 'flex' : 'none';
+            if (mode === 1) antidisableGranularity = 'series';
+            document.getElementById('antidisableGranSeriesBtn').classList.toggle('active', antidisableGranularity === 'series');
+            document.getElementById('antidisableGranCharacterBtn').classList.toggle('active', antidisableGranularity === 'character');
+            renderAntidisableList();
+        }
+
+        function setAntidisableGranularity(granularity) {
+            antidisableGranularity = granularity;
+            document.getElementById('antidisableGranSeriesBtn').classList.toggle('active', granularity === 'series');
+            document.getElementById('antidisableGranCharacterBtn').classList.toggle('active', granularity === 'character');
+            renderAntidisableList();
+        }
+
+        function renderAntidisableList() {
+            const list = document.getElementById('antidisableList');
+            const searchInput = document.getElementById('antidisableSearchInput');
+            const mode = AppState.ui.gameMode === 2 ? 2 : 1;
+            const byCharacter = mode === 2 && antidisableGranularity === 'character';
+
+            const hint = document.getElementById('antidisableHint');
+            if (hint) {
+                hint.innerHTML = mode === 1
+                    ? 'Series where every character is currently disabled, checked by default - uncheck any you don\'t want re-enabled, then generate a single <code>$antidisable series1$series2$...</code> command for the rest.'
+                    : 'In Mode 2, disabling a series doesn\'t shrink your pool - an equally-popular character is auto-enabled to replace it, and <code>$limroul</code> auto-disables anything below your server\'s rank cutoff the same way. <code>$antidisable</code> guarantees a series (or, Mode 2 only, an individual character below) stays rollable no matter that cutoff.';
+            }
+
+            if (searchInput) searchInput.style.display = byCharacter ? '' : 'none';
+            const query = (byCharacter && searchInput) ? searchInput.value.trim().toLowerCase() : '';
+
+            document.getElementById('antidisableOutput').innerHTML = '';
+
+            if (!byCharacter) {
+                const names = getDisabledSeriesNames();
+                if (names.length === 0) {
+                    list.innerHTML = '<p class="ims-image-thumb-empty">No fully-disabled series in your collection right now.</p>';
+                } else {
+                    list.innerHTML = names.map(function (name, i) {
+                        return `<label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px;">
     <input type="checkbox" class="antidisable-check" id="antidisableCheck${i}" data-series="${escapeHTML(name)}" checked>
     ${escapeHTML(name)}
 </label>`;
-                }).join('');
+                    }).join('');
+                }
+                document.getElementById('antidisableGenerateBtn').disabled = names.length === 0;
+            } else {
+                let entries = getDisabledCharacterEntries();
+                if (query) {
+                    entries = entries.filter(function (e) {
+                        return e.name.toLowerCase().includes(query) || e.series.toLowerCase().includes(query);
+                    });
+                }
+                if (entries.length === 0) {
+                    list.innerHTML = '<p class="ims-image-thumb-empty">No disabled characters match right now.</p>';
+                } else {
+                    list.innerHTML = entries.map(function (entry, i) {
+                        return `<label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px;">
+    <input type="checkbox" class="antidisable-check" id="antidisableCheck${i}" data-name="${escapeHTML(entry.name)}" checked>
+    ${escapeHTML(entry.name)} <span style="color: #9ca3af;">(${escapeHTML(entry.series)})</span>
+</label>`;
+                    }).join('');
+                }
+                document.getElementById('antidisableGenerateBtn').disabled = entries.length === 0;
             }
-
-            document.getElementById('antidisableGenerateBtn').disabled = names.length === 0;
-            document.getElementById('antidisableOverlay').style.display = 'flex';
         }
 
         function closeAntidisableModal() {
@@ -7254,13 +7383,14 @@ ${rouletteBarHTML}
 
         function generateAntidisableCommand() {
             const messageEl = document.getElementById('antidisableMessage');
+            const byCharacter = AppState.ui.gameMode === 2 && antidisableGranularity === 'character';
             const names = Array.from(document.querySelectorAll('.antidisable-check'))
                 .filter(function (box) { return box.checked; })
-                .map(function (box) { return box.dataset.series; });
+                .map(function (box) { return byCharacter ? box.dataset.name : box.dataset.series; });
 
             if (names.length === 0) {
                 messageEl.className = 'error-message';
-                messageEl.textContent = 'Select at least one series first.';
+                messageEl.textContent = `Select at least one ${byCharacter ? 'character' : 'series'} first.`;
                 return;
             }
             messageEl.innerHTML = '';
@@ -7269,11 +7399,12 @@ ${rouletteBarHTML}
             const overLimit = command.length > 2000;
             const output = document.getElementById('antidisableOutput');
             output.innerHTML = `
-<p class="sort-hint" style="margin: 10px 0 8px;">${names.length.toLocaleString('en-US')} series, ${command.length.toLocaleString('en-US')} chars.${overLimit ? ' <span class="sort-limit-warning">⚠ Over Discord\'s 2,000 character limit.</span>' : ''}</p>
+<p class="sort-hint" style="margin: 10px 0 8px;">${names.length.toLocaleString('en-US')} ${byCharacter ? 'character' + (names.length === 1 ? '' : 's') : 'series'}, ${command.length.toLocaleString('en-US')} chars.${overLimit ? ' <span class="sort-limit-warning">⚠ Over Discord\'s 2,000 character limit.</span>' : ''}</p>
 <div class="command-item">
  <div class="command-text">${escapeHTML(command)}</div>
  <button type="button" class="btn btn-sm btn-primary" id="antidisableCopyBtn">Copy Command</button>
-</div>`;
+</div>
+${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character shares its name with a series, use <code>$adc</code>/<code>$aec</code> in Discord to disambiguate.</p>' : ''}`;
             document.getElementById('antidisableCopyBtn').onclick = function () { copyCommand(this, command); };
         }
 
@@ -8651,7 +8782,8 @@ ${rouletteBarHTML}
                     fitToScreen: false,
                     sortCompactView: false,
                     sortViewMode: 'detailed',
-                    seriesViewMode: 'list'
+                    seriesViewMode: 'list',
+                    gameMode: 1
                 }
             };
 
@@ -11748,6 +11880,7 @@ ${rouletteBarHTML}
                 if (!AppState.ui.sortViewMode) AppState.ui.sortViewMode = AppState.ui.sortCompactView ? 'compact' : 'detailed';
                 if (!AppState.ui.seriesViewMode) AppState.ui.seriesViewMode = 'list';
                 if (typeof AppState.ui.showOnlyDisabledSeries !== 'boolean') AppState.ui.showOnlyDisabledSeries = false;
+                if (AppState.ui.gameMode !== 1 && AppState.ui.gameMode !== 2) AppState.ui.gameMode = 1;
                 currentWishlists();
 
                 // Selection and search/filter are per-session, so a collection
@@ -12567,7 +12700,12 @@ ${rouletteBarHTML}
                 version: '2026-08-15',
                 date: 'August 15, 2026',
                 items: [
-                    { type: 'feature', text: 'New <b>Embeds</b> tab: build <code>$tuarrange</code>/<code>$arrangeim</code>/<code>$profilearrange</code> commands (which categories show in your <code>$tu</code>, <code>$im</code>/roll, and <code>$profile</code> embeds) by clicking categories into place instead of hand-typing Discord\'s syntax, with a live best-effort preview (using real example art and Mudae\'s own kakera/sphere/key/disabled icons) and save/share for your favorite layouts (saved globally, since it\'s a personal Discord preference, not collection data). A <b>Visual (drag &amp; drop)</b> mode is also available on desktop alongside the textarea: drag categories/line-breaks/symbols onto a canvas to build the command, and right-click any piece (or any selected text in the textarea) to bold/italicize/underline it.' }
+                    { type: 'feature', text: 'New <b>Embeds</b> tab: build <code>$tuarrange</code>/<code>$arrangeim</code>/<code>$profilearrange</code> commands (which categories show in your <code>$tu</code>, <code>$im</code>/roll, and <code>$profile</code> embeds) by clicking categories into place instead of hand-typing Discord\'s syntax, with a live best-effort preview (using real example art and Mudae\'s own kakera/sphere/key/disabled icons) and save/share for your favorite layouts (saved globally, since it\'s a personal Discord preference, not collection data). A <b>Visual (drag &amp; drop)</b> mode is also available on desktop alongside the textarea: drag categories/line-breaks/symbols onto a canvas to build the command, and right-click any piece (or any selected text in the textarea) to bold/italicize/underline it.' },
+                    { type: 'feature', text: 'The Embeds Visual Builder now auto-inserts Discord\'s <code>$</code> same-line separator when two categories land next to each other, shows a hover tooltip/collapsible glossary explaining what every category actually displays, and has its own Undo/Redo scoped to the command you\'re editing.' },
+                    { type: 'feature', text: 'Added a <b>Build Text</b> tool to the Embeds Visual Builder for composing a whole decorative run (like a border) in one go instead of clicking one symbol at a time, chip copy/paste for duplicating a piece, and a <b>Clear Text</b> button to wipe a command\'s draft and start over.' },
+                    { type: 'feature', text: 'The <code>$antidisable</code> command builder now accounts for which of Mudae\'s two <b>Game Modes</b> your server runs - pick it right in the builder. Mode 2 works very differently (disabling a series doesn\'t shrink your pool the way it does in Mode 1, since an equally-popular character is auto-enabled to replace it), so the builder now also offers re-enabling individual characters, not just whole series, when Mode 2 is selected.' },
+                    { type: 'fix', text: 'Bold/italic/underline applied through the Embeds Visual Builder now actually renders in the live preview - a couple of rendering bugs (underline breaking the category-name substitution, and bold blending into an already-semibold value) meant formatting could silently look like it wasn\'t applied at all.' },
+                    { type: 'fix', text: 'A disabled character\'s note could pick up stray <code>🚫 $xx DISABLED</code> text left over from Mudae\'s own per-roulette disabled marker (visible on <code>$harem</code>-style paste for anyone using Game Mode 2, where a character can be disabled in more than one roulette at once) instead of just the note itself.' }
                 ]
             },
             {

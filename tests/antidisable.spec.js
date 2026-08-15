@@ -91,6 +91,99 @@ module.exports = [
         }
     },
     {
+        name: 'Game Mode defaults to 1, hides the granularity toggle, and persists across a reload',
+        async run(page) {
+            await loadDemoCollection(page);
+            await page.click('#generateAntidisableBtn');
+            await page.waitForSelector('#antidisableOverlay', { state: 'visible' });
+
+            assert.strictEqual(await page.locator('#antidisableMode1Btn').evaluate(el => el.classList.contains('active')), true, 'expected Mode 1 active by default');
+            assert.strictEqual(await page.locator('#antidisableGranularityToggle').isVisible(), false, 'expected the granularity toggle hidden in Mode 1');
+
+            await page.click('#antidisableMode2Btn');
+            assert.strictEqual(await page.locator('#antidisableGranularityToggle').isVisible(), true, 'expected the granularity toggle to appear in Mode 2');
+
+            const gameMode = await page.evaluate(() => AppState.ui.gameMode);
+            assert.strictEqual(gameMode, 2, 'expected the choice written to AppState.ui.gameMode');
+
+            await page.reload();
+            await page.waitForSelector('#generateAntidisableBtn');
+            const gameModeAfterReload = await page.evaluate(() => AppState.ui.gameMode);
+            assert.strictEqual(gameModeAfterReload, 2, 'expected the game mode to persist across a reload');
+        }
+    },
+    {
+        name: 'Mode 2 "By Character" lists individual disabled characters with their series, filterable by search',
+        async run(page) {
+            await loadDemoCollection(page);
+            await page.evaluate(() => {
+                AppState.seriesData['One Piece'].characters[0].isDisabled = true;
+            });
+            const firstOnePieceName = await page.evaluate(() => AppState.seriesData['One Piece'].characters[0].displayName || AppState.seriesData['One Piece'].characters[0].name);
+            await disableAllCharactersInSeries(page, 'Dungeon Meshi');
+
+            await page.click('#generateAntidisableBtn');
+            await page.waitForSelector('#antidisableOverlay', { state: 'visible' });
+            await page.click('#antidisableMode2Btn');
+            await page.click('#antidisableGranCharacterBtn');
+            await page.waitForTimeout(100);
+
+            assert.strictEqual(await page.locator('#antidisableSearchInput').isVisible(), true, 'expected the search box to appear for character mode');
+            const labels = await page.locator('#antidisableList label').allTextContents();
+            assert.ok(labels.some(l => l.includes(firstOnePieceName) && l.includes('One Piece')), `expected the single disabled One Piece character listed with its series, got: ${JSON.stringify(labels)}`);
+            assert.ok(labels.length > 1, 'expected more than just the fully-disabled series worth of characters (partial series should show individually too)');
+
+            await page.fill('#antidisableSearchInput', 'One Piece');
+            await page.waitForTimeout(100);
+            const filteredLabels = await page.locator('#antidisableList label').allTextContents();
+            assert.ok(filteredLabels.every(l => l.includes('One Piece')), `expected the search to filter to only One Piece entries, got: ${JSON.stringify(filteredLabels)}`);
+        }
+    },
+    {
+        name: 'generating a command in "By Character" mode joins character names and adds the $adc/$aec disambiguation note',
+        async run(page) {
+            await loadDemoCollection(page);
+            await page.evaluate(() => {
+                AppState.seriesData['One Piece'].characters[0].isDisabled = true;
+            });
+
+            await page.click('#generateAntidisableBtn');
+            await page.waitForSelector('#antidisableOverlay', { state: 'visible' });
+            await page.click('#antidisableMode2Btn');
+            await page.click('#antidisableGranCharacterBtn');
+            await page.waitForTimeout(100);
+
+            await page.click('#antidisableGenerateBtn');
+            await page.waitForSelector('#antidisableOutput .command-text');
+            const command = await page.locator('#antidisableOutput .command-text').textContent();
+            assert.ok(command.startsWith('$antidisable '), `expected a valid $antidisable command, got: "${command}"`);
+            assert.ok(!command.includes('One Piece)'), 'expected only the character name in the command, not the "(Series)" label');
+
+            const noteVisible = await page.locator('#antidisableOutput').textContent();
+            assert.ok(/\$adc.*\$aec|\$aec.*\$adc/.test(noteVisible), 'expected the $adc/$aec disambiguation note in character mode');
+        }
+    },
+    {
+        name: 'switching back to Mode 1 hides the granularity toggle and reverts to the series list, even if "By Character" was active',
+        async run(page) {
+            await loadDemoCollection(page);
+            await disableAllCharactersInSeries(page, 'Dungeon Meshi');
+
+            await page.click('#generateAntidisableBtn');
+            await page.waitForSelector('#antidisableOverlay', { state: 'visible' });
+            await page.click('#antidisableMode2Btn');
+            await page.click('#antidisableGranCharacterBtn');
+            await page.waitForTimeout(100);
+
+            await page.click('#antidisableMode1Btn');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.locator('#antidisableGranularityToggle').isVisible(), false);
+            assert.strictEqual(await page.locator('#antidisableSearchInput').isVisible(), false);
+            const rows = await page.locator('#antidisableList label').allTextContents();
+            assert.deepStrictEqual(rows.map(r => r.trim()), ['Dungeon Meshi']);
+        }
+    },
+    {
         name: 'unchecking everything shows an error instead of generating an empty command',
         async run(page) {
             await loadDemoCollection(page);
