@@ -13552,12 +13552,24 @@ ${rouletteBarHTML}
                 const hasSample = cmd.sampleValues && typeof cmd.sampleValues[cat.toLowerCase()] === 'string';
                 const sample = hasSample ? cmd.sampleValues[cat.toLowerCase()] : cat;
                 const icons = embedCategoryIconsHTML(cmd, cat.toLowerCase());
-                const re = new RegExp('\\b' + cat + '\\b', 'gi');
+                // Not \b - \b treats '_' as a word character, so it fails to
+                // find a boundary in e.g. "__Series__" (our own underline
+                // wrapping) and the category is left as literal text
+                // instead of being substituted. Only letters/digits count
+                // as "part of the word" here, so '_'/'*' on either side
+                // still count as a boundary.
+                const re = new RegExp('(?<![A-Za-z0-9])' + cat + '(?![A-Za-z0-9])', 'gi');
                 html = html.replace(re, (sample ? '<span class="embed-preview-token">' + escapeHTML(sample) + '</span>' : '') + icons);
             });
 
+            // The triple-asterisk (bold+italic) case is handled before the
+            // shorter '**'/'*' patterns - running those first on "***x***"
+            // consumes the stars unevenly and produces mismatched, invalid
+            // nested tags (<strong><em>...</strong></em>).
+            html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            html = html.replace(/__(.+?)__/g, '<u>$1</u>');
 
             if (!html.trim()) return '';
             return isSubtext ? `<small class="embed-preview-subtext">${html}</small>` : html;

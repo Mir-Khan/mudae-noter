@@ -609,5 +609,55 @@ module.exports = [
             await page.waitForTimeout(150);
             assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim', 'expected Reset to Default itself to be undoable');
         }
+    },
+    {
+        name: 'the preview substitutes the real sample text (not the raw category name) for every bold/italic/underline combination',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+
+            const cases = {
+                bold: '**Series**',
+                italic: '*Series*',
+                underline: '__Series__',
+                'bold+italic': '***Series***',
+                'bold+underline': '__**Series**__',
+                'italic+underline': '__*Series*__',
+                'all three': '__***Series***__'
+            };
+
+            for (const [name, text] of Object.entries(cases)) {
+                await page.fill('#embedTextInput', text);
+                await page.waitForTimeout(150);
+                const tokenText = await page.locator('#embedPreviewCard .embed-preview-token').first().textContent();
+                assert.strictEqual(tokenText, 'Jujutsu Kaisen', `expected the real sample text substituted for "${name}" (${text}), got: "${tokenText}"`);
+            }
+        }
+    },
+    {
+        name: 'bold+italic (***text***) renders as properly nested <strong><em> tags, not mismatched/overlapping ones',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.fill('#embedTextInput', '***Series***');
+            await page.waitForTimeout(150);
+
+            const html = await page.locator('#embedPreviewCard .embed-preview-line').first().innerHTML();
+            assert.ok(/<strong><em>.*<\/em><\/strong>/.test(html), `expected properly nested <strong><em>...</em></strong>, got: ${html}`);
+        }
+    },
+    {
+        name: 'underline renders as real <u> formatting, with no leftover literal "__" characters',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.fill('#embedTextInput', '__Series__');
+            await page.waitForTimeout(150);
+
+            const line = page.locator('#embedPreviewCard .embed-preview-line').first();
+            assert.strictEqual(await line.locator('u').count(), 1, 'expected a real <u> element in the rendered preview');
+            const text = await line.textContent();
+            assert.ok(!text.includes('_'), `expected no literal underscore characters left over in the rendered text, got: "${text}"`);
+        }
     }
 ];
