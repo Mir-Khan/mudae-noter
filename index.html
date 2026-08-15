@@ -2861,6 +2861,46 @@
             margin-bottom: 14px;
         }
 
+        .embed-format-hint {
+            margin-top: -6px;
+            margin-bottom: 14px;
+        }
+
+        .embed-category-glossary {
+            margin-bottom: 10px;
+            font-size: 0.85em;
+        }
+
+        .embed-category-glossary summary {
+            cursor: pointer;
+            color: #a78bfa;
+            user-select: none;
+        }
+
+        .embed-category-glossary summary:hover {
+            color: #c4b5fd;
+        }
+
+        .embed-category-glossary dl {
+            margin: 8px 0 0;
+            padding: 10px 12px;
+            background: #1e2024;
+            border-radius: 4px;
+            display: grid;
+            grid-template-columns: max-content 1fr;
+            gap: 4px 12px;
+        }
+
+        .embed-category-glossary dt {
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .embed-category-glossary dd {
+            margin: 0;
+            color: #9ca3af;
+        }
+
         .embed-canvas {
             display: flex;
             flex-wrap: wrap;
@@ -4062,9 +4102,17 @@
                     onclick="switchEmbedBuilderMode('visual')">🧩 Visual (drag &amp; drop)</button>
             </div>
 
+            <p class="sort-hint embed-format-hint" id="embedFormatHint" style="display: none;">💡 Right-click a
+                chip on the canvas below - or a text selection in the box - for a menu to <b>bold</b>,
+                <i>italicize</i>, or <u>underline</u> it.</p>
+
             <div class="embed-builder-layout">
                 <div class="embed-builder-column">
                     <div class="embed-palette" id="embedPalette"></div>
+                    <details class="embed-category-glossary">
+                        <summary>What do these mean?</summary>
+                        <dl id="embedCategoryGlossary"></dl>
+                    </details>
                     <textarea id="embedTextInput" class="add-chars-textarea" style="min-height: 140px;"
                         oninput="onEmbedTextInput()" oncontextmenu="handleEmbedTextContextMenu(event)"></textarea>
                     <div id="embedCanvas" class="embed-canvas" style="display: none;" ondragover="handleEmbedCanvasDragOver(event)"
@@ -4415,6 +4463,25 @@
                     disabled: ['docs/assets/disabled-icon.svg'],
                     disabledemoji: ['docs/assets/disabled-icon.svg']
                 },
+                categoryInfo: {
+                    series: 'The character\'s series/anime/game of origin.',
+                    gender: 'The character\'s gender symbol (♂/♀).',
+                    roulette: 'Which roulette the character was rolled from (e.g. Animanga, Games, Multi).',
+                    kakera: 'The character\'s kakera value.',
+                    keys: 'How many keys you\'ve used on this character.',
+                    claims: 'Your claim rank for this character.',
+                    likes: 'Your like rank for this character.',
+                    firstalias: 'The character\'s original/canonical name, before any alias.',
+                    customalias: 'Your personal custom alias/nickname for the character.',
+                    customaliasfirst: 'Your custom alias, shown in the "first alias" position instead.',
+                    artist: 'Credit for the artist of the character\'s current image, when known.',
+                    pictags: 'Tags attached to the character\'s current image (e.g. #favorite).',
+                    matching: 'How closely the current image matches your collection\'s set style/theme.',
+                    noteimg: 'An icon showing the character has a note attached.',
+                    custompos: 'Who owns the character and their position in that person\'s harem.',
+                    disabled: 'Shows if the character is currently disabled (can\'t be rolled), with the word "Disabled".',
+                    disabledemoji: 'Just the disabled icon on its own, without the word "Disabled".'
+                },
                 sampleValues: {
                     series: 'Jujutsu Kaisen',
                     gender: '♂',
@@ -4445,6 +4512,29 @@
                 categoryIcons: {
                     kakerastock: ['docs/assets/kakera-symbol.webp'],
                     spherestock: ['docs/assets/sphere-red.webp']
+                },
+                categoryInfo: {
+                    claim: 'Time left until your next claim is available.',
+                    rolls: 'How many rolls you have left, and when they reset.',
+                    daily: 'Time left until your next $daily reset.',
+                    bku: 'Number of bonus keys available to use.',
+                    kakerareact: 'Whether you can currently react to kakera, and your current reaction power.',
+                    kakerapower: 'How much reaction power each kakera button costs.',
+                    kakerainfo: 'Extra info about reaction power costs (e.g. 10+ key characters cost half).',
+                    kakerastock: 'Your current kakera stock.',
+                    rt: 'Cooldown status for $rt (kakera reaction time reset).',
+                    dk: 'Availability and cooldown for $dk (daily kakera).',
+                    pokemon: 'Whether a wild Pokémon roll is currently available.',
+                    vote: 'Time left until you can vote again.',
+                    rollsreset: 'Time left until your rolls refresh.',
+                    oh: 'Your remaining daily uses of the Ourosphere minigames ($oh/$oc/$oq/$ot).',
+                    megasphere: 'Time left until the next megasphere refill.',
+                    perk8: 'Whether your Perk 8 (extra kakera from buttons) is ready to use.',
+                    perk8b: 'A second Perk 8 cooldown/use, tracked separately from the first.',
+                    perk9: 'Whether your Perk 9 (extra sphere buttons) is ready to use.',
+                    perk9b: 'A second Perk 9 cooldown/use, tracked separately from the first.',
+                    spherestock: 'Your current sphere stock.',
+                    omegakeys: 'How many Omega Keys you have available.'
                 },
                 sampleValues: {
                     claim: "You can't claim for another 20 min.",
@@ -4489,6 +4579,20 @@
                     spheres: ['docs/assets/sphere-black.webp', 'docs/assets/sphere-blue.webp', 'docs/assets/sphere-green.webp', 'docs/assets/sphere-orange.webp', 'docs/assets/sphere-purple.webp', 'docs/assets/sphere-rainbow.webp', 'docs/assets/sphere-red.webp', 'docs/assets/sphere-teal.webp', 'docs/assets/sphere-white.webp', 'docs/assets/sphere-yellow.webp'],
                     // Mudae's real kakera badge tier order (by their default prices, low to high): bronze < silver < gold < sapphire < ruby < emerald < diamond.
                     badges: ['docs/assets/badge-bronze.webp', 'docs/assets/badge-silver.webp', 'docs/assets/badge-gold.webp', 'docs/assets/badge-sapphire.webp', 'docs/assets/badge-ruby.webp', 'docs/assets/badge-emerald.webp', 'docs/assets/badge-diamond.webp']
+                },
+                categoryInfo: {
+                    harem: 'Your total collection size and gender split.',
+                    pokedex: 'How many unique Pokémon you\'ve collected.',
+                    arena: 'Your current arena rank.',
+                    reacts: 'A breakdown of your kakera reaction counts by color.',
+                    mudapins: 'Your Mudapins progress and the kakera earned from them.',
+                    kakera: 'Your current kakera balance.',
+                    tower: 'Your current Kakera Tower floor.',
+                    keys: 'How many characters you have at each key tier (bronze/silver/gold).',
+                    omegakeys: 'How many Omega Keys you have.',
+                    spheres: 'A breakdown of your sphere counts by color.',
+                    spherereacts: 'How many sphere reactions you\'ve made.',
+                    badges: 'Which kakera badge tiers you\'ve unlocked.'
                 },
                 sampleValues: {
                     harem: 'Collection size: 603 (40% ♀ 60% ♂)',
@@ -12663,6 +12767,12 @@ ${rouletteBarHTML}
             container.innerHTML = '';
             const cmd = EMBED_COMMANDS[embedActiveCommand];
 
+            // Right-click formatting only applies to $arrangeim's freeform
+            // text - surface it explicitly rather than leaving it to be
+            // found only via hover tooltips.
+            const formatHint = document.getElementById('embedFormatHint');
+            if (formatHint) formatHint.style.display = cmd.syntax === 'freeform' ? '' : 'none';
+
             function makePaletteButton(label, className, chip, textModeAction) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -12681,7 +12791,10 @@ ${rouletteBarHTML}
             }
 
             cmd.categories.forEach(function (cat) {
-                container.appendChild(makePaletteButton(cat, 'btn btn-sm', { type: 'category', value: cat }, function () { insertEmbedCategoryToken(cat); }));
+                const btn = makePaletteButton(cat, 'btn btn-sm', { type: 'category', value: cat }, function () { insertEmbedCategoryToken(cat); });
+                const info = cmd.categoryInfo && cmd.categoryInfo[cat.toLowerCase()];
+                if (info) btn.title = info;
+                container.appendChild(btn);
             });
 
             if (cmd.syntax === 'tokens') {
@@ -12701,6 +12814,22 @@ ${rouletteBarHTML}
                     container.appendChild(makePaletteButton(sym, 'btn btn-sm embed-symbol-btn', { type: 'text', value: sym }, function () { insertEmbedRaw(sym); }));
                 });
             }
+
+            renderEmbedCategoryGlossary(cmd);
+        }
+
+        // A hover tooltip on each palette button/chip covers the quick
+        // case, but tooltips aren't discoverable on touch devices and
+        // require finding the right button first - this collapsible
+        // reference lists every category for the active command with what
+        // it actually shows, all in one place.
+        function renderEmbedCategoryGlossary(cmd) {
+            const list = document.getElementById('embedCategoryGlossary');
+            if (!list) return;
+            list.innerHTML = cmd.categories.map(function (cat) {
+                const info = (cmd.categoryInfo && cmd.categoryInfo[cat.toLowerCase()]) || '';
+                return `<dt>${escapeHTML(cat)}</dt><dd>${escapeHTML(info)}</dd>`;
+            }).join('');
         }
 
         function insertAtCursor(textareaEl, text) {
@@ -12713,10 +12842,40 @@ ${rouletteBarHTML}
             textareaEl.focus();
         }
 
+        // Does `text` end with a category name butting right up against the
+        // end (no separator)? Used to decide whether inserting another
+        // category right there needs a leading '$' first - Mudae's real
+        // $arrangeim syntax needs a literal '$' between every pair of
+        // same-line categories, not just once per line.
+        function embedTextEndsWithCategory(text, catsByLength) {
+            for (let i = 0; i < catsByLength.length; i++) {
+                const cat = catsByLength[i];
+                if (text.length < cat.length) continue;
+                const tail = text.slice(text.length - cat.length);
+                if (tail.toLowerCase() !== cat.toLowerCase()) continue;
+                const before = text.length === cat.length ? '' : text[text.length - cat.length - 1];
+                if (!/\w/.test(before)) return true;
+            }
+            return false;
+        }
+
+        function embedTextStartsWithCategory(text, catsByLength) {
+            for (let i = 0; i < catsByLength.length; i++) {
+                const cat = catsByLength[i];
+                if (text.slice(0, cat.length).toLowerCase() !== cat.toLowerCase()) continue;
+                const after = text[cat.length] || '';
+                if (!/\w/.test(after)) return true;
+            }
+            return false;
+        }
+
         // tokens-syntax commands are space-separated, so a category/jump
         // insert needs a leading space unless the cursor already sits right
-        // after whitespace (or at the very start) - freeform has no such
-        // rule, categories can butt up against decorative text directly.
+        // after whitespace (or at the very start). freeform has no such
+        // spacing rule, but DOES need a literal '$' between two categories
+        // landing on the same line - inserting a category directly next to
+        // another one (on either side) adds that automatically instead of
+        // requiring a separate "$ Same Line" click first.
         function insertEmbedCategoryToken(token) {
             const textarea = document.getElementById('embedTextInput');
             if (!textarea) return;
@@ -12727,7 +12886,13 @@ ${rouletteBarHTML}
                 const needsSpace = before.length > 0 && !/\s$/.test(before);
                 insertAtCursor(textarea, (needsSpace ? ' ' : '') + token);
             } else {
-                insertAtCursor(textarea, token);
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const value = textarea.value;
+                const catsByLength = cmd.categories.slice().sort(function (a, b) { return b.length - a.length; });
+                const needsLeadingDollar = embedTextEndsWithCategory(value.slice(0, start), catsByLength);
+                const needsTrailingDollar = embedTextStartsWithCategory(value.slice(end), catsByLength);
+                insertAtCursor(textarea, (needsLeadingDollar ? '$' : '') + token + (needsTrailingDollar ? '$' : ''));
             }
             onEmbedTextInput();
         }
@@ -12946,8 +13111,29 @@ ${rouletteBarHTML}
             }).join('');
         }
 
+        // Mudae's real $arrangeim syntax needs a literal '$' between every
+        // pair of categories sharing a line - run after every canvas
+        // mutation (drop, reorder, remove) so two category chips ending up
+        // back-to-back (from any of those actions) always get a same-line
+        // chip inserted between them automatically, instead of requiring a
+        // separate "$ Same Line" drop for what's really one action.
+        function ensureEmbedSamelineBetweenCategories(cmd, chips) {
+            if (cmd.syntax !== 'freeform') return chips;
+            const result = [];
+            for (let i = 0; i < chips.length; i++) {
+                const prev = result[result.length - 1];
+                const cur = chips[i];
+                if (prev && prev.type === 'category' && cur.type === 'category') {
+                    result.push({ type: 'sameline', value: '$' });
+                }
+                result.push(cur);
+            }
+            return result;
+        }
+
         function syncEmbedCanvasToText() {
             const cmd = EMBED_COMMANDS[embedActiveCommand];
+            embedCanvasChips = ensureEmbedSamelineBetweenCategories(cmd, embedCanvasChips);
             const text = serializeEmbedChips(cmd, embedCanvasChips);
             embedDraftText[embedActiveCommand] = text;
             const textarea = document.getElementById('embedTextInput');
@@ -12994,10 +13180,16 @@ ${rouletteBarHTML}
                 chipEl.addEventListener('dragstart', function (e) { handleEmbedChipDragStart(e, index); });
                 chipEl.addEventListener('dragend', handleEmbedChipDragEnd);
 
+                const titleParts = [];
+                if (chip.type === 'category') {
+                    const info = cmd.categoryInfo && cmd.categoryInfo[chip.value.toLowerCase()];
+                    if (info) titleParts.push(info);
+                }
                 if (formattable && (chip.type === 'category' || chip.type === 'text')) {
-                    chipEl.title = 'Right-click for bold/italic/underline';
+                    titleParts.push('Right-click for bold/italic/underline');
                     chipEl.addEventListener('contextmenu', function (e) { openEmbedChipMenu(e, index); });
                 }
+                if (titleParts.length) chipEl.title = titleParts.join(' — ');
 
                 container.appendChild(chipEl);
             });

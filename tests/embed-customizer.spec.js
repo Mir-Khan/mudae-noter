@@ -12,10 +12,11 @@ async function dragAndDrop(page, source, target) {
     const tBox = await target.boundingBox();
     await page.mouse.move(sBox.x + sBox.width / 2, sBox.y + sBox.height / 2);
     await page.mouse.down();
-    await page.waitForTimeout(30);
-    await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + tBox.height / 2, { steps: 15 });
-    await page.waitForTimeout(30);
+    await page.waitForTimeout(80);
+    await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + tBox.height / 2, { steps: 25 });
+    await page.waitForTimeout(80);
     await page.mouse.up();
+    await page.waitForTimeout(80);
 }
 
 // Dispatches a synthetic contextmenu event instead of a real mouse
@@ -452,6 +453,86 @@ module.exports = [
             await selectAndRightClickTextarea(page, 0, 5);
             await page.waitForTimeout(200);
             assert.strictEqual(await page.locator('#embedTextFormatMenu').count(), 0, 'expected no menu on a tokens-syntax command, even with a selection');
+        }
+    },
+    {
+        name: 'Text mode auto-inserts "$" when two categories land back-to-back, including when inserting one between two existing categories',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.fill('#embedTextInput', '');
+
+            await page.click('#embedPalette button:has-text("Series")');
+            await page.waitForTimeout(100);
+            await page.click('#embedPalette button:has-text("Gender")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'Series$Gender', 'expected a "$" auto-inserted between two back-to-back categories');
+
+            await page.fill('#embedTextInput', 'SeriesGender');
+            await page.evaluate(() => {
+                const el = document.getElementById('embedTextInput');
+                el.focus();
+                el.selectionStart = el.selectionEnd = 6;
+            });
+            await page.click('#embedPalette button:has-text("Kakera")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'Series$Kakera$Gender', 'expected "$" on both sides of a category inserted between two others');
+        }
+    },
+    {
+        name: 'Visual mode auto-inserts a sameline chip when two categories end up back-to-back, whether clicked or dragged in',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.fill('#embedTextInput', '');
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+
+            await page.click('#embedPalette button:has-text("Series")');
+            await page.waitForTimeout(100);
+            await page.click('#embedPalette button:has-text("Gender")');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'Series$Gender');
+            assert.strictEqual(await page.locator('#embedCanvas .embed-chip').count(), 3, 'expected Series, an auto-inserted sameline chip, and Gender');
+            assert.strictEqual(await page.locator('#embedCanvas .embed-chip-sameline').count(), 1);
+
+            const paletteBtn = page.locator('#embedPalette button', { hasText: 'Kakera' }).first();
+            const canvas = page.locator('#embedCanvas');
+            await dragAndDrop(page, paletteBtn, canvas);
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'Series$Gender$Kakera', 'expected the dragged-in category appended with its own auto "$" separator');
+        }
+    },
+    {
+        name: 'each palette category button has a hover tooltip explaining what it shows, and the collapsible glossary lists all of them',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-profilearrange-btn');
+
+            const haremBtn = page.locator('#embedPalette button', { hasText: 'harem' }).first();
+            const title = await haremBtn.getAttribute('title');
+            assert.ok(title && title.length > 5, `expected a non-trivial tooltip on the harem button, got: "${title}"`);
+
+            await page.click('.embed-category-glossary summary');
+            await page.waitForTimeout(150);
+            const glossaryTerms = await page.locator('#embedCategoryGlossary dt').allTextContents();
+            assert.deepStrictEqual(glossaryTerms, ['harem', 'pokedex', 'arena', 'reacts', 'mudapins', 'kakera', 'tower', 'keys', 'omegakeys', 'spheres', 'spherereacts', 'badges']);
+            const glossaryDescriptions = await page.locator('#embedCategoryGlossary dd').allTextContents();
+            assert.ok(glossaryDescriptions.every(function (d) { return d.length > 5; }), 'expected every category to have a real description, not a blank one');
+        }
+    },
+    {
+        name: 'the right-click formatting hint only shows for $arrangeim, since $tuarrange/$profilearrange don\'t support markdown at all',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            assert.strictEqual(await page.locator('#embedFormatHint').isVisible(), true, 'expected the hint visible on $arrangeim');
+
+            await page.click('#embed-tab-tuarrange-btn');
+            assert.strictEqual(await page.locator('#embedFormatHint').isVisible(), false, 'expected the hint hidden on $tuarrange');
+
+            await page.click('#embed-tab-profilearrange-btn');
+            assert.strictEqual(await page.locator('#embedFormatHint').isVisible(), false, 'expected the hint hidden on $profilearrange');
         }
     }
 ];
