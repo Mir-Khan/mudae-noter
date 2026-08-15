@@ -676,5 +676,162 @@ module.exports = [
 
             assert.notStrictEqual(plainWeight, boldWeight, `expected bold text to have a visibly heavier font-weight than plain text, both were: "${plainWeight}"`);
         }
+    },
+    {
+        name: 'Build Text: typing/pasting filters out disallowed characters live, and only $arrangeim offers the button',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.click('button:has-text("Build Text")');
+            await page.waitForSelector('#embedTextBuilderOverlay', { state: 'visible' });
+
+            await page.fill('#embedTextBuilderInput', 'abc-de');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextBuilderInput'), '-', 'expected only the allowed dash to survive, letters stripped');
+            await page.click('button:has-text("Cancel")');
+
+            await page.click('#embed-tab-tuarrange-btn');
+            assert.strictEqual(await page.locator('button:has-text("Build Text")').count(), 0, 'expected no Build Text button on a tokens-syntax command');
+        }
+    },
+    {
+        name: 'Build Text: the repeat count inserts N copies of a symbol in one click',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.click('button:has-text("Build Text")');
+            await page.waitForSelector('#embedTextBuilderOverlay', { state: 'visible' });
+
+            await page.fill('#embedTextBuilderRepeat', '5');
+            await page.click('#embedTextBuilderSymbols button:has-text("★")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#embedTextBuilderInput'), '★★★★★');
+        }
+    },
+    {
+        name: 'Build Text inserts the whole run as a single chip in Visual mode, and at the cursor in Text mode',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.fill('#embedTextInput', '');
+
+            await page.click('button:has-text("Build Text")');
+            await page.waitForSelector('#embedTextBuilderOverlay', { state: 'visible' });
+            await page.fill('#embedTextBuilderInput', '☾----------★★★★★----------☽');
+            await page.click('button:has-text("Insert")');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), '☾----------★★★★★----------☽', 'expected the exact run inserted at the cursor in Text mode');
+
+            await page.fill('#embedTextInput', '');
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+            await page.click('button:has-text("Build Text")');
+            await page.waitForSelector('#embedTextBuilderOverlay', { state: 'visible' });
+            await page.fill('#embedTextBuilderInput', '----------');
+            await page.click('button:has-text("Insert")');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.locator('#embedCanvas .embed-chip').count(), 1, 'expected the whole run as a single chip, not one per character');
+            assert.strictEqual(await page.inputValue('#embedTextInput'), '----------');
+        }
+    },
+    {
+        name: 'the pencil button on a text chip re-opens Build Text pre-filled, and updates that chip in place',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.fill('#embedTextInput', '----------');
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+
+            await page.click('#embedCanvas .embed-chip-edit');
+            await page.waitForSelector('#embedTextBuilderOverlay', { state: 'visible' });
+            assert.strictEqual(await page.inputValue('#embedTextBuilderInput'), '----------', 'expected the modal pre-filled with the chip\'s current value');
+
+            await page.fill('#embedTextBuilderInput', '~~~~~');
+            await page.click('button:has-text("Insert")');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.locator('#embedCanvas .embed-chip').count(), 1, 'expected the same chip updated in place, not a second one added');
+            assert.strictEqual(await page.inputValue('#embedTextInput'), '~~~~~');
+        }
+    },
+    {
+        name: 'copying a chip enables Paste, which appends independent copies (repeatable)',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-tuarrange-btn');
+            await page.fill('#embedTextInput', 'claim');
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+
+            assert.strictEqual(await page.locator('#embedPasteBtn').isDisabled(), true, 'expected Paste disabled before anything is copied');
+
+            await page.click('#embedCanvas .embed-chip button:has-text("⎘")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.locator('#embedPasteBtn').isDisabled(), false);
+
+            await page.click('#embedPasteBtn');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim claim');
+
+            await page.click('#embedPasteBtn');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim claim claim', 'expected Paste to be repeatable');
+        }
+    },
+    {
+        name: 'copying a formatted chip preserves bold/italic/underline on the pasted copy',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+            await page.fill('#embedTextInput', '**Kakera**');
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+
+            await page.click('#embedCanvas .embed-chip button:has-text("⎘")');
+            await page.waitForTimeout(100);
+            await page.click('#embedPasteBtn');
+            await page.waitForTimeout(150);
+
+            // Auto same-line insertion (from an earlier fix) correctly adds
+            // a '$' between the two now-adjacent category chips.
+            assert.strictEqual(await page.inputValue('#embedTextInput'), '**Kakera**$**Kakera**', 'expected the pasted copy to keep its bold formatting');
+        }
+    },
+    {
+        name: 'the Paste button is hidden entirely in Text mode',
+        async run(page) {
+            await openEmbeds(page);
+            assert.strictEqual(await page.locator('#embedPasteBtn').isVisible(), false, 'expected Paste hidden by default in Text mode');
+
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+            await page.click('#embedModeTextBtn');
+            assert.strictEqual(await page.locator('#embedPasteBtn').isVisible(), false, 'expected Paste hidden again after switching back to Text mode');
+        }
+    },
+    {
+        name: 'Clear Text empties the draft in both modes, and is itself undoable',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-tuarrange-btn');
+            await page.fill('#embedTextInput', 'claim rolls daily');
+            await page.waitForTimeout(100);
+
+            await page.click('button:has-text("Clear Text")');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), '');
+
+            await page.click('#embedUndoBtn');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), 'claim rolls daily', 'expected Clear Text itself to be undoable');
+
+            await page.click('#embedModeVisualBtn');
+            await page.waitForTimeout(150);
+            await page.click('button:has-text("Clear Text")');
+            await page.waitForTimeout(150);
+            assert.strictEqual(await page.locator('#embedCanvas .embed-chip').count(), 0, 'expected the canvas emptied too');
+            assert.strictEqual(await page.locator('#embedCanvas .embed-preview-empty').isVisible(), true);
+            assert.strictEqual(await page.inputValue('#embedTextInput'), '');
+        }
     }
 ];

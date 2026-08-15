@@ -2857,6 +2857,24 @@
             font-family: monospace;
         }
 
+        .embed-text-builder-modal {
+            max-width: 480px;
+        }
+
+        .embed-chip-edit {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 0.85em;
+            line-height: 1;
+            padding: 0 2px 0 4px;
+        }
+
+        .embed-chip-edit:hover {
+            color: #a78bfa;
+        }
+
         .embed-mode-tabs {
             margin-bottom: 14px;
         }
@@ -4130,10 +4148,14 @@
                     <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 10px; margin-top: 8px;">
                         <button type="button" class="btn btn-sm" onclick="resetEmbedToDefault()">Reset to
                             Default</button>
+                        <button type="button" class="btn btn-sm" title="Clear everything and start from scratch (undoable)"
+                            onclick="clearEmbedDraft()">Clear Text</button>
                         <button type="button" id="embedUndoBtn" class="btn btn-sm" disabled
                             title="Undo the last change to this command's text/chips" onclick="embedUndo()">↶ Undo</button>
                         <button type="button" id="embedRedoBtn" class="btn btn-sm" disabled
                             title="Redo" onclick="embedRedo()">↷ Redo</button>
+                        <button type="button" id="embedPasteBtn" class="btn btn-sm" disabled
+                            style="display: none;" onclick="pasteEmbedChip()">📋 Paste</button>
                     </div>
                     <div id="embedCommandOutput" style="margin-top: 12px;"></div>
                 </div>
@@ -4163,6 +4185,29 @@
                     placeholder="Paste a shared code...">
                 <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
                     <button type="button" class="btn btn-sm" onclick="importEmbedSharedCode()">Import</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="embedTextBuilderOverlay" class="changelog-overlay" style="display: none; z-index: 2100;">
+            <div class="changelog-modal embed-text-builder-modal">
+                <h2>Build Text</h2>
+                <p class="sort-hint" style="margin-top: 4px;">Type or paste a decorative run - only characters
+                    <code>$arrangeim</code> actually allows are kept, everything else is dropped as you type.</p>
+                <input type="text" id="embedTextBuilderInput" class="add-chars-textarea"
+                    style="min-height: unset; font-family: monospace;" oninput="filterEmbedTextBuilderInput()"
+                    placeholder="e.g. ----------">
+                <p class="sort-hint" id="embedTextBuilderAllowed" style="margin-top: 6px; font-size: 0.8em;"></p>
+                <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 8px; margin-top: 10px;">
+                    <span style="color: #9ca3af; font-size: 0.85em;">Insert</span>
+                    <input type="number" id="embedTextBuilderRepeat" value="1" min="1" max="50"
+                        style="width: 55px;" class="color-hex-text-input">
+                    <span style="color: #9ca3af; font-size: 0.85em;">time(s):</span>
+                </div>
+                <div class="embed-palette" id="embedTextBuilderSymbols" style="margin-top: 6px;"></div>
+                <div class="add-chars-modal-actions" style="margin-top: 16px;">
+                    <button type="button" class="btn" onclick="closeEmbedTextBuilder()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmEmbedTextBuilder()">Insert</button>
                 </div>
             </div>
         </div>
@@ -12686,6 +12731,10 @@ ${rouletteBarHTML}
         let embedBuilderMode = 'text';
         let embedCanvasChips = [];
         let embedDragPayload = null;
+        // A single-chip clipboard for the Visual canvas - copying clones the
+        // chip's data (not a reference) so later edits to the original or
+        // to a pasted copy never bleed into each other.
+        let embedChipClipboard = null;
 
         // A small, separate undo/redo scoped to the draft text/chips being
         // edited for the ACTIVE command, mirroring the main app's
@@ -12768,10 +12817,13 @@ ${rouletteBarHTML}
             const canvas = document.getElementById('embedCanvas');
             if (textarea) textarea.style.display = mode === 'text' ? '' : 'none';
             if (canvas) canvas.style.display = mode === 'visual' ? '' : 'none';
+            const pasteBtn = document.getElementById('embedPasteBtn');
+            if (pasteBtn) pasteBtn.style.display = mode === 'visual' ? '' : 'none';
             if (mode === 'visual') {
                 const cmd = EMBED_COMMANDS[embedActiveCommand];
                 embedCanvasChips = tokenizeEmbedText(cmd, embedDraftText[embedActiveCommand] || '');
                 renderEmbedCanvas();
+                updateEmbedPasteButton();
             }
             renderEmbedPalette();
         }
@@ -12842,9 +12894,111 @@ ${rouletteBarHTML}
                     if (embedBuilderMode === 'visual' && EMBED_REDUNDANT_VISUAL_SYMBOLS.indexOf(sym) !== -1) return;
                     container.appendChild(makePaletteButton(sym, 'btn btn-sm embed-symbol-btn', { type: 'text', value: sym }, function () { insertEmbedRaw(sym); }));
                 });
+
+                const buildTextBtn = document.createElement('button');
+                buildTextBtn.type = 'button';
+                buildTextBtn.className = 'btn btn-sm';
+                buildTextBtn.textContent = '✎ Build Text';
+                buildTextBtn.title = 'Build a whole decorative run (like a border) at once, instead of one symbol per click';
+                buildTextBtn.onclick = function () { openEmbedTextBuilder(); };
+                container.appendChild(buildTextBtn);
             }
 
             renderEmbedCategoryGlossary(cmd);
+        }
+
+        // ===================== "Build Text" modal =====================
+        // Composing something like a border ("----------★★★★★----------")
+        // one symbol-button click at a time is tedious - this builds the
+        // whole run in one small text box (typing/pasting is filtered live
+        // to only the characters $arrangeim actually allows), then inserts
+        // it as a single unit: a new 'text' chip in Visual mode, or spliced
+        // straight into the textarea in Text mode. `embedTextBuilderEditIndex`
+        // tracks whether this is a fresh insert or editing an existing chip.
+        let embedTextBuilderEditIndex = null;
+
+        function openEmbedTextBuilder(editIndex) {
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            if (cmd.syntax !== 'freeform') return;
+            embedTextBuilderEditIndex = typeof editIndex === 'number' ? editIndex : null;
+
+            const input = document.getElementById('embedTextBuilderInput');
+            if (input) input.value = embedTextBuilderEditIndex !== null ? (embedCanvasChips[embedTextBuilderEditIndex].value || '') : '';
+
+            const allowed = document.getElementById('embedTextBuilderAllowed');
+            if (allowed) allowed.textContent = 'Allowed: ' + (cmd.symbols || []).join(' ') + ' (and spaces)';
+
+            const symbolsContainer = document.getElementById('embedTextBuilderSymbols');
+            if (symbolsContainer) {
+                symbolsContainer.innerHTML = '';
+                (cmd.symbols || []).forEach(function (sym) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm embed-symbol-btn';
+                    btn.textContent = sym;
+                    btn.onclick = function () { insertEmbedTextBuilderSymbol(sym); };
+                    symbolsContainer.appendChild(btn);
+                });
+            }
+
+            const overlay = document.getElementById('embedTextBuilderOverlay');
+            if (overlay) overlay.style.display = 'flex';
+            if (input) input.focus();
+        }
+
+        function closeEmbedTextBuilder() {
+            const overlay = document.getElementById('embedTextBuilderOverlay');
+            if (overlay) overlay.style.display = 'none';
+            embedTextBuilderEditIndex = null;
+        }
+
+        // Strips anything not in the active command's allowed symbol list
+        // (or a plain space) as the user types or pastes, so invalid
+        // characters never make it into the built string in the first
+        // place - covers both keystrokes and paste, since both fire 'input'.
+        function filterEmbedTextBuilderInput() {
+            const input = document.getElementById('embedTextBuilderInput');
+            if (!input) return;
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            const allowed = (cmd.symbols || []).concat([' ']);
+            const cursor = input.selectionStart;
+            const original = input.value;
+            const filtered = original.split('').filter(function (ch) { return allowed.indexOf(ch) !== -1; }).join('');
+            if (filtered !== original) {
+                const removedBefore = original.slice(0, cursor).length - filtered.slice(0, cursor).length;
+                input.value = filtered;
+                const newCursor = Math.max(0, cursor - removedBefore);
+                input.selectionStart = input.selectionEnd = newCursor;
+            }
+        }
+
+        function insertEmbedTextBuilderSymbol(sym) {
+            const input = document.getElementById('embedTextBuilderInput');
+            if (!input) return;
+            const repeatInput = document.getElementById('embedTextBuilderRepeat');
+            const count = Math.min(50, Math.max(1, parseInt(repeatInput && repeatInput.value, 10) || 1));
+            insertAtCursor(input, sym.repeat(count));
+        }
+
+        function confirmEmbedTextBuilder() {
+            const input = document.getElementById('embedTextBuilderInput');
+            const value = input ? input.value : '';
+            if (!value) { closeEmbedTextBuilder(); return; }
+
+            if (embedTextBuilderEditIndex !== null) {
+                embedCanvasChips[embedTextBuilderEditIndex].value = value;
+                syncEmbedCanvasToText();
+                renderEmbedCanvas();
+            } else if (embedBuilderMode === 'visual') {
+                appendEmbedChip({ type: 'text', value: value });
+            } else {
+                const textarea = document.getElementById('embedTextInput');
+                if (textarea) {
+                    insertAtCursor(textarea, value);
+                    onEmbedTextInput();
+                }
+            }
+            closeEmbedTextBuilder();
         }
 
         // A hover tooltip on each palette button/chip covers the quick
@@ -13089,6 +13243,23 @@ ${rouletteBarHTML}
             updateEmbedPreview();
         }
 
+        // Wipes the current command's text/chips back to nothing (not the
+        // default template) - same undo/redo coverage as every other draft
+        // edit, so clearing by mistake is a one-click Undo away rather than
+        // needing a confirm() dialog.
+        function clearEmbedDraft() {
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            const textarea = document.getElementById('embedTextInput');
+            if (textarea) textarea.value = '';
+            embedDraftText[embedActiveCommand] = '';
+            recordEmbedHistory(embedActiveCommand, '');
+            if (embedBuilderMode === 'visual') {
+                embedCanvasChips = [];
+                renderEmbedCanvas();
+            }
+            updateEmbedPreview();
+        }
+
         // ===================== Visual Builder: text <-> chips =====================
         // The textarea is always the source of truth (see embedBuilderMode
         // above) - these two functions are exact inverses of each other so
@@ -13261,6 +13432,24 @@ ${rouletteBarHTML}
                 if (chip.underline) label.style.textDecoration = 'underline';
                 chipEl.appendChild(label);
 
+                if (chip.type === 'text') {
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
+                    editBtn.className = 'embed-chip-edit';
+                    editBtn.textContent = '✎';
+                    editBtn.title = 'Edit this text';
+                    editBtn.onclick = function (e) { e.stopPropagation(); openEmbedTextBuilder(index); };
+                    chipEl.appendChild(editBtn);
+                }
+
+                const copyBtn = document.createElement('button');
+                copyBtn.type = 'button';
+                copyBtn.className = 'embed-chip-edit';
+                copyBtn.textContent = '⎘';
+                copyBtn.title = 'Copy this chip';
+                copyBtn.onclick = function (e) { e.stopPropagation(); copyEmbedChip(index); };
+                chipEl.appendChild(copyBtn);
+
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'embed-chip-remove';
@@ -13356,6 +13545,33 @@ ${rouletteBarHTML}
             embedCanvasChips.splice(index, 1);
             syncEmbedCanvasToText();
             renderEmbedCanvas();
+        }
+
+        // Single-chip copy/paste - copying clones the chip's data (type,
+        // value, and any bold/italic/underline flags) into embedChipClipboard
+        // rather than keeping a reference, so pasted copies and their
+        // source are fully independent afterward. Paste always appends to
+        // the end (same as clicking a palette button) - drag it into place
+        // afterward if it needs to go elsewhere.
+        function copyEmbedChip(index) {
+            const chip = embedCanvasChips[index];
+            if (!chip) return;
+            embedChipClipboard = Object.assign({}, chip);
+            updateEmbedPasteButton();
+        }
+
+        function pasteEmbedChip() {
+            if (!embedChipClipboard) return;
+            appendEmbedChip(Object.assign({}, embedChipClipboard));
+        }
+
+        function updateEmbedPasteButton() {
+            const btn = document.getElementById('embedPasteBtn');
+            if (!btn) return;
+            btn.disabled = !embedChipClipboard;
+            btn.title = embedChipClipboard
+                ? 'Paste a copy of: ' + (embedChipClipboard.type === 'newline' ? '↵ new line' : embedChipClipboard.type === 'sameline' ? '$ same line' : embedChipClipboard.value)
+                : 'Copy a chip first';
         }
 
         // Cross-container drag (palette -> canvas, following the
