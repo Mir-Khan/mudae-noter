@@ -3100,6 +3100,16 @@
             font-weight: 600;
         }
 
+        /* Used for the substituted sample VALUE in the freeform ($arrangeim)
+           preview - unlike .embed-preview-token (the bold field-name label
+           in the tokens-syntax preview, matching Discord's real bold field
+           names), a value has no default weight of its own so real
+           <strong>/<em>/<u> markdown applied to it is actually visible
+           instead of blending into an already-semibold 600 weight. */
+        .embed-preview-value {
+            color: #fff;
+        }
+
         .embed-preview-subtext {
             color: #949ba4;
             font-size: 0.85em;
@@ -13559,7 +13569,7 @@ ${rouletteBarHTML}
                 // as "part of the word" here, so '_'/'*' on either side
                 // still count as a boundary.
                 const re = new RegExp('(?<![A-Za-z0-9])' + cat + '(?![A-Za-z0-9])', 'gi');
-                html = html.replace(re, (sample ? '<span class="embed-preview-token">' + escapeHTML(sample) + '</span>' : '') + icons);
+                html = html.replace(re, (sample ? '<span class="embed-preview-value">' + escapeHTML(sample) + '</span>' : '') + icons);
             });
 
             // The triple-asterisk (bold+italic) case is handled before the

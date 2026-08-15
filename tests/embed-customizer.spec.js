@@ -116,8 +116,8 @@ module.exports = [
             assert.strictEqual(lineCount, 2, 'expected two preview lines - one per real newline');
 
             const firstLineHtml = await page.locator('#embedPreviewCard .embed-preview-line').first().innerHTML();
-            // Series and Gender should both appear as separate token spans on the same line.
-            const tokenCountOnFirstLine = (firstLineHtml.match(/embed-preview-token/g) || []).length;
+            // Series and Gender should both appear as separate value spans on the same line.
+            const tokenCountOnFirstLine = (firstLineHtml.match(/embed-preview-value/g) || []).length;
             assert.strictEqual(tokenCountOnFirstLine, 2, `expected Series and Gender both on the first line, got html: ${firstLineHtml}`);
 
             const secondLineHtml = await page.locator('#embedPreviewCard .embed-preview-line').nth(1).innerHTML();
@@ -629,7 +629,7 @@ module.exports = [
             for (const [name, text] of Object.entries(cases)) {
                 await page.fill('#embedTextInput', text);
                 await page.waitForTimeout(150);
-                const tokenText = await page.locator('#embedPreviewCard .embed-preview-token').first().textContent();
+                const tokenText = await page.locator('#embedPreviewCard .embed-preview-value').first().textContent();
                 assert.strictEqual(tokenText, 'Jujutsu Kaisen', `expected the real sample text substituted for "${name}" (${text}), got: "${tokenText}"`);
             }
         }
@@ -658,6 +658,23 @@ module.exports = [
             assert.strictEqual(await line.locator('u').count(), 1, 'expected a real <u> element in the rendered preview');
             const text = await line.textContent();
             assert.ok(!text.includes('_'), `expected no literal underscore characters left over in the rendered text, got: "${text}"`);
+        }
+    },
+    {
+        name: 'applying bold to a category is actually visible - the substituted value has no default bold weight of its own to blend into',
+        async run(page) {
+            await openEmbeds(page);
+            await page.click('#embed-tab-arrangeim-btn');
+
+            await page.fill('#embedTextInput', 'Series');
+            await page.waitForTimeout(150);
+            const plainWeight = await page.locator('#embedPreviewCard .embed-preview-value').first().evaluate(function (el) { return getComputedStyle(el).fontWeight; });
+
+            await page.fill('#embedTextInput', '**Series**');
+            await page.waitForTimeout(150);
+            const boldWeight = await page.locator('#embedPreviewCard strong .embed-preview-value').first().evaluate(function (el) { return getComputedStyle(el).fontWeight; });
+
+            assert.notStrictEqual(plainWeight, boldWeight, `expected bold text to have a visibly heavier font-weight than plain text, both were: "${plainWeight}"`);
         }
     }
 ];
