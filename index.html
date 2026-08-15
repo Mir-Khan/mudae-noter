@@ -2828,6 +2828,254 @@
             font-size: 0.85em;
         }
 
+        /* ===================== Embed Customizer tab ===================== */
+        .embed-command-tabs {
+            margin-bottom: 14px;
+        }
+
+        .embed-builder-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .embed-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .embed-palette-jump {
+            border-color: #a78bfa;
+            color: #a78bfa;
+        }
+
+        .embed-symbol-btn {
+            min-width: 32px;
+            font-family: monospace;
+        }
+
+        .embed-mode-tabs {
+            margin-bottom: 14px;
+        }
+
+        .embed-canvas {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 6px;
+            min-height: 90px;
+            padding: 10px;
+            border: 2px dashed #3a3d42;
+            border-radius: 6px;
+            background: #1e2024;
+        }
+
+        .embed-canvas.drag-over {
+            border-color: #7c3aed;
+            background: #24202e;
+        }
+
+        .embed-chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2b2d31;
+            border: 1px solid #3a3d42;
+            font-size: 0.85em;
+            cursor: grab;
+        }
+
+        .embed-chip.dragging {
+            opacity: 0.4;
+        }
+
+        .embed-chip-category {
+            background: #372a5c;
+            border-color: #7c3aed;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .embed-chip-text {
+            font-family: monospace;
+            color: #9ca3af;
+        }
+
+        .embed-chip-unknown {
+            color: #f87171;
+            font-style: italic;
+        }
+
+        .embed-chip-newline {
+            flex-basis: 100%;
+            justify-content: center;
+            color: #a78bfa;
+            border-style: dashed;
+        }
+
+        /* Forces its own row, same as .embed-chip-newline - a "jump" is a
+           line break in the tokens syntax too, so the canvas should visibly
+           split into groups the same way the Preview does. */
+        .embed-chip-jump {
+            flex-basis: 100%;
+            justify-content: center;
+            color: #a78bfa;
+            border-style: dashed;
+            margin-bottom: 4px;
+        }
+
+        .embed-chip-sameline {
+            color: #a78bfa;
+            padding: 4px 6px;
+        }
+
+        .embed-chip-remove {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 1em;
+            line-height: 1;
+            padding: 0 0 0 2px;
+        }
+
+        .embed-chip-remove:hover {
+            color: #f87171;
+        }
+
+        .embed-chip-menu {
+            position: absolute;
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            background: #2b2d31;
+            border: 1px solid #3a3d42;
+            border-radius: 6px;
+            padding: 4px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            min-width: 130px;
+        }
+
+        .embed-chip-menu button {
+            background: none;
+            border: none;
+            color: #dbdee1;
+            text-align: left;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .embed-chip-menu button:hover {
+            background: #372a5c;
+        }
+
+        .embed-chip-menu button.active {
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
+        .embed-preview-card {
+            background: #2b2d31;
+            border-left: 4px solid #7c3aed;
+            border-radius: 4px;
+            padding: 12px 14px;
+            color: #dbdee1;
+            font-size: 0.9em;
+            min-height: 80px;
+            overflow: auto;
+        }
+
+        .embed-preview-thumbnail {
+            float: right;
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin: 0 0 10px 10px;
+        }
+
+        .embed-preview-image {
+            display: block;
+            max-width: 100%;
+            width: 300px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .embed-preview-icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.15em;
+        }
+
+        .embed-preview-icon-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-top: 4px;
+            opacity: 0.85;
+        }
+
+        /* The kakera crystal art is drawn lying on its side - rotated
+           upright here so it reads as a gem like Discord's own kakera
+           emoji, instead of sideways. */
+        img.embed-preview-icon[src*="kakera-"],
+        .embed-preview-icon-legend img[src*="kakera-"] {
+            transform: rotate(90deg);
+        }
+
+        .embed-preview-icon-legend img {
+            width: 0.85em;
+            height: 0.85em;
+        }
+
+        .embed-preview-line {
+            margin-bottom: 6px;
+        }
+
+        .embed-preview-group {
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #3a3d42;
+        }
+
+        .embed-preview-group:last-child {
+            border-bottom: none;
+        }
+
+        .embed-preview-item {
+            margin-bottom: 4px;
+        }
+
+        .embed-preview-token {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .embed-preview-subtext {
+            color: #949ba4;
+            font-size: 0.85em;
+        }
+
+        .embed-preview-unknown {
+            color: #f87171;
+            font-style: italic;
+        }
+
+        .embed-preview-empty {
+            color: #949ba4;
+            font-style: italic;
+            margin: 0;
+        }
+
         /* ===================== Mobile / narrow-screen layout =====================
            Nothing below this point changes anything above ~900px wide - the
            desktop layout (two-column input/options grid, fixed-width Quick
@@ -3001,6 +3249,19 @@
             .changelog-modal {
                 padding: 16px;
             }
+
+            /* Two-column palette+textarea / preview layout doesn't fit a
+               phone screen - stack the preview underneath instead. */
+            .embed-builder-layout {
+                grid-template-columns: 1fr;
+            }
+
+            /* This app has no touch drag-and-drop anywhere - the Visual
+               canvas is desktop-only, so hide its toggle and leave Text
+               mode (already usable on mobile) as the only option. */
+            #embedModeVisualBtn {
+                display: none;
+            }
         }
 
         /* Extra-narrow phones: the Sort/Series Order rows (drag handle,
@@ -3032,6 +3293,16 @@
             .character-card img {
                 height: 172px;
             }
+
+            /* The longest tab label ("Custom Images & Cropper") is wider
+               than the scrollable tab strip's visible width at this size
+               even when fully scrolled to it - shrinking further here gives
+               long labels a real shot at fitting instead of always trailing
+               off past the edge. */
+            .app-tab {
+                padding: 8px 8px;
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
@@ -3051,6 +3322,8 @@
                     Wishlists</button>
                 <button type="button" id="tab-customimages-btn" class="app-tab"
                     onclick="switchAppTab('customimages')">🖼️ Custom Images &amp; Cropper</button>
+                <button type="button" id="tab-embeds-btn" class="app-tab" onclick="switchAppTab('embeds')">🖋️
+                    Embeds</button>
             </div>
             <div id="mobileUndoDock" class="mobile-undo-dock"></div>
         </div>
@@ -3772,6 +4045,66 @@
             </div>
         </div>
 
+        <div id="embedsTabPanel" style="display: none;">
+            <div id="embedsMessage"></div>
+            <h2>Embed Customizer</h2>
+            <p class="sort-hint">Build <code>$tuarrange</code> / <code>$arrangeim</code> / <code>$profilearrange</code>
+                commands to customize what Mudae shows in its embeds. Click categories below to build the command,
+                or start from <b>Reset to Default</b> and tweak from there. The preview is a best-effort
+                approximation of the layout - not a pixel-perfect match for Discord's own rendering.</p>
+
+            <div class="button-group embed-command-tabs" id="embedCommandTabs"></div>
+
+            <div class="button-group embed-mode-tabs" id="embedModeTabs">
+                <button type="button" id="embedModeTextBtn" class="btn btn-sm active"
+                    onclick="switchEmbedBuilderMode('text')">✏️ Text</button>
+                <button type="button" id="embedModeVisualBtn" class="btn btn-sm"
+                    onclick="switchEmbedBuilderMode('visual')">🧩 Visual (drag &amp; drop)</button>
+            </div>
+
+            <div class="embed-builder-layout">
+                <div class="embed-builder-column">
+                    <div class="embed-palette" id="embedPalette"></div>
+                    <textarea id="embedTextInput" class="add-chars-textarea" style="min-height: 140px;"
+                        oninput="onEmbedTextInput()" oncontextmenu="handleEmbedTextContextMenu(event)"></textarea>
+                    <div id="embedCanvas" class="embed-canvas" style="display: none;" ondragover="handleEmbedCanvasDragOver(event)"
+                        ondragleave="handleEmbedCanvasDragLeave(event)" ondrop="handleEmbedCanvasDrop(event)"></div>
+                    <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 10px; margin-top: 8px;">
+                        <button type="button" class="btn btn-sm" onclick="resetEmbedToDefault()">Reset to
+                            Default</button>
+                    </div>
+                    <div id="embedCommandOutput" style="margin-top: 12px;"></div>
+                </div>
+                <div class="embed-builder-column">
+                    <h3 style="margin-top: 0; color: #e5e7eb;">Preview</h3>
+                    <div id="embedPreviewCard" class="embed-preview-card"></div>
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top: 24px;">
+                <h3>Saved Layouts</h3>
+                <div class="add-chars-modal-actions" style="justify-content: flex-start; gap: 10px;">
+                    <input type="text" id="embedSaveNameInput" class="color-hex-text-input"
+                        style="text-transform: none; max-width: 260px;" placeholder="Name this layout...">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="saveEmbedLayoutAs()">Save
+                        As</button>
+                </div>
+                <div id="embedSaveMessage"></div>
+                <div id="embedSavedList" class="wishlist-cards" style="margin-top: 12px;"></div>
+                <div id="embedShareOutput"></div>
+            </div>
+
+            <div class="control-group" style="margin-top: 24px;">
+                <h3>Import Shared Code</h3>
+                <p class="sort-hint">Paste a code someone shared with you to add it to your saved layouts.</p>
+                <input type="text" id="embedImportInput" class="color-hex-text-input" style="text-transform: none;"
+                    placeholder="Paste a shared code...">
+                <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
+                    <button type="button" class="btn btn-sm" onclick="importEmbedSharedCode()">Import</button>
+                </div>
+            </div>
+        </div>
+
         <div class="footer">
             <div class="footer-contact">
                 Questions, feedback or bugs? Contact <strong>arczeus</strong> on Discord.
@@ -4049,6 +4382,130 @@
         // wholesale-rebuilt (with a fresh `ui` block) whenever a new
         // collection is created.
         const IMGCHEST_TOKEN_KEY = 'mudaeImgChestToken';
+
+        // Same rationale as IMGCHEST_TOKEN_KEY - which categories show up in
+        // your Discord embeds is a personal account preference, not data
+        // belonging to any one collection, so saved layouts are global
+        // rather than living inside AppState.
+        const EMBED_LAYOUTS_KEY = 'mudaeEmbedLayouts';
+
+        // Category lists/defaults verified directly against the live bot
+        // (screenshots the user provided) and cross-checked against the
+        // Mudae Wiki's List_of_Commands - the wiki's $arrangeim entry matched
+        // exactly, but its $tuarrange category list was stale (missing
+        // several categories the live bot actually has), so the live
+        // screenshots win wherever the two disagree. sampleValues are drawn
+        // from real embed screenshots too (a $im Satoru Gojo card, a
+        // $profile, and a $tu output) so the preview shows realistic-looking
+        // text instead of generic placeholders - it's still a best-effort
+        // approximation, not a guarantee every category renders exactly
+        // this way for every character/account.
+        const EMBED_COMMANDS = {
+            arrangeim: {
+                label: '$im / roll embeds',
+                command: '$arrangeim',
+                syntax: 'freeform', // '$' = same line as previous category, real newline = new line
+                categories: ['Series', 'Gender', 'Roulette', 'Kakera', 'Keys', 'Claims', 'Likes', 'Firstalias', 'Customalias', 'Customaliasfirst', 'Artist', 'Pictags', 'Matching', 'Noteimg', 'Custompos', 'Disabled', 'Disabledemoji'],
+                symbols: ['·', ',', '_', '-', '*', '~', '#', '`', '+', '.', '>', '\\', '|', '/', '<', '☀', '☼', '☽', '☾', '★', '☆', '♥', '♦', '♠', '♣', '♡', '♢', '♤', '♧', '♪', '♫', '⚛', '⚜'],
+                defaultText: 'Series$ Gender\n*Roulette*$ · **Kakera**$ · Keys\nClaims\nLikes\nFirstalias\n*Customalias*\nArtist\n-# Matching\nNoteimg\nCustompos\nDisabled',
+                previewImage: 'docs/assets/embed-preview-im.webp',
+                categoryIcons: {
+                    kakera: ['docs/assets/kakera-symbol.webp'],
+                    keys: ['docs/assets/key-bronze.webp'],
+                    disabled: ['docs/assets/disabled-icon.svg'],
+                    disabledemoji: ['docs/assets/disabled-icon.svg']
+                },
+                sampleValues: {
+                    series: 'Jujutsu Kaisen',
+                    gender: '♂',
+                    roulette: 'Animanga roulette',
+                    kakera: '1,319',
+                    keys: '3',
+                    claims: 'Claim Rank: #11',
+                    likes: 'Like Rank: #4',
+                    firstalias: 'The Strongest Jujutsu Sorcerer',
+                    customalias: 'My Nickname',
+                    customaliasfirst: 'My Nickname',
+                    artist: 'Art: Gege Akutami',
+                    pictags: '#favorite #cool',
+                    matching: '87% match',
+                    noteimg: '📝 has a note',
+                    custompos: '🐹 Belongs to you ~ 1 / 140',
+                    disabled: 'Disabled',
+                    disabledemoji: ''
+                }
+            },
+            tuarrange: {
+                label: '$tu timers',
+                command: '$tuarrange',
+                syntax: 'tokens', // space-separated; 'jump' is a repeatable line-break token
+                categories: ['claim', 'rolls', 'daily', 'bku', 'kakerareact', 'kakerapower', 'kakerainfo', 'kakerastock', 'rt', 'dk', 'pokemon', 'vote', 'rollsreset', 'oh', 'megasphere', 'perk8', 'perk8b', 'perk9', 'perk9b', 'spherestock', 'omegakeys'],
+                jumpMax: 10,
+                defaultText: 'claim rolls daily jump kakerareact kakerapower kakerainfo kakerastock jump rt dk vote jump oh spherestock',
+                categoryIcons: {
+                    kakerastock: ['docs/assets/kakera-symbol.webp'],
+                    spherestock: ['docs/assets/sphere-red.webp']
+                },
+                sampleValues: {
+                    claim: "You can't claim for another 20 min.",
+                    rolls: 'You have 0 rolls (+7 $mk) left. Next rolls reset in 20 min.',
+                    daily: 'Next $daily reset in 14h 28min.',
+                    bku: '1 bonus key available.',
+                    kakerareact: 'You can react to kakera right now! Power: 61%',
+                    kakerapower: 'Each kakera button consumes 34% of your reaction power.',
+                    kakerainfo: 'Characters with 10+ keys consume half the power.',
+                    kakerastock: 'Stock: 70,974',
+                    rt: 'The cooldown of $rt is not over. Time left: 17h 34min. ($rtu)',
+                    dk: '1 $dk available. Next in 5h 04min.',
+                    pokemon: 'A wild Pokémon roll is available.',
+                    vote: 'You may vote again in 28 min.',
+                    rollsreset: 'Next rolls reset in 20 min.',
+                    oh: '0 $oh left for today, 0 $oc, 1 $oq and 0 $ot.',
+                    megasphere: '45 min before the refill.',
+                    perk8: 'Perk 8 ready.',
+                    perk8b: 'Perk 8B ready.',
+                    perk9: 'Perk 9 ready.',
+                    perk9b: 'Perk 9B ready.',
+                    spherestock: 'Stock: 6,140',
+                    omegakeys: 'Omega Keys: 2 available.'
+                }
+            },
+            profilearrange: {
+                label: '$profile',
+                command: '$profilearrange',
+                syntax: 'tokens',
+                categories: ['harem', 'pokedex', 'arena', 'reacts', 'mudapins', 'kakera', 'tower', 'keys', 'omegakeys', 'spheres', 'spherereacts', 'badges'],
+                jumpMax: 15,
+                defaultText: 'harem pokedex arena jump reacts mudapins kakera jump keys omegakeys jump spheres spherereacts jump badges',
+                previewThumbnail: 'docs/assets/embed-preview-profile.png',
+                categoryIcons: {
+                    mudapins: ['docs/assets/kakera-symbol.webp'],
+                    // Mudae's own $profile shows a red-circle icon next to this line (verified against the user's screenshot).
+                    kakera: ['docs/assets/sphere-red.webp'],
+                    // Bronze/silver/gold is Mudae's documented key-tier order (1-2/3-5/6-9 keys) - the sample's three counts map to those tiers in that order.
+                    keys: ['docs/assets/key-bronze.webp', 'docs/assets/key-silver.webp', 'docs/assets/key-gold.webp'],
+                    // Mudae doesn't publicly document which position in this 10-number breakdown is which color - these render as a neutral alphabetical legend, not a claimed mapping.
+                    reacts: ['docs/assets/kakera-black.webp', 'docs/assets/kakera-chaos.webp', 'docs/assets/kakera-green.webp', 'docs/assets/kakera-light.webp', 'docs/assets/kakera-orange.webp', 'docs/assets/kakera-purple.webp', 'docs/assets/kakera-rainbow.webp', 'docs/assets/kakera-red.webp', 'docs/assets/kakera-teal.webp', 'docs/assets/kakera-yellow.webp'],
+                    spheres: ['docs/assets/sphere-black.webp', 'docs/assets/sphere-blue.webp', 'docs/assets/sphere-green.webp', 'docs/assets/sphere-orange.webp', 'docs/assets/sphere-purple.webp', 'docs/assets/sphere-rainbow.webp', 'docs/assets/sphere-red.webp', 'docs/assets/sphere-teal.webp', 'docs/assets/sphere-white.webp', 'docs/assets/sphere-yellow.webp'],
+                    // Mudae's real kakera badge tier order (by their default prices, low to high): bronze < silver < gold < sapphire < ruby < emerald < diamond.
+                    badges: ['docs/assets/badge-bronze.webp', 'docs/assets/badge-silver.webp', 'docs/assets/badge-gold.webp', 'docs/assets/badge-sapphire.webp', 'docs/assets/badge-ruby.webp', 'docs/assets/badge-emerald.webp', 'docs/assets/badge-diamond.webp']
+                },
+                sampleValues: {
+                    harem: 'Collection size: 603 (40% ♀ 60% ♂)',
+                    pokedex: 'Pokédex: 73 Pokémon',
+                    arena: 'Arena rank: #128',
+                    reacts: '131x 34x 35x 12x 526x 34x 10x 92x 50x 51x (kakera reacts by type)',
+                    mudapins: 'Mudapins: 1/2,347 · 70,974',
+                    kakera: '6,140',
+                    tower: 'Tower floor: 12',
+                    keys: '101 3 1',
+                    omegakeys: 'Omega Keys: 3',
+                    spheres: '55x 165x 73x 86x 24x 21x 32x 1x 13x 4x (spheres by color)',
+                    spherereacts: 'Sphere reacts: 12',
+                    badges: ''
+                }
+            }
+        };
 
         const AppState = {
             seriesData: {},
@@ -7602,6 +8059,7 @@ ${rouletteBarHTML}
             const colorsPanel = document.getElementById('colorsTabPanel');
             const wishlistsPanel = document.getElementById('wishlistsTabPanel');
             const customImagesPanel = document.getElementById('customImagesTabPanel');
+            const embedsPanel = document.getElementById('embedsTabPanel');
             let messageDiv;
             if (sortPanel && sortPanel.style.display !== 'none') {
                 messageDiv = document.getElementById('sortMessage');
@@ -7613,6 +8071,8 @@ ${rouletteBarHTML}
                 messageDiv = document.getElementById('wishlistsMessage');
             } else if (customImagesPanel && customImagesPanel.style.display !== 'none') {
                 messageDiv = document.getElementById('customImagesMessage');
+            } else if (embedsPanel && embedsPanel.style.display !== 'none') {
+                messageDiv = document.getElementById('embedsMessage');
             }
             if (!messageDiv) messageDiv = document.getElementById('message');
             messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
@@ -8461,12 +8921,14 @@ ${rouletteBarHTML}
             const colorsPanel = document.getElementById('colorsTabPanel');
             const wishlistsPanel = document.getElementById('wishlistsTabPanel');
             const customImagesPanel = document.getElementById('customImagesTabPanel');
+            const embedsPanel = document.getElementById('embedsTabPanel');
             const notesBtn = document.getElementById('tab-notes-btn');
             const sortBtn = document.getElementById('tab-sort-btn');
             const seriesBtn = document.getElementById('tab-series-btn');
             const colorsBtn = document.getElementById('tab-colors-btn');
             const wishlistsBtn = document.getElementById('tab-wishlists-btn');
             const customImagesBtn = document.getElementById('tab-customimages-btn');
+            const embedsBtn = document.getElementById('tab-embeds-btn');
             const notesInstructions = document.getElementById('notesInstructions');
             const sortInstructions = document.getElementById('sortInstructions');
             const seriesInstructions = document.getElementById('seriesInstructions');
@@ -8478,7 +8940,8 @@ ${rouletteBarHTML}
             const showColors = tab === 'colors';
             const showWishlists = tab === 'wishlists';
             const showCustomImages = tab === 'customimages';
-            const showNotes = !showSort && !showSeries && !showColors && !showWishlists && !showCustomImages;
+            const showEmbeds = tab === 'embeds';
+            const showNotes = !showSort && !showSeries && !showColors && !showWishlists && !showCustomImages && !showEmbeds;
 
             if (notesPanel) notesPanel.style.display = showNotes ? '' : 'none';
             if (sortPanel) sortPanel.style.display = showSort ? '' : 'none';
@@ -8486,12 +8949,22 @@ ${rouletteBarHTML}
             if (colorsPanel) colorsPanel.style.display = showColors ? '' : 'none';
             if (wishlistsPanel) wishlistsPanel.style.display = showWishlists ? '' : 'none';
             if (customImagesPanel) customImagesPanel.style.display = showCustomImages ? '' : 'none';
+            if (embedsPanel) embedsPanel.style.display = showEmbeds ? '' : 'none';
             if (notesBtn) notesBtn.classList.toggle('active', showNotes);
             if (sortBtn) sortBtn.classList.toggle('active', showSort);
             if (seriesBtn) seriesBtn.classList.toggle('active', showSeries);
             if (colorsBtn) colorsBtn.classList.toggle('active', showColors);
             if (wishlistsBtn) wishlistsBtn.classList.toggle('active', showWishlists);
             if (customImagesBtn) customImagesBtn.classList.toggle('active', showCustomImages);
+            if (embedsBtn) embedsBtn.classList.toggle('active', showEmbeds);
+
+            // On mobile, the tab strip scrolls horizontally instead of
+            // wrapping - without this, switching to a tab near the end (e.g.
+            // the newest one) can leave its own label clipped off-screen,
+            // with no indication anything's even selected.
+            const activeTabBtn = document.querySelector('.app-tab.active');
+            if (activeTabBtn) activeTabBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+
             if (notesInstructions) notesInstructions.style.display = showNotes ? '' : 'none';
             if (sortInstructions) sortInstructions.style.display = showSort ? '' : 'none';
             if (seriesInstructions) seriesInstructions.style.display = showSeries ? '' : 'none';
@@ -8524,6 +8997,10 @@ ${rouletteBarHTML}
                 try { token = localStorage.getItem(IMGCHEST_TOKEN_KEY) || ''; } catch (e) { }
                 const tokenInput = document.getElementById('customImageUploadTokenInput');
                 if (tokenInput) tokenInput.value = token;
+            }
+
+            if (showEmbeds) {
+                initEmbedCustomizer();
             }
         }
 
@@ -11921,13 +12398,30 @@ ${rouletteBarHTML}
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-10';
+        const CHANGELOG_VERSION = '2026-08-15';
         const CHANGELOG = [
+            {
+                version: '2026-08-15',
+                date: 'August 15, 2026',
+                items: [
+                    { type: 'feature', text: 'New <b>Embeds</b> tab: build <code>$tuarrange</code>/<code>$arrangeim</code>/<code>$profilearrange</code> commands (which categories show in your <code>$tu</code>, <code>$im</code>/roll, and <code>$profile</code> embeds) by clicking categories into place instead of hand-typing Discord\'s syntax, with a live best-effort preview (using real example art and Mudae\'s own kakera/sphere/key/disabled icons) and save/share for your favorite layouts (saved globally, since it\'s a personal Discord preference, not collection data). A <b>Visual (drag &amp; drop)</b> mode is also available on desktop alongside the textarea: drag categories/line-breaks/symbols onto a canvas to build the command, and right-click any piece (or any selected text in the textarea) to bold/italicize/underline it.' }
+                ]
+            },
+            {
+                version: '2026-08-11',
+                date: 'August 11, 2026',
+                items: [
+                    { type: 'feature', text: 'You can now <b>delete characters</b> from the Notes and Sort tabs. Each card/row gets a 🗑️ badge - tap once to arm it, tap again to actually delete (a plain confirm popup is too easy to reflex-tap through on mobile, so this keeps a stray tap harmless while staying just as visible). Both tabs also support bulk delete: a new dedicated selection on the Notes tab, and the Sort tab\'s existing selection, each with their own "Delete Selected" behind a confirmation. Deletions are undoable with the usual Undo button.' }
+                ]
+            },
             {
                 version: '2026-08-10',
                 date: 'August 10, 2026',
                 items: [
-                    { type: 'feature', text: 'You can now <b>delete characters</b> from the Notes and Sort tabs. Each card/row gets a 🗑️ badge - tap once to arm it, tap again to actually delete (a plain confirm popup is too easy to reflex-tap through on mobile, so this keeps a stray tap harmless while staying just as visible). Both tabs also support bulk delete: a new dedicated selection on the Notes tab, and the Sort tab\'s existing selection, each with their own "Delete Selected" behind a confirmation. Deletions are undoable with the usual Undo button.' },
+                    { type: 'feature', text: 'The Custom Images tab now clearly sections off its <b>Crop &amp; Upload</b> tool instead of it blending in at the bottom of a potentially long gallery - the tab is labeled "Custom Images &amp; Cropper", the gallery scrolls in its own bounded area, and the crop panel gets its own bordered, clearly-headed section right below it.' },
+                    { type: 'fix', text: 'The per-character image picker now generates <code>$imsi- CharacterName</code> instead of plain <code>$ims</code> - same numbered list of image links DM\'d back, but without every one of them also popping up as a full image embed in your DMs.' },
+                    { type: 'fix', text: 'The GIF cropper\'s encoding libraries are now bundled directly into the app instead of loaded from a CDN when needed - some ad blockers/privacy extensions were silently blocking that request, making GIF cropping look like it just didn\'t work.' },
+                    { type: 'feature', text: 'Confirming an <code>$ai</code> upload no longer closes the image picker if there\'s also a <code>$c</code> command still waiting to be run - easy to forget once the modal\'s gone. The <code>$c</code> command now gets its own confirm button too, and the modal only closes once both are confirmed (when a <code>$c</code> command applies at all).' },
                     { type: 'feature', text: 'New <b>$antidisable</b> command builder: lists every series in your collection where all characters are currently disabled (checked by default), and generates a single <code>$antidisable series1$series2$...</code> command to re-enable whichever ones you pick.' },
                     { type: 'feature', text: 'New <b>Crop &amp; Upload</b> section on the Custom Images tab: crop and upload an image before deciding who it belongs to, then search for a character to assign it to afterward - handy for prepping a batch of images ahead of time.' },
                     { type: 'feature', text: 'The <b>Imgur &rarr; ImgChest transfer</b> list now has an optional "Crop first" button on each row - untouched rows still transfer automatically, but any row can be cropped to Mudae\'s 225&times;350 before it uploads.' },
@@ -12051,6 +12545,894 @@ ${rouletteBarHTML}
             const overlay = document.getElementById('changelogOverlay');
             if (overlay) overlay.style.display = 'none';
             try { localStorage.setItem('mudaeChangelogSeenVersion', CHANGELOG_VERSION); } catch (e) { }
+        }
+
+        // ===================== Embed Customizer (standalone tab) =====================
+        // Builds $tuarrange / $arrangeim / $profilearrange commands. Each of
+        // the three keeps its own draft text so switching between them
+        // mid-session doesn't lose work; saved layouts are global (see
+        // EMBED_LAYOUTS_KEY above), not per-collection, since which
+        // categories show in your embeds is a personal Discord account
+        // preference, not data belonging to any one collection.
+        let embedActiveCommand = 'arrangeim';
+        let embedDraftText = {};
+        let embedCustomizerInitialized = false;
+        // Visual Builder state - 'text' (the textarea+palette, unchanged)
+        // or 'visual' (drag-and-drop canvas). The textarea's current value
+        // stays the single source of truth either way: embedCanvasChips is
+        // just a tokenized VIEW of it, re-derived fresh whenever Visual mode
+        // is (re)entered, and every canvas edit immediately re-serializes
+        // back into the textarea/embedDraftText - so there's no separate
+        // state to keep in sync, and Text mode always reflects the latest
+        // canvas edits with no extra work.
+        let embedBuilderMode = 'text';
+        let embedCanvasChips = [];
+        let embedDragPayload = null;
+
+        function initEmbedCustomizer() {
+            if (!embedCustomizerInitialized) {
+                renderEmbedCommandTabs();
+                Object.keys(EMBED_COMMANDS).forEach(function (key) {
+                    if (typeof embedDraftText[key] !== 'string') embedDraftText[key] = EMBED_COMMANDS[key].defaultText;
+                });
+                embedCustomizerInitialized = true;
+            }
+            switchEmbedCommand(embedActiveCommand);
+        }
+
+        function renderEmbedCommandTabs() {
+            const container = document.getElementById('embedCommandTabs');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.keys(EMBED_COMMANDS).forEach(function (key) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm';
+                btn.id = `embed-tab-${key}-btn`;
+                btn.textContent = EMBED_COMMANDS[key].label;
+                btn.onclick = function () { switchEmbedCommand(key); };
+                container.appendChild(btn);
+            });
+        }
+
+        function switchEmbedCommand(key) {
+            if (!EMBED_COMMANDS[key]) return;
+            closeEmbedTextFormatMenu();
+            embedActiveCommand = key;
+            Object.keys(EMBED_COMMANDS).forEach(function (k) {
+                const btn = document.getElementById(`embed-tab-${k}-btn`);
+                if (btn) btn.classList.toggle('active', k === key);
+            });
+            renderEmbedPalette();
+            const textarea = document.getElementById('embedTextInput');
+            if (textarea) textarea.value = embedDraftText[key] || '';
+            if (embedBuilderMode === 'visual') {
+                embedCanvasChips = tokenizeEmbedText(EMBED_COMMANDS[key], embedDraftText[key] || '');
+                renderEmbedCanvas();
+            }
+            updateEmbedPreview();
+            renderEmbedSavedList();
+            const shareOutput = document.getElementById('embedShareOutput');
+            if (shareOutput) shareOutput.innerHTML = '';
+            const saveMessage = document.getElementById('embedSaveMessage');
+            if (saveMessage) saveMessage.innerHTML = '';
+        }
+
+        // Switches between the textarea+palette (Text mode, unchanged - the
+        // only option on mobile, since this app has no touch drag-and-drop
+        // anywhere) and the drag-and-drop canvas (Visual mode, desktop
+        // only). The textarea stays the source of truth either way - see
+        // the embedBuilderMode declaration above.
+        function switchEmbedBuilderMode(mode) {
+            if (mode === 'visual' && window.matchMedia && window.matchMedia('(max-width: 900px)').matches) return;
+            closeEmbedTextFormatMenu();
+            embedBuilderMode = mode;
+            const textBtn = document.getElementById('embedModeTextBtn');
+            const visualBtn = document.getElementById('embedModeVisualBtn');
+            if (textBtn) textBtn.classList.toggle('active', mode === 'text');
+            if (visualBtn) visualBtn.classList.toggle('active', mode === 'visual');
+            const textarea = document.getElementById('embedTextInput');
+            const canvas = document.getElementById('embedCanvas');
+            if (textarea) textarea.style.display = mode === 'text' ? '' : 'none';
+            if (canvas) canvas.style.display = mode === 'visual' ? '' : 'none';
+            if (mode === 'visual') {
+                const cmd = EMBED_COMMANDS[embedActiveCommand];
+                embedCanvasChips = tokenizeEmbedText(cmd, embedDraftText[embedActiveCommand] || '');
+                renderEmbedCanvas();
+            }
+            renderEmbedPalette();
+        }
+
+        // '*' and '_' are the literal Discord markdown delimiters for
+        // italic/underline - clunky to drag as their own chips now that
+        // Visual mode's right-click menu does the same job in one step, so
+        // they're left out of the palette there. Text mode still needs them
+        // (no right-click menu exists over plain text), so nothing changes
+        // there.
+        const EMBED_REDUNDANT_VISUAL_SYMBOLS = ['*', '_'];
+
+        // Built via DOM API + closures rather than inline onclick="..."
+        // strings, since $arrangeim's allowed symbol list includes
+        // characters (backslash, backtick) that would be awkward/risky to
+        // interpolate directly into an HTML attribute. Each button is both
+        // draggable (for the Visual canvas) and clickable (Text mode inserts
+        // at the cursor as before; Visual mode appends a matching chip).
+        function renderEmbedPalette() {
+            const container = document.getElementById('embedPalette');
+            if (!container) return;
+            container.innerHTML = '';
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+
+            function makePaletteButton(label, className, chip, textModeAction) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = className;
+                btn.textContent = label;
+                btn.draggable = true;
+                btn.addEventListener('dragstart', function (e) { handleEmbedPaletteDragStart(e, chip); });
+                btn.onclick = function () {
+                    if (embedBuilderMode === 'visual') {
+                        appendEmbedChip(chip);
+                    } else {
+                        textModeAction();
+                    }
+                };
+                return btn;
+            }
+
+            cmd.categories.forEach(function (cat) {
+                container.appendChild(makePaletteButton(cat, 'btn btn-sm', { type: 'category', value: cat }, function () { insertEmbedCategoryToken(cat); }));
+            });
+
+            if (cmd.syntax === 'tokens') {
+                const jumpBtn = makePaletteButton('↵ jump', 'btn btn-sm embed-palette-jump', { type: 'jump', value: 'jump' }, function () { insertEmbedCategoryToken('jump'); });
+                jumpBtn.title = `Line break - usable up to ${cmd.jumpMax} times`;
+                container.appendChild(jumpBtn);
+            } else {
+                const newlineBtn = makePaletteButton('↵ New Line', 'btn btn-sm embed-palette-jump', { type: 'newline', value: '\n' }, function () { insertEmbedRaw('\n'); });
+                container.appendChild(newlineBtn);
+
+                const sameLineBtn = makePaletteButton('$ Same Line', 'btn btn-sm', { type: 'sameline', value: '$' }, function () { insertEmbedRaw('$'); });
+                sameLineBtn.title = 'Keeps the next category on the same line as this one';
+                container.appendChild(sameLineBtn);
+
+                (cmd.symbols || []).forEach(function (sym) {
+                    if (embedBuilderMode === 'visual' && EMBED_REDUNDANT_VISUAL_SYMBOLS.indexOf(sym) !== -1) return;
+                    container.appendChild(makePaletteButton(sym, 'btn btn-sm embed-symbol-btn', { type: 'text', value: sym }, function () { insertEmbedRaw(sym); }));
+                });
+            }
+        }
+
+        function insertAtCursor(textareaEl, text) {
+            const start = textareaEl.selectionStart;
+            const end = textareaEl.selectionEnd;
+            const value = textareaEl.value;
+            textareaEl.value = value.slice(0, start) + text + value.slice(end);
+            const newPos = start + text.length;
+            textareaEl.selectionStart = textareaEl.selectionEnd = newPos;
+            textareaEl.focus();
+        }
+
+        // tokens-syntax commands are space-separated, so a category/jump
+        // insert needs a leading space unless the cursor already sits right
+        // after whitespace (or at the very start) - freeform has no such
+        // rule, categories can butt up against decorative text directly.
+        function insertEmbedCategoryToken(token) {
+            const textarea = document.getElementById('embedTextInput');
+            if (!textarea) return;
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            if (cmd.syntax === 'tokens') {
+                const start = textarea.selectionStart;
+                const before = textarea.value.slice(0, start);
+                const needsSpace = before.length > 0 && !/\s$/.test(before);
+                insertAtCursor(textarea, (needsSpace ? ' ' : '') + token);
+            } else {
+                insertAtCursor(textarea, token);
+            }
+            onEmbedTextInput();
+        }
+
+        function insertEmbedRaw(text) {
+            const textarea = document.getElementById('embedTextInput');
+            if (!textarea) return;
+            insertAtCursor(textarea, text);
+            onEmbedTextInput();
+        }
+
+        function onEmbedTextInput() {
+            closeEmbedTextFormatMenu();
+            const textarea = document.getElementById('embedTextInput');
+            if (!textarea) return;
+            embedDraftText[embedActiveCommand] = textarea.value;
+            updateEmbedPreview();
+        }
+
+        // Text mode's equivalent of the Visual canvas's right-click chip
+        // menu: right-clicking a text SELECTION (not the whole textarea -
+        // the native cut/copy/paste menu still shows when nothing's
+        // selected) offers Bold/Italic/Underline, wrapping just that
+        // selection in the matching Discord markdown. Only offered for
+        // $arrangeim - the tokens-syntax commands don't support decorative
+        // markdown at all.
+        function closeEmbedTextFormatMenu() {
+            const existing = document.getElementById('embedTextFormatMenu');
+            if (existing) existing.remove();
+            document.removeEventListener('click', closeEmbedTextFormatMenuOnOutsideClick);
+            document.removeEventListener('keydown', closeEmbedTextFormatMenuOnEscape);
+        }
+
+        function closeEmbedTextFormatMenuOnOutsideClick(e) {
+            const menu = document.getElementById('embedTextFormatMenu');
+            if (menu && !menu.contains(e.target)) closeEmbedTextFormatMenu();
+        }
+
+        function closeEmbedTextFormatMenuOnEscape(e) {
+            if (e.key === 'Escape') closeEmbedTextFormatMenu();
+        }
+
+        // Wraps just the current selection, so applying a second style to
+        // the same selected word (not including markers already added)
+        // nests correctly - selecting "bold" inside "**bold**" and
+        // italicizing it produces "***bold***", matching Discord's real
+        // combined syntax, the same nesting formatEmbedChipValue produces
+        // for canvas chips.
+        function wrapEmbedTextSelection(marker) {
+            const textarea = document.getElementById('embedTextInput');
+            if (!textarea) return;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            if (start === end) return;
+            const value = textarea.value;
+            const selected = value.slice(start, end);
+            textarea.value = value.slice(0, start) + marker + selected + marker + value.slice(end);
+            textarea.selectionStart = start + marker.length;
+            textarea.selectionEnd = start + marker.length + selected.length;
+            textarea.focus();
+            onEmbedTextInput();
+        }
+
+        function handleEmbedTextContextMenu(e) {
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            if (!cmd || cmd.syntax !== 'freeform') return;
+            const textarea = e.currentTarget;
+            if (textarea.selectionStart === textarea.selectionEnd) return;
+            e.preventDefault();
+            closeEmbedTextFormatMenu();
+
+            const menu = document.createElement('div');
+            menu.id = 'embedTextFormatMenu';
+            menu.className = 'embed-chip-menu';
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+
+            [['**', 'Bold'], ['*', 'Italic'], ['__', 'Underline']].forEach(function (pair) {
+                const marker = pair[0];
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = pair[1];
+                btn.onclick = function () { wrapEmbedTextSelection(marker); closeEmbedTextFormatMenu(); };
+                menu.appendChild(btn);
+            });
+
+            document.body.appendChild(menu);
+            setTimeout(function () {
+                document.addEventListener('click', closeEmbedTextFormatMenuOnOutsideClick);
+                document.addEventListener('keydown', closeEmbedTextFormatMenuOnEscape);
+            }, 0);
+        }
+
+        function resetEmbedToDefault() {
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            const textarea = document.getElementById('embedTextInput');
+            if (textarea) textarea.value = cmd.defaultText;
+            embedDraftText[embedActiveCommand] = cmd.defaultText;
+            if (embedBuilderMode === 'visual') {
+                embedCanvasChips = tokenizeEmbedText(cmd, cmd.defaultText);
+                renderEmbedCanvas();
+            }
+            updateEmbedPreview();
+        }
+
+        // ===================== Visual Builder: text <-> chips =====================
+        // The textarea is always the source of truth (see embedBuilderMode
+        // above) - these two functions are exact inverses of each other so
+        // entering/leaving Visual mode never loses or mangles anything the
+        // user typed, dragged, or built from the palette.
+        //
+        // tokens syntax (tuarrange/profilearrange) is trivial: it's already
+        // just whitespace-separated words. freeform syntax ($arrangeim) is
+        // scanned character-by-character instead, since '\n'/'$'/category
+        // names can be embedded directly in arbitrary decorative text (e.g.
+        // "*Roulette*$ · **Kakera**") - anything that isn't one of those is
+        // captured as its own literal "text" chip (symbols, markdown
+        // asterisks, spaces the user typed) so nothing is lost.
+        function embedCategoryAt(cmd, text, pos, catsByLength) {
+            for (let i = 0; i < catsByLength.length; i++) {
+                const cat = catsByLength[i];
+                const len = cat.length;
+                if (text.slice(pos, pos + len).toLowerCase() !== cat.toLowerCase()) continue;
+                const before = pos === 0 ? '' : text[pos - 1];
+                const after = text[pos + len] || '';
+                if (!/\w/.test(before) && !/\w/.test(after)) return cat;
+            }
+            return null;
+        }
+
+        // Mirrors formatEmbedChipValue's wrap order (bold innermost, then
+        // italic, then underline) - checked longest-open-first so e.g.
+        // "***" (bold+italic) is never mistaken for a lone "*" (italic). A
+        // category name already wrapped like this - including the app's own
+        // default text, e.g. "**Kakera**" - collapses into a single
+        // formatted chip on the canvas instead of separate '*' chips
+        // sandwiching a plain category chip, so the Visual canvas always
+        // matches what the right-click Bold/Italic/Underline menu would
+        // have produced.
+        const EMBED_FORMAT_COMBOS = [
+            { open: '__***', close: '***__', bold: true, italic: true, underline: true },
+            { open: '__**', close: '**__', bold: true, italic: false, underline: true },
+            { open: '***', close: '***', bold: true, italic: true, underline: false },
+            { open: '__*', close: '*__', bold: false, italic: true, underline: true },
+            { open: '**', close: '**', bold: true, italic: false, underline: false },
+            { open: '__', close: '__', bold: false, italic: false, underline: true },
+            { open: '*', close: '*', bold: false, italic: true, underline: false }
+        ];
+
+        function embedFormattedCategoryAt(text, pos, catsByLength) {
+            for (let c = 0; c < EMBED_FORMAT_COMBOS.length; c++) {
+                const combo = EMBED_FORMAT_COMBOS[c];
+                if (text.slice(pos, pos + combo.open.length) !== combo.open) continue;
+                const afterOpen = pos + combo.open.length;
+                for (let i = 0; i < catsByLength.length; i++) {
+                    const cat = catsByLength[i];
+                    if (text.slice(afterOpen, afterOpen + cat.length).toLowerCase() !== cat.toLowerCase()) continue;
+                    const afterCat = afterOpen + cat.length;
+                    if (text.slice(afterCat, afterCat + combo.close.length) !== combo.close) continue;
+                    return { category: cat, bold: combo.bold, italic: combo.italic, underline: combo.underline, length: combo.open.length + cat.length + combo.close.length };
+                }
+            }
+            return null;
+        }
+
+        function tokenizeEmbedText(cmd, text) {
+            if (cmd.syntax === 'tokens') {
+                return text.trim().split(/\s+/).filter(Boolean).map(function (tok) {
+                    if (tok.toLowerCase() === 'jump') return { type: 'jump', value: 'jump' };
+                    const known = cmd.categories.find(function (c) { return c.toLowerCase() === tok.toLowerCase(); });
+                    return known ? { type: 'category', value: known } : { type: 'unknown', value: tok };
+                });
+            }
+
+            const chips = [];
+            const catsByLength = cmd.categories.slice().sort(function (a, b) { return b.length - a.length; });
+            let i = 0;
+            while (i < text.length) {
+                const ch = text[i];
+                if (ch === '\n') { chips.push({ type: 'newline', value: '\n' }); i++; continue; }
+                if (ch === '$') { chips.push({ type: 'sameline', value: '$' }); i++; continue; }
+                const formatted = embedFormattedCategoryAt(text, i, catsByLength);
+                if (formatted) {
+                    chips.push({ type: 'category', value: formatted.category, bold: formatted.bold, italic: formatted.italic, underline: formatted.underline });
+                    i += formatted.length;
+                    continue;
+                }
+                const matchedCat = embedCategoryAt(cmd, text, i, catsByLength);
+                if (matchedCat) { chips.push({ type: 'category', value: matchedCat }); i += matchedCat.length; continue; }
+                let j = i + 1;
+                while (j < text.length && text[j] !== '\n' && text[j] !== '$' && !embedCategoryAt(cmd, text, j, catsByLength) && !embedFormattedCategoryAt(text, j, catsByLength)) j++;
+                chips.push({ type: 'text', value: text.slice(i, j) });
+                i = j;
+            }
+            return chips;
+        }
+
+        // Bold/italic/underline are applied in this fixed order (innermost
+        // to outermost) rather than in whichever order the user toggled
+        // them, so combined formatting always serializes as valid Discord
+        // markdown - '**' immediately followed by '*' naturally becomes
+        // '***word***' (Discord's real bold+italic syntax), and wrapping
+        // that again in '__...__' is valid too.
+        function formatEmbedChipValue(chip) {
+            let v = chip.value;
+            if (chip.bold) v = '**' + v + '**';
+            if (chip.italic) v = '*' + v + '*';
+            if (chip.underline) v = '__' + v + '__';
+            return v;
+        }
+
+        function serializeEmbedChips(cmd, chips) {
+            if (cmd.syntax === 'tokens') return chips.map(function (c) { return c.value; }).join(' ');
+            return chips.map(function (c) {
+                return (c.type === 'category' || c.type === 'text') ? formatEmbedChipValue(c) : c.value;
+            }).join('');
+        }
+
+        function syncEmbedCanvasToText() {
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            const text = serializeEmbedChips(cmd, embedCanvasChips);
+            embedDraftText[embedActiveCommand] = text;
+            const textarea = document.getElementById('embedTextInput');
+            if (textarea) textarea.value = text;
+            updateEmbedPreview();
+        }
+
+        function renderEmbedCanvas() {
+            closeEmbedChipMenu();
+            const container = document.getElementById('embedCanvas');
+            if (!container) return;
+            container.innerHTML = '';
+            if (embedCanvasChips.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'embed-preview-empty';
+                empty.textContent = 'Nothing here yet - drag a category from above onto this area, or click one to add it.';
+                container.appendChild(empty);
+                return;
+            }
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            const formattable = cmd.syntax === 'freeform';
+
+            embedCanvasChips.forEach(function (chip, index) {
+                const chipEl = document.createElement('div');
+                chipEl.className = 'embed-chip embed-chip-' + chip.type;
+                chipEl.draggable = true;
+                chipEl.dataset.chipIndex = index;
+
+                const label = document.createElement('span');
+                label.textContent = chip.type === 'newline' ? '↵ new line' : chip.type === 'sameline' ? '$ same line' : chip.value;
+                if (chip.bold) label.style.fontWeight = '700';
+                if (chip.italic) label.style.fontStyle = 'italic';
+                if (chip.underline) label.style.textDecoration = 'underline';
+                chipEl.appendChild(label);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'embed-chip-remove';
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Remove';
+                removeBtn.onclick = function (e) { e.stopPropagation(); removeEmbedChip(index); };
+                chipEl.appendChild(removeBtn);
+
+                chipEl.addEventListener('dragstart', function (e) { handleEmbedChipDragStart(e, index); });
+                chipEl.addEventListener('dragend', handleEmbedChipDragEnd);
+
+                if (formattable && (chip.type === 'category' || chip.type === 'text')) {
+                    chipEl.title = 'Right-click for bold/italic/underline';
+                    chipEl.addEventListener('contextmenu', function (e) { openEmbedChipMenu(e, index); });
+                }
+
+                container.appendChild(chipEl);
+            });
+        }
+
+        // Right-click formatting menu - lets a chip be bolded/italicized/
+        // underlined directly instead of composing it out of separate '*'/
+        // '_' symbol chips, which got clunky fast for anything more than
+        // one wrapped word.
+        function closeEmbedChipMenu() {
+            const existing = document.getElementById('embedChipMenu');
+            if (existing) existing.remove();
+            document.removeEventListener('click', closeEmbedChipMenuOnOutsideClick);
+            document.removeEventListener('keydown', closeEmbedChipMenuOnEscape);
+        }
+
+        function closeEmbedChipMenuOnOutsideClick(e) {
+            const menu = document.getElementById('embedChipMenu');
+            if (menu && !menu.contains(e.target)) closeEmbedChipMenu();
+        }
+
+        function closeEmbedChipMenuOnEscape(e) {
+            if (e.key === 'Escape') closeEmbedChipMenu();
+        }
+
+        function toggleEmbedChipFormat(index, prop) {
+            const chip = embedCanvasChips[index];
+            if (!chip) return;
+            chip[prop] = !chip[prop];
+            closeEmbedChipMenu();
+            syncEmbedCanvasToText();
+            renderEmbedCanvas();
+        }
+
+        function openEmbedChipMenu(e, index) {
+            e.preventDefault();
+            closeEmbedChipMenu();
+            const chip = embedCanvasChips[index];
+            if (!chip) return;
+
+            const menu = document.createElement('div');
+            menu.id = 'embedChipMenu';
+            menu.className = 'embed-chip-menu';
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+
+            [['bold', 'Bold'], ['italic', 'Italic'], ['underline', 'Underline']].forEach(function (pair) {
+                const prop = pair[0];
+                const label = pair[1];
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = chip[prop] ? 'active' : '';
+                btn.textContent = (chip[prop] ? '✓ ' : '') + label;
+                btn.onclick = function () { toggleEmbedChipFormat(index, prop); };
+                menu.appendChild(btn);
+            });
+
+            document.body.appendChild(menu);
+            setTimeout(function () {
+                document.addEventListener('click', closeEmbedChipMenuOnOutsideClick);
+                document.addEventListener('keydown', closeEmbedChipMenuOnEscape);
+            }, 0);
+        }
+
+        function appendEmbedChip(chip) {
+            embedCanvasChips.push(chip);
+            syncEmbedCanvasToText();
+            renderEmbedCanvas();
+        }
+
+        function removeEmbedChip(index) {
+            embedCanvasChips.splice(index, 1);
+            syncEmbedCanvasToText();
+            renderEmbedCanvas();
+        }
+
+        // Cross-container drag (palette -> canvas, following the
+        // quickNoteDragFromIndex/sortDragState convention already used
+        // elsewhere for this app's other drag-and-drop lists) plus
+        // reordering within the canvas itself, sharing one payload variable
+        // so the drop handler knows which case it's in.
+        function handleEmbedPaletteDragStart(e, chip) {
+            closeEmbedChipMenu();
+            embedDragPayload = { source: 'palette', chip: chip };
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'copy';
+                try { e.dataTransfer.setData('text/plain', chip.value); } catch (err) { }
+            }
+        }
+
+        function handleEmbedChipDragStart(e, index) {
+            closeEmbedChipMenu();
+            embedDragPayload = { source: 'canvas', fromIndex: index };
+            e.currentTarget.classList.add('dragging');
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'move';
+                try { e.dataTransfer.setData('text/plain', ''); } catch (err) { }
+            }
+        }
+
+        function handleEmbedChipDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            embedDragPayload = null;
+        }
+
+        // Finds where a drop should land among the canvas's wrapped chip
+        // rows: same-row drops compare against each chip's horizontal
+        // midpoint, a drop above a row's top inserts before that row
+        // entirely - good enough for a canvas of small pills without
+        // needing a live insertion-point indicator.
+        function embedChipDropIndex(e) {
+            const container = document.getElementById('embedCanvas');
+            const chipEls = container ? Array.from(container.querySelectorAll('.embed-chip')) : [];
+            for (let i = 0; i < chipEls.length; i++) {
+                const rect = chipEls[i].getBoundingClientRect();
+                if (e.clientY < rect.top) return i;
+                const sameRow = e.clientY >= rect.top && e.clientY <= rect.bottom;
+                if (sameRow && e.clientX < rect.left + rect.width / 2) return i;
+            }
+            return chipEls.length;
+        }
+
+        function handleEmbedCanvasDragOver(e) {
+            if (!embedDragPayload) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = embedDragPayload.source === 'palette' ? 'copy' : 'move';
+            const container = document.getElementById('embedCanvas');
+            if (container) container.classList.add('drag-over');
+        }
+
+        function handleEmbedCanvasDragLeave(e) {
+            const container = document.getElementById('embedCanvas');
+            if (container && (!e.relatedTarget || !container.contains(e.relatedTarget))) container.classList.remove('drag-over');
+        }
+
+        function handleEmbedCanvasDrop(e) {
+            if (!embedDragPayload) return;
+            e.preventDefault();
+            const container = document.getElementById('embedCanvas');
+            if (container) container.classList.remove('drag-over');
+
+            let dropIndex = embedChipDropIndex(e);
+            if (embedDragPayload.source === 'palette') {
+                embedCanvasChips.splice(dropIndex, 0, embedDragPayload.chip);
+            } else {
+                const fromIndex = embedDragPayload.fromIndex;
+                const moved = embedCanvasChips.splice(fromIndex, 1)[0];
+                if (fromIndex < dropIndex) dropIndex--;
+                embedCanvasChips.splice(dropIndex, 0, moved);
+            }
+
+            embedDragPayload = null;
+            syncEmbedCanvasToText();
+            renderEmbedCanvas();
+        }
+
+        function buildEmbedCommandText() {
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            const textarea = document.getElementById('embedTextInput');
+            const body = textarea ? textarea.value : '';
+            if (cmd.syntax === 'tokens') return `${cmd.command} ${body.trim()}`.trim();
+            return `${cmd.command} ${body}`;
+        }
+
+        function updateEmbedCommandOutput() {
+            const output = document.getElementById('embedCommandOutput');
+            if (!output) return;
+            const command = buildEmbedCommandText();
+            output.innerHTML = `
+<div class="command-item">
+ <div class="command-text">${escapeHTML(command)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="embedCopyBtn">Copy Command</button>
+</div>`;
+            const copyBtn = document.getElementById('embedCopyBtn');
+            if (copyBtn) copyBtn.onclick = function () { copyCommand(this, command); };
+        }
+
+        // Real character/profile art and Mudae's own kakera/sphere/key icons
+        // (dropped in by the user, not generic emoji) are swapped into the
+        // rendered preview so it reads closer to an actual Discord embed
+        // instead of generic placeholders. Which icon(s) go with which
+        // category is driven entirely by each command's `categoryIcons` map
+        // (see EMBED_COMMANDS) so adding more icons later doesn't require
+        // touching the renderers below.
+        function embedCategoryIconsHTML(cmd, catLower) {
+            const icons = cmd.categoryIcons && cmd.categoryIcons[catLower];
+            if (!icons || !icons.length) return '';
+            // More than a handful means it's an illustrative "these are the
+            // possible colors" legend (e.g. the 10-color reacts/spheres
+            // breakdowns), not a claimed 1:1 mapping to specific numbers -
+            // Mudae doesn't document that ordering anywhere.
+            if (icons.length > 3) {
+                return '<div class="embed-preview-icon-legend" title="Illustrative - Mudae doesn\'t document which number is which color">'
+                    + icons.map(function (src) { return `<img src="${src}" alt="">`; }).join('')
+                    + '</div>';
+            }
+            return icons.map(function (src) { return `<img src="${src}" alt="" class="embed-preview-icon">`; }).join('');
+        }
+
+        function updateEmbedPreview() {
+            updateEmbedCommandOutput();
+            const previewEl = document.getElementById('embedPreviewCard');
+            if (!previewEl) return;
+            const cmd = EMBED_COMMANDS[embedActiveCommand];
+            const textarea = document.getElementById('embedTextInput');
+            const text = textarea ? textarea.value : '';
+            let html = cmd.syntax === 'tokens' ? renderTokenEmbedPreview(cmd, text) : renderFreeformEmbedPreview(cmd, text);
+            if (text.trim()) {
+                if (cmd.previewThumbnail) {
+                    html = `<img src="${cmd.previewThumbnail}" alt="" class="embed-preview-thumbnail">` + html;
+                }
+                if (cmd.previewImage) {
+                    html += `<img src="${cmd.previewImage}" alt="" class="embed-preview-image">`;
+                }
+            }
+            previewEl.innerHTML = html;
+        }
+
+        // tokens preview: groups categories between "jump" line breaks,
+        // showing each category's realistic sample text (drawn from real
+        // embed screenshots) - unrecognized tokens (typos) are called out
+        // distinctly rather than silently dropped.
+        function renderTokenEmbedPreview(cmd, text) {
+            const tokens = text.trim().split(/\s+/).filter(Boolean);
+            if (tokens.length === 0) return '<p class="embed-preview-empty">Nothing to preview yet - click some categories above.</p>';
+
+            const groups = [[]];
+            tokens.forEach(function (tok) {
+                if (tok.toLowerCase() === 'jump') {
+                    groups.push([]);
+                } else {
+                    groups[groups.length - 1].push(tok);
+                }
+            });
+
+            return groups.filter(function (g) { return g.length > 0; }).map(function (group) {
+                const rows = group.map(function (tok) {
+                    const known = cmd.categories.find(function (c) { return c.toLowerCase() === tok.toLowerCase(); });
+                    if (!known) {
+                        return `<div class="embed-preview-item embed-preview-unknown">${escapeHTML(tok)}? (unrecognized category)</div>`;
+                    }
+                    const sample = (cmd.sampleValues && cmd.sampleValues[known.toLowerCase()]) || '';
+                    const icons = embedCategoryIconsHTML(cmd, known.toLowerCase());
+                    return `<div class="embed-preview-item"><span class="embed-preview-token">${escapeHTML(known)}</span> ${escapeHTML(sample)}${icons}</div>`;
+                }).join('');
+                return `<div class="embed-preview-group">${rows}</div>`;
+            }).join('');
+        }
+
+        // freeform ($arrangeim) preview: real newlines are separate embed
+        // lines, '$' joins categories onto the same line - each segment's
+        // known category names are substituted with their sample text
+        // BEFORE markdown is applied, so **Kakera** naturally becomes
+        // **1,319 💠** and still renders bold, matching how the real default
+        // template's own markdown wraps its category tokens.
+        function renderFreeformEmbedPreview(cmd, text) {
+            if (!text.trim()) return '<p class="embed-preview-empty">Nothing to preview yet - click some categories above.</p>';
+            const lines = text.split('\n');
+            return lines.map(function (line) {
+                const segments = line.split('$');
+                const rendered = segments.map(function (seg) { return renderFreeformSegment(cmd, seg); }).filter(Boolean).join(' &nbsp; ');
+                return `<div class="embed-preview-line">${rendered || '&nbsp;'}</div>`;
+            }).join('');
+        }
+
+        function renderFreeformSegment(cmd, segment) {
+            let raw = segment;
+            let isSubtext = false;
+            const trimmed = raw.trim();
+            if (/^-#\s*/.test(trimmed)) {
+                isSubtext = true;
+                raw = trimmed.replace(/^-#\s*/, '');
+            }
+
+            let html = escapeHTML(raw);
+
+            cmd.categories.forEach(function (cat) {
+                const hasSample = cmd.sampleValues && typeof cmd.sampleValues[cat.toLowerCase()] === 'string';
+                const sample = hasSample ? cmd.sampleValues[cat.toLowerCase()] : cat;
+                const icons = embedCategoryIconsHTML(cmd, cat.toLowerCase());
+                const re = new RegExp('\\b' + cat + '\\b', 'gi');
+                html = html.replace(re, (sample ? '<span class="embed-preview-token">' + escapeHTML(sample) + '</span>' : '') + icons);
+            });
+
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+            if (!html.trim()) return '';
+            return isSubtext ? `<small class="embed-preview-subtext">${html}</small>` : html;
+        }
+
+        function currentEmbedLayouts() {
+            try {
+                const raw = localStorage.getItem(EMBED_LAYOUTS_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        if (!parsed.entries || typeof parsed.entries !== 'object') parsed.entries = {};
+                        if (!Array.isArray(parsed.order)) parsed.order = Object.keys(parsed.entries);
+                        return parsed;
+                    }
+                }
+            } catch (e) { }
+            return { entries: {}, order: [] };
+        }
+
+        function saveEmbedLayoutsToStorage(data) {
+            try { localStorage.setItem(EMBED_LAYOUTS_KEY, JSON.stringify(data)); } catch (e) { }
+        }
+
+        function generateEmbedLayoutId() {
+            return 'el_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function saveEmbedLayoutAs() {
+            const nameInput = document.getElementById('embedSaveNameInput');
+            const messageEl = document.getElementById('embedSaveMessage');
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (!name) {
+                if (messageEl) { messageEl.className = 'error-message'; messageEl.textContent = 'Give this layout a name first.'; }
+                return;
+            }
+            const textarea = document.getElementById('embedTextInput');
+            const text = textarea ? textarea.value : '';
+            const data = currentEmbedLayouts();
+            const id = generateEmbedLayoutId();
+            data.entries[id] = { id: id, commandKey: embedActiveCommand, name: name, text: text, updatedAt: Date.now() };
+            data.order.push(id);
+            saveEmbedLayoutsToStorage(data);
+            if (nameInput) nameInput.value = '';
+            if (messageEl) { messageEl.className = 'success-message'; messageEl.textContent = `Saved "${name}".`; }
+            renderEmbedSavedList();
+        }
+
+        function renderEmbedSavedList() {
+            const container = document.getElementById('embedSavedList');
+            if (!container) return;
+            const data = currentEmbedLayouts();
+            const ids = data.order.filter(function (id) { return data.entries[id] && data.entries[id].commandKey === embedActiveCommand; });
+            if (ids.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No saved layouts yet for this command.</p>';
+                return;
+            }
+            container.innerHTML = ids.map(function (id) {
+                const entry = data.entries[id];
+                return `<div class="wishlist-card">
+    <div class="wishlist-card-name">${escapeHTML(entry.name)}</div>
+    <div class="wishlist-card-actions">
+        <button class="btn btn-sm" onclick="loadEmbedLayout('${id}')">Load</button>
+        <button class="btn btn-sm" onclick="shareEmbedLayout('${id}')">Share</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteEmbedLayout('${id}')">Delete</button>
+    </div>
+</div>`;
+            }).join('');
+        }
+
+        function loadEmbedLayout(id) {
+            const data = currentEmbedLayouts();
+            const entry = data.entries[id];
+            if (!entry) return;
+            if (entry.commandKey !== embedActiveCommand) {
+                switchEmbedCommand(entry.commandKey);
+            }
+            const textarea = document.getElementById('embedTextInput');
+            if (textarea) textarea.value = entry.text;
+            embedDraftText[entry.commandKey] = entry.text;
+            updateEmbedPreview();
+        }
+
+        function deleteEmbedLayout(id) {
+            const data = currentEmbedLayouts();
+            delete data.entries[id];
+            data.order = data.order.filter(function (x) { return x !== id; });
+            saveEmbedLayoutsToStorage(data);
+            renderEmbedSavedList();
+            const shareOutput = document.getElementById('embedShareOutput');
+            if (shareOutput) shareOutput.innerHTML = '';
+        }
+
+        // UTF-8-safe base64 - plain btoa()/atob() only handle Latin-1, and
+        // $arrangeim's allowed decorative symbols include characters outside
+        // that range.
+        function encodeEmbedShareCode(obj) {
+            const json = JSON.stringify(Object.assign({ v: 1 }, obj));
+            return btoa(unescape(encodeURIComponent(json)));
+        }
+
+        function decodeEmbedShareCode(code) {
+            const json = decodeURIComponent(escape(atob(code)));
+            return JSON.parse(json);
+        }
+
+        function shareEmbedLayout(id) {
+            const data = currentEmbedLayouts();
+            const entry = data.entries[id];
+            if (!entry) return;
+            const code = encodeEmbedShareCode({ commandKey: entry.commandKey, name: entry.name, text: entry.text });
+            const output = document.getElementById('embedShareOutput');
+            if (!output) return;
+            output.innerHTML = `
+<p class="sort-hint" style="margin: 10px 0 8px;">Send this code to a friend - they can paste it into "Import Shared Code" below to add it to their own saved layouts.</p>
+<div class="command-item">
+ <div class="command-text">${escapeHTML(code)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="embedShareCopyBtn">Copy Code</button>
+</div>`;
+            const copyBtn = document.getElementById('embedShareCopyBtn');
+            if (copyBtn) copyBtn.onclick = function () { copyCommand(this, code); };
+        }
+
+        function importEmbedSharedCode() {
+            const input = document.getElementById('embedImportInput');
+            const code = input ? input.value.trim() : '';
+            if (!code) {
+                showMessage('Paste a shared code first.', 'error');
+                return;
+            }
+            let parsed;
+            try {
+                parsed = decodeEmbedShareCode(code);
+            } catch (e) {
+                parsed = null;
+            }
+            if (!parsed || !EMBED_COMMANDS[parsed.commandKey] || typeof parsed.text !== 'string') {
+                showMessage("That code doesn't look valid - double check it was copied in full.", 'error');
+                return;
+            }
+            const data = currentEmbedLayouts();
+            const id = generateEmbedLayoutId();
+            const name = parsed.name || 'Imported layout';
+            data.entries[id] = { id: id, commandKey: parsed.commandKey, name: name, text: parsed.text, updatedAt: Date.now() };
+            data.order.push(id);
+            saveEmbedLayoutsToStorage(data);
+            if (input) input.value = '';
+            switchEmbedCommand(parsed.commandKey);
+            showMessage(`Imported "${name}".`, 'success');
         }
 
         // ===================== Wishlists (standalone tab) =====================

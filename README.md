@@ -29,6 +29,11 @@ Designed for use with the [Mudae bot](https://top.gg/bot/432610292342587392) on 
 - A "missing from Sort tab" indicator flags Notes-tab characters with no matching entry in your last `$mmmka+s` paste, so nobody silently disappears from Sort tab search.
 - After running a generated `$sm`/`$smseries`/`$smnote`/color command in Discord, confirm it worked to lock that order/color in as the app's new baseline - no need to re-import to keep everything in sync.
 - Save your own and your friends' `$wishlist` output on the **Wishlists** tab, and compare any two to see exactly which characters overlap - handy for trades or spotting who else wants what you've got.
+- A **Custom Images** tab: a live gallery of every character using a non-mudae.net image, plus its own **Crop & Upload** tool to crop/upload an image before deciding who it belongs to, then search and assign it to a character afterward.
+- Bulk-transfer every imgur.com-hosted image in your collection to ImgChest in one go (Imgur no longer accepts new API app registrations), with an optional per-row crop for any image that needs resizing first.
+- Build a `$antidisable` command from whichever of your currently fully-disabled series you want to re-enable, picked from a checklist.
+- Delete character(s) from the Notes or Sort tab - a tap-to-arm, tap-again-to-confirm badge per character (safe against an accidental tap, especially on mobile), plus a bulk "Delete Selected" for removing several at once. Fully undoable.
+- An **Embeds** tab to build `$tuarrange`/`$arrangeim`/`$profilearrange` commands (which categories show in Mudae's embeds) by clicking categories into place, with a live preview and save/share for your layouts.
 - Undo/redo (`Ctrl+Z` / `Ctrl+Y`) across the whole app for the current session.
 - Search characters by name, series, note, or owner.
 - Visualize player collection styles (Animanga vs. Game / Waifu vs. Husbando) based on harem owners.
@@ -78,6 +83,22 @@ Need a brand-new image instead? The same modal has an upload section - a one-tim
 On the **Wishlists** tab, run `$wishlist` in Discord (yours, or a friend's), paste the result in to save it, then compare any two saved wishlists to see the overlap - handy for trades.
 
 ![Wishlists tab](docs/screenshots/wishlists-tab.png)
+
+### 7. Custom Images and the built-in cropper
+
+The **Custom Images** tab is a live gallery of every character currently using a non-mudae.net image. Below it, **Crop & Upload** lets you crop and upload a new image *before* deciding who it belongs to - upload or crop first, then search for a character to assign it to. The same cropper is also reachable per-row from the Imgur → ImgChest bulk transfer, for any image that needs resizing before it moves over.
+
+![Custom Images tab](docs/screenshots/custom-images-tab.png)
+
+### 8. Customize your Discord embeds
+
+The **Embeds** tab builds `$tuarrange`, `$arrangeim`, and `$profilearrange` - the three Mudae commands that control which categories show up in your `$tu`, `$im`/roll, and `$profile` embeds. Click categories to build the command (or start from **Reset to Default** and tweak from there), see a live best-effort preview of the result, and save/share layouts you like.
+
+![Embeds tab](docs/screenshots/embeds-tab.png)
+
+On desktop, a **Visual (drag & drop)** mode is also available alongside the text box: drag categories, line-breaks, and symbols onto a canvas to build the command instead of typing, and right-click any piece (or any selected text in the text box) to bold/italicize/underline it.
+
+![Embeds tab visual drag-and-drop builder demo](docs/assets/embeds-visual-builder-demo.gif)
 
 ### Keeping up with changes
 
@@ -139,6 +160,13 @@ Everything below was added on top of [Arczeus's original project](https://github
 - **+ Add New Characters** - a popup for adding just-claimed characters without re-pasting your entire collection: run `$mmsaty+ri-c+x+kon` (your usual import flags plus Mudae's `n` "not noted" flag) to DM yourself only your un-noted characters, paste that into the popup, and it merges them in - existing characters (matched by series + name) are left completely untouched, newly-added ones are slotted in by global rank (lower # first) rather than always landing last, and you can add a quick note to each new arrival right there.
 - **Confirm order applied** - after generating a `$sm`/`$smseries`/`$smnote`/color command and running it in Discord, a "✓ Ran this in Discord" button lets you lock that order/color in as the app's new baseline (reordering or recoloring the underlying data to match), so later actions build on the real current state instead of the stale one from your last full import.
 - **Wishlists tab** - save your own and other players' `$wishlist` output (paste it, name it) and compare any two side by side to see exactly which characters overlap. A trailing `⭐` (starwish) or `✅` (already claimed) in the pasted text is recognized and shown next to matching characters in the results. Wishlists are saved per collection, since a different collection can mean a whole different Mudae server with different people's wishes.
+- **`$imsi-` instead of `$ims`** - the per-character image picker now generates `$imsi- CharacterName` (the `$im` command with its DM and "hide images" flags together) instead of plain `$ims`, so Mudae's response is a numbered text list you can paste in without every claimed image also popping up as a full embed in your DMs.
+- **Custom Images tab + Crop & Upload** - a live gallery of every character currently using a non-mudae.net image, with its own "Crop & Upload" section: crop and/or upload an image before deciding who it belongs to, then search for a character to assign it to afterward - handy for prepping a batch of images ahead of time. The image cropper itself was also made more reliable by vendoring its GIF-encoding libraries directly into the app instead of loading them from a CDN at crop time, since some ad blockers/privacy extensions were silently blocking that request and making GIF cropping appear to just not work.
+- **Bulk Imgur → ImgChest transfer, with per-row cropping** - migrate every imgur.com-hosted image in your collection to ImgChest at once (checked by default, deselect any you don't want), each with its own `$ai` command and confirm button. Any row can also be cropped to Mudae's 225×350 first via an optional "Crop first" button, without slowing down the rows you leave untouched.
+- **Two-step `$ai`/`$c` confirm** - uploading a new image and confirming it used to close the picker modal right away even when a `$c` command was still waiting to be run to actually make the image active - easy to forget once the modal's gone. The `$c` command now gets its own confirm button too, and the modal only closes once both have been confirmed (when there's a `$c` command to confirm at all).
+- **`$antidisable` command builder** - lists every series in your collection where every character is currently disabled (checked by default), and generates a single `$antidisable series1$series2$...` command to re-enable whichever ones you pick.
+- **Delete character(s)** - a 🗑️ badge on every character card/row (Notes and Sort tabs) deletes that one character; tap once to arm it, tap again to actually delete, since a plain confirmation popup doesn't really guard against an accidental tap (especially on mobile) the way a two-step badge does. Both tabs also support bulk delete - a dedicated selection on the Notes tab, and the Sort tab's existing selection - each behind a normal confirmation. Deleting the last character in a series removes the series too, and everything is undoable with the usual Undo button.
+- **Embeds tab** - build `$tuarrange`/`$arrangeim`/`$profilearrange` commands (which categories Mudae shows in your `$tu`, `$im`/roll, and `$profile` embeds) by clicking categories into a text box instead of hand-typing Discord's syntax, with a live best-effort preview of the result (using real example art plus Mudae's own kakera/sphere/key icons) and the ability to save layouts (and share them with a friend via a copyable code) - saved globally, since your embed display preferences aren't tied to any one collection. On desktop, a **Visual (drag & drop)** mode is also available alongside the text box: drag categories, line-breaks, and symbols onto a canvas to build the command, and right-click any piece - or any selected text in the text box - to bold/italicize/underline it, instead of composing markdown by hand.
 
 ## Why?
 
