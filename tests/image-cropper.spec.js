@@ -414,5 +414,115 @@ module.exports = [
             const commandText = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$ai' }).textContent();
             assert.ok(commandText.includes('https://cdn.imgchest.com/files/auto-upload-test.png'), `expected the $ai command to use the uploaded link, got: "${commandText}"`);
         }
+    },
+    {
+        name: 'the border is off by default, and drawing one produces the exact chosen color/width at the crop edges without disturbing the center',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.setInputFiles('#imageCropperFileInput', FIXTURE_IMAGE);
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            assert.strictEqual(await page.locator('#imageCropperBorderToggle').isChecked(), false, 'expected the border off by default');
+            assert.strictEqual(await page.locator('#imageCropperBorderColorInput').inputValue(), '#ffffff', 'expected white as the default border color');
+
+            await page.check('#imageCropperBorderToggle');
+            await page.fill('#imageCropperBorderColorInput', '#ff0000');
+            await page.dispatchEvent('#imageCropperBorderColorInput', 'input');
+            await page.fill('#imageCropperBorderWidth', '10');
+            await page.dispatchEvent('#imageCropperBorderWidth', 'input');
+            await page.waitForTimeout(100);
+
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' });
+
+            const pixels = await page.evaluate(async () => {
+                const f = document.getElementById('imgChestFileInput').files[0];
+                const bmp = await createImageBitmap(f);
+                const canvas = document.createElement('canvas');
+                canvas.width = bmp.width;
+                canvas.height = bmp.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(bmp, 0, 0);
+                function px(x, y) { const d = ctx.getImageData(x, y, 1, 1).data; return [d[0], d[1], d[2], d[3]]; }
+                return { dims: { w: bmp.width, h: bmp.height }, topEdge: px(112, 2), leftEdge: px(2, 175), center: px(112, 175) };
+            });
+
+            assert.deepStrictEqual(pixels.dims, { w: 225, h: 350 });
+            assert.deepStrictEqual(pixels.topEdge, [255, 0, 0, 255], `expected a solid red border pixel at the top edge, got ${pixels.topEdge}`);
+            assert.deepStrictEqual(pixels.leftEdge, [255, 0, 0, 255], `expected a solid red border pixel at the left edge, got ${pixels.leftEdge}`);
+            assert.notDeepStrictEqual(pixels.center, [255, 0, 0, 255], 'expected the center of the crop to be untouched by the border');
+        }
+    },
+    {
+        name: 'the border also renders on an animated GIF crop, applied to every exported frame',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.setInputFiles('#imageCropperFileInput', FIXTURE_GIF);
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            await page.check('#imageCropperBorderToggle');
+            await page.fill('#imageCropperBorderColorInput', '#00ff00');
+            await page.dispatchEvent('#imageCropperBorderColorInput', 'input');
+            await page.waitForTimeout(100);
+
+            await page.click('#imageCropperUseBtn');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden', timeout: 20000 });
+
+            const gifPixels = await page.evaluate(async () => {
+                const f = document.getElementById('imgChestFileInput').files[0];
+                const buffer = await f.arrayBuffer();
+                const parsed = window.gifuctJs.parseGIF(buffer);
+                const frames = window.gifuctJs.decompressFrames(parsed, true);
+                const frame = frames[0];
+                const canvas = document.createElement('canvas');
+                canvas.width = frame.dims.width;
+                canvas.height = frame.dims.height;
+                const ctx = canvas.getContext('2d');
+                ctx.putImageData(new ImageData(frame.patch, frame.dims.width, frame.dims.height), 0, 0);
+                function px(x, y) { const d = ctx.getImageData(x, y, 1, 1).data; return [d[0], d[1], d[2]]; }
+                return { dims: { w: parsed.lsd.width, h: parsed.lsd.height }, topEdge: px(112, 2), leftEdge: px(2, 175) };
+            });
+
+            assert.deepStrictEqual(gifPixels.dims, { w: 225, h: 350 });
+            assert.ok(gifPixels.topEdge[1] > 200 && gifPixels.topEdge[0] < 60 && gifPixels.topEdge[2] < 60, `expected a green border pixel at the gif's top edge, got ${gifPixels.topEdge}`);
+            assert.ok(gifPixels.leftEdge[1] > 200 && gifPixels.leftEdge[0] < 60 && gifPixels.leftEdge[2] < 60, `expected a green border pixel at the gif's left edge, got ${gifPixels.leftEdge}`);
+        }
+    },
+    {
+        name: 'the border toggle, color, and width reset to defaults each time the cropper is (re)opened',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.setInputFiles('#imageCropperFileInput', FIXTURE_IMAGE);
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            await page.check('#imageCropperBorderToggle');
+            await page.fill('#imageCropperBorderColorInput', '#0000ff');
+            await page.dispatchEvent('#imageCropperBorderColorInput', 'input');
+            await page.click('#imageCropperOverlay button:has-text("Cancel")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' });
+
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.setInputFiles('#imageCropperFileInput', FIXTURE_IMAGE);
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            assert.strictEqual(await page.locator('#imageCropperBorderToggle').isChecked(), false, 'expected the border toggle reset to off');
+            assert.strictEqual(await page.locator('#imageCropperBorderColorInput').inputValue(), '#ffffff', 'expected the color reset back to white');
+        }
     }
 ];

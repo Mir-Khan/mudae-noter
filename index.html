@@ -4383,7 +4383,9 @@
         <div class="changelog-modal">
             <h2>Crop Image</h2>
             <p class="sort-hint" style="margin-top: 4px;">Crops to <b>225&times;350</b> - the size Mudae's own
-                images use. Works on GIFs too, animation included. Drag to reposition, use the slider to zoom.</p>
+                images use. Works on GIFs too, animation included. Drag to reposition, use the slider to zoom, and
+                optionally add a border - Mudae's own Discord embeds show a slight white edge around images, so
+                white's the default if you turn one on.</p>
             <input type="file" id="imageCropperFileInput" accept="image/*"
                 oninput="document.getElementById('imageCropperUrlInput').value = '';" style="width: 100%;">
             <div class="ims-upload-divider" style="margin: 10px 0;">or</div>
@@ -4397,10 +4399,26 @@
             <div id="imageCropperWorkspace" style="display: none;">
                 <div id="imageCropperViewport" class="image-cropper-viewport">
                     <img id="imageCropperImg" alt="" draggable="false">
+                    <div id="imageCropperBorderPreview" style="position: absolute; inset: 0; pointer-events: none;"></div>
                 </div>
                 <div class="image-cropper-zoom-row">
                     <span>🔍</span>
                     <input type="range" id="imageCropperZoom" min="1" max="4" step="0.01" value="1">
+                </div>
+                <div class="image-cropper-zoom-row">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="imageCropperBorderToggle" onchange="onImageCropperBorderToggle()">
+                        Border
+                    </label>
+                    <div class="color-swatch-btn" id="imageCropperBorderSwatch"
+                        onclick="document.getElementById('imageCropperBorderColorInput').click()"
+                        style="width: 26px; min-width: 26px; height: 26px; border-radius: 4px; background: #ffffff; cursor: pointer; position: relative; border: 1px solid #3a3d42; display: none;">
+                        <input type="color" id="imageCropperBorderColorInput" value="#ffffff"
+                            oninput="onImageCropperBorderColorChange(this.value)"
+                            style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; margin: 0;">
+                    </div>
+                    <input type="range" id="imageCropperBorderWidth" min="2" max="20" step="1" value="6"
+                        oninput="onImageCropperBorderWidthChange(this.value)" style="display: none;">
                 </div>
                 <div id="imageCropperStatus"></div>
             </div>
@@ -7570,6 +7588,13 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // null means "just offer a Download button" (the cropper's own
         // fallback behavior when opened with nothing else to do with it).
         let cropperOnCropped = null;
+        // Optional colored border, drawn as a stroke inset from the crop
+        // edge - off by default, white when first turned on since that's
+        // the slight edge Mudae's own images already show once embedded in
+        // Discord (so a matching border blends in rather than standing out).
+        let cropperBorderEnabled = false;
+        let cropperBorderColor = '#ffffff';
+        let cropperBorderWidth = 6;
 
         function showImageCropperMessage(text, type) {
             const el = document.getElementById('imageCropperMessage');
@@ -7880,6 +7905,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             cropperZoom = 1;
             cropperResultBlob = null;
             cropperOnCropped = null;
+            cropperBorderEnabled = false;
+            cropperBorderColor = '#ffffff';
+            cropperBorderWidth = 6;
             document.getElementById('imageCropperFileInput').value = '';
             document.getElementById('imageCropperUrlInput').value = '';
             document.getElementById('imageCropperMessage').innerHTML = '';
@@ -7888,6 +7916,45 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             document.getElementById('imageCropperStatus').textContent = '';
             document.getElementById('imageCropperUseBtn').disabled = true;
             document.getElementById('imageCropperDownloadBtn').style.display = 'none';
+            document.getElementById('imageCropperBorderToggle').checked = false;
+            document.getElementById('imageCropperBorderColorInput').value = '#ffffff';
+            document.getElementById('imageCropperBorderWidth').value = 6;
+            document.getElementById('imageCropperBorderSwatch').style.display = 'none';
+            document.getElementById('imageCropperBorderSwatch').style.background = '#ffffff';
+            document.getElementById('imageCropperBorderWidth').style.display = 'none';
+            document.getElementById('imageCropperBorderPreview').style.boxShadow = '';
+        }
+
+        // Live preview: an inset box-shadow approximates where the real
+        // stroke will land once drawn onto the output canvas (see
+        // applyCropperBorder below) - deliberately a separate overlay div
+        // painted AFTER the <img> in DOM order, not a box-shadow on the
+        // viewport itself, since a parent's own box-shadow paints behind
+        // its children and the opaque image would otherwise cover it
+        // completely.
+        function updateImageCropperBorderPreview() {
+            const overlay = document.getElementById('imageCropperBorderPreview');
+            overlay.style.boxShadow = cropperBorderEnabled
+                ? `inset 0 0 0 ${cropperBorderWidth}px ${cropperBorderColor}`
+                : '';
+        }
+
+        function onImageCropperBorderToggle() {
+            cropperBorderEnabled = document.getElementById('imageCropperBorderToggle').checked;
+            document.getElementById('imageCropperBorderSwatch').style.display = cropperBorderEnabled ? '' : 'none';
+            document.getElementById('imageCropperBorderWidth').style.display = cropperBorderEnabled ? '' : 'none';
+            updateImageCropperBorderPreview();
+        }
+
+        function onImageCropperBorderColorChange(value) {
+            cropperBorderColor = value;
+            document.getElementById('imageCropperBorderSwatch').style.background = value;
+            updateImageCropperBorderPreview();
+        }
+
+        function onImageCropperBorderWidthChange(value) {
+            cropperBorderWidth = parseInt(value, 10) || 6;
+            updateImageCropperBorderPreview();
         }
 
         document.getElementById('imageCropperFileInput').addEventListener('change', function (e) {
@@ -8035,6 +8102,25 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
         }
 
+        // Stroked inward from the very edge (inset by half the line width,
+        // so the stroke itself never gets clipped) rather than shrinking
+        // the image to fit inside a frame - reads as a thin colored edge
+        // overlaid on the crop, matching the subtle border Mudae's own
+        // images already pick up once Discord embeds them.
+        function applyCropperBorder(ctx) {
+            if (!cropperBorderEnabled || cropperBorderWidth <= 0) return;
+            ctx.save();
+            ctx.strokeStyle = cropperBorderColor;
+            ctx.lineWidth = cropperBorderWidth;
+            ctx.strokeRect(
+                cropperBorderWidth / 2,
+                cropperBorderWidth / 2,
+                CROP_OUTPUT_WIDTH - cropperBorderWidth,
+                CROP_OUTPUT_HEIGHT - cropperBorderWidth
+            );
+            ctx.restore();
+        }
+
         function cropStaticImage(file, rect) {
             return new Promise(function (resolve, reject) {
                 const img = new Image();
@@ -8045,6 +8131,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     canvas.height = CROP_OUTPUT_HEIGHT;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, CROP_OUTPUT_WIDTH, CROP_OUTPUT_HEIGHT);
+                    applyCropperBorder(ctx);
                     URL.revokeObjectURL(url);
                     canvas.toBlob(function (blob) {
                         if (blob) resolve(blob); else reject(new Error('Could not export the cropped image.'));
@@ -8105,7 +8192,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     const outCanvas = document.createElement('canvas');
                     outCanvas.width = CROP_OUTPUT_WIDTH;
                     outCanvas.height = CROP_OUTPUT_HEIGHT;
-                    outCanvas.getContext('2d').drawImage(fullCanvas, rect.x, rect.y, rect.w, rect.h, 0, 0, CROP_OUTPUT_WIDTH, CROP_OUTPUT_HEIGHT);
+                    const outCtx = outCanvas.getContext('2d');
+                    outCtx.drawImage(fullCanvas, rect.x, rect.y, rect.w, rect.h, 0, 0, CROP_OUTPUT_WIDTH, CROP_OUTPUT_HEIGHT);
+                    applyCropperBorder(outCtx);
 
                     encoder.addFrame(outCanvas, { delay: frame.delay || 100, copy: true });
                     previousFrame = frame;
@@ -12705,7 +12794,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     { type: 'feature', text: 'Added a <b>Build Text</b> tool to the Embeds Visual Builder for composing a whole decorative run (like a border) in one go instead of clicking one symbol at a time, chip copy/paste for duplicating a piece, and a <b>Clear Text</b> button to wipe a command\'s draft and start over.' },
                     { type: 'feature', text: 'The <code>$antidisable</code> command builder now accounts for which of Mudae\'s two <b>Game Modes</b> your server runs - pick it right in the builder. Mode 2 works very differently (disabling a series doesn\'t shrink your pool the way it does in Mode 1, since an equally-popular character is auto-enabled to replace it), so the builder now also offers re-enabling individual characters, not just whole series, when Mode 2 is selected.' },
                     { type: 'fix', text: 'Bold/italic/underline applied through the Embeds Visual Builder now actually renders in the live preview - a couple of rendering bugs (underline breaking the category-name substitution, and bold blending into an already-semibold value) meant formatting could silently look like it wasn\'t applied at all.' },
-                    { type: 'fix', text: 'A disabled character\'s note could pick up stray <code>🚫 $xx DISABLED</code> text left over from Mudae\'s own per-roulette disabled marker (visible on <code>$harem</code>-style paste for anyone using Game Mode 2, where a character can be disabled in more than one roulette at once) instead of just the note itself.' }
+                    { type: 'fix', text: 'A disabled character\'s note could pick up stray <code>🚫 $xx DISABLED</code> text left over from Mudae\'s own per-roulette disabled marker (visible on <code>$harem</code>-style paste for anyone using Game Mode 2, where a character can be disabled in more than one roulette at once) instead of just the note itself.' },
+                    { type: 'feature', text: 'The <b>Image Cropper</b> can now add an optional colored border to the crop (white by default - the slight edge Mudae\'s own images already show once Discord embeds them), with a live preview in the cropper itself before committing. Works on animated GIF crops too, drawn onto every frame.' }
                 ]
             },
             {
