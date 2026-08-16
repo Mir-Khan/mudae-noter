@@ -4410,15 +4410,21 @@
                         <input type="checkbox" id="imageCropperBorderToggle" onchange="onImageCropperBorderToggle()">
                         Border
                     </label>
-                    <div class="color-swatch-btn" id="imageCropperBorderSwatch"
-                        onclick="document.getElementById('imageCropperBorderColorInput').click()"
-                        style="width: 26px; min-width: 26px; height: 26px; border-radius: 4px; background: #ffffff; cursor: pointer; position: relative; border: 1px solid #3a3d42; display: none;">
-                        <input type="color" id="imageCropperBorderColorInput" value="#ffffff"
-                            oninput="onImageCropperBorderColorChange(this.value)"
-                            style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; margin: 0;">
-                    </div>
-                    <input type="range" id="imageCropperBorderWidth" min="2" max="20" step="1" value="6"
+                    <input type="range" id="imageCropperBorderWidth" min="2" max="20" step="1" value="2"
                         oninput="onImageCropperBorderWidthChange(this.value)" style="display: none;">
+                </div>
+                <div id="imageCropperBorderColorBlock" style="display: none; max-width: 140px; margin: 8px auto 0;">
+                    <canvas id="imageCropperBorderWheelCanvas" width="120" height="120" class="color-wheel-canvas"
+                        style="display: block; margin: 0 auto;"></canvas>
+                    <input type="range" id="imageCropperBorderLightnessSlider" min="0" max="100" value="100"
+                        style="width: 100%; margin-top: 6px;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                        <div id="imageCropperBorderSwatch"
+                            style="width: 22px; height: 22px; min-width: 22px; border-radius: 4px; background: #ffffff; border: 1px solid #3a3d42;">
+                        </div>
+                        <input type="text" id="imageCropperBorderHexInput" class="color-hex-text-input"
+                            placeholder="#RRGGBB" maxlength="7" style="text-transform: none; flex: 1;">
+                    </div>
                 </div>
                 <div id="imageCropperStatus"></div>
             </div>
@@ -7594,7 +7600,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Discord (so a matching border blends in rather than standing out).
         let cropperBorderEnabled = false;
         let cropperBorderColor = '#ffffff';
-        let cropperBorderWidth = 6;
+        let cropperBorderWidth = 2;
+        // Its own compact color wheel (see renderColorWheelPixels/
+        // renderColorWheelMarker, shared with the Colors tab's full-size
+        // one) rather than a native <input type="color"> - h/s=0 with
+        // l=100 is white, so the marker starts dead-center at max
+        // lightness, matching the white default above.
+        const cropperBorderColorState = { h: 0, s: 0, l: 100 };
+        let cropperBorderColorPickerReady = false;
 
         function showImageCropperMessage(text, type) {
             const el = document.getElementById('imageCropperMessage');
@@ -7907,7 +7920,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             cropperOnCropped = null;
             cropperBorderEnabled = false;
             cropperBorderColor = '#ffffff';
-            cropperBorderWidth = 6;
+            cropperBorderWidth = 2;
+            cropperBorderColorState.h = 0;
+            cropperBorderColorState.s = 0;
+            cropperBorderColorState.l = 100;
             document.getElementById('imageCropperFileInput').value = '';
             document.getElementById('imageCropperUrlInput').value = '';
             document.getElementById('imageCropperMessage').innerHTML = '';
@@ -7917,12 +7933,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             document.getElementById('imageCropperUseBtn').disabled = true;
             document.getElementById('imageCropperDownloadBtn').style.display = 'none';
             document.getElementById('imageCropperBorderToggle').checked = false;
-            document.getElementById('imageCropperBorderColorInput').value = '#ffffff';
-            document.getElementById('imageCropperBorderWidth').value = 6;
-            document.getElementById('imageCropperBorderSwatch').style.display = 'none';
-            document.getElementById('imageCropperBorderSwatch').style.background = '#ffffff';
+            document.getElementById('imageCropperBorderWidth').value = 2;
             document.getElementById('imageCropperBorderWidth').style.display = 'none';
+            document.getElementById('imageCropperBorderColorBlock').style.display = 'none';
+            document.getElementById('imageCropperBorderSwatch').style.background = '#ffffff';
+            document.getElementById('imageCropperBorderHexInput').value = '#ffffff';
+            document.getElementById('imageCropperBorderLightnessSlider').value = 100;
             document.getElementById('imageCropperBorderPreview').style.boxShadow = '';
+            if (document.getElementById('imageCropperBorderWheelCanvas')) drawCropperBorderWheel();
         }
 
         // Live preview: an inset box-shadow approximates where the real
@@ -7941,20 +7959,99 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
         function onImageCropperBorderToggle() {
             cropperBorderEnabled = document.getElementById('imageCropperBorderToggle').checked;
-            document.getElementById('imageCropperBorderSwatch').style.display = cropperBorderEnabled ? '' : 'none';
             document.getElementById('imageCropperBorderWidth').style.display = cropperBorderEnabled ? '' : 'none';
-            updateImageCropperBorderPreview();
-        }
-
-        function onImageCropperBorderColorChange(value) {
-            cropperBorderColor = value;
-            document.getElementById('imageCropperBorderSwatch').style.background = value;
+            document.getElementById('imageCropperBorderColorBlock').style.display = cropperBorderEnabled ? '' : 'none';
+            if (cropperBorderEnabled) {
+                initCropperBorderColorPicker();
+                drawCropperBorderWheel();
+            }
             updateImageCropperBorderPreview();
         }
 
         function onImageCropperBorderWidthChange(value) {
-            cropperBorderWidth = parseInt(value, 10) || 6;
+            cropperBorderWidth = parseInt(value, 10) || 2;
             updateImageCropperBorderPreview();
+        }
+
+        // A compact version of the Colors tab's own wheel+lightness+hex
+        // picker (renderColorWheelPixels/renderColorWheelMarker, hslToHex/
+        // hexToHsl are all shared, generic helpers - only the canvas size
+        // and this small bit of wiring are specific to the cropper).
+        function drawCropperBorderWheel() {
+            const canvas = document.getElementById('imageCropperBorderWheelCanvas');
+            if (!canvas) return;
+            renderColorWheelPixels(canvas);
+            renderColorWheelMarker(canvas, cropperBorderColorState.h, cropperBorderColorState.s);
+        }
+
+        function updateCropperBorderColorDisplay() {
+            const hex = hslToHex(cropperBorderColorState.h, cropperBorderColorState.s, cropperBorderColorState.l);
+            cropperBorderColor = hex;
+            const swatch = document.getElementById('imageCropperBorderSwatch');
+            const hexInput = document.getElementById('imageCropperBorderHexInput');
+            const slider = document.getElementById('imageCropperBorderLightnessSlider');
+            if (swatch) swatch.style.background = hex;
+            if (hexInput && document.activeElement !== hexInput) hexInput.value = hex;
+            if (slider && document.activeElement !== slider) slider.value = Math.round(cropperBorderColorState.l);
+            updateImageCropperBorderPreview();
+            return hex;
+        }
+
+        function setCropperBorderColorFromWheelEvent(e) {
+            const canvas = document.getElementById('imageCropperBorderWheelCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const point = e.touches ? e.touches[0] : e;
+            const x = (point.clientX - rect.left) * scaleX;
+            const y = (point.clientY - rect.top) * scaleY;
+
+            const radius = canvas.width / 2;
+            const dx = x - radius;
+            const dy = y - radius;
+            const dist = Math.min(radius, Math.sqrt(dx * dx + dy * dy));
+
+            let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            if (angle < 0) angle += 360;
+
+            cropperBorderColorState.h = angle;
+            cropperBorderColorState.s = Math.min(100, (dist / radius) * 100);
+
+            drawCropperBorderWheel();
+            updateCropperBorderColorDisplay();
+        }
+
+        function initCropperBorderColorPicker() {
+            if (cropperBorderColorPickerReady) return;
+            const canvas = document.getElementById('imageCropperBorderWheelCanvas');
+            if (!canvas) return;
+            cropperBorderColorPickerReady = true;
+
+            let dragging = false;
+            canvas.addEventListener('pointerdown', function (e) { dragging = true; setCropperBorderColorFromWheelEvent(e); });
+            window.addEventListener('pointermove', function (e) { if (dragging) setCropperBorderColorFromWheelEvent(e); });
+            window.addEventListener('pointerup', function () { dragging = false; });
+
+            const slider = document.getElementById('imageCropperBorderLightnessSlider');
+            if (slider) {
+                slider.addEventListener('input', function () {
+                    cropperBorderColorState.l = parseInt(slider.value, 10);
+                    updateCropperBorderColorDisplay();
+                });
+            }
+
+            const hexInput = document.getElementById('imageCropperBorderHexInput');
+            if (hexInput) {
+                hexInput.addEventListener('input', function () {
+                    const hsl = hexToHsl(hexInput.value);
+                    if (!hsl) return;
+                    cropperBorderColorState.h = hsl.h;
+                    cropperBorderColorState.s = hsl.s;
+                    cropperBorderColorState.l = hsl.l;
+                    drawCropperBorderWheel();
+                    updateCropperBorderColorDisplay();
+                });
+            }
         }
 
         document.getElementById('imageCropperFileInput').addEventListener('change', function (e) {
@@ -12360,9 +12457,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             return { h, s: s * 100, l: l * 100 };
         }
 
-        function drawColorWheel() {
-            const canvas = document.getElementById('colorWheelCanvas');
-            if (!canvas) return;
+        // Generic hue/saturation wheel painter + marker, factored out so the
+        // Colors tab's full-size wheel and the Image Cropper's compact
+        // border-color wheel can share the same drawing code instead of
+        // duplicating this pixel loop - takes a canvas (any size) and an
+        // { h, s } pair rather than reaching for any particular state object.
+        function renderColorWheelPixels(canvas) {
             const ctx = canvas.getContext('2d');
             const size = canvas.width;
             const radius = size / 2;
@@ -12388,12 +12488,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 }
             }
             ctx.putImageData(image, 0, 0);
-            drawColorWheelMarker();
         }
 
-        function drawColorWheelMarker() {
-            const canvas = document.getElementById('colorWheelCanvas');
-            if (!canvas) return;
+        function renderColorWheelMarker(canvas, h, s) {
             const ctx = canvas.getContext('2d');
             const size = canvas.width;
             const radius = size / 2;
@@ -12401,21 +12498,31 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // Re-draw from the cached base wheel would be ideal, but redrawing
             // the whole wheel per marker move is cheap enough at this size and
             // keeps this function simple - no separate canvas layer needed.
-            const angleRad = colorPickerState.h * Math.PI / 180;
-            const dist = (colorPickerState.s / 100) * radius;
+            // Marker radius scales with canvas size so it doesn't look
+            // oversized on the cropper's smaller wheel.
+            const markerRadius = size * (7 / 220);
+            const angleRad = h * Math.PI / 180;
+            const dist = (s / 100) * radius;
             const markerX = radius + Math.cos(angleRad) * dist;
             const markerY = radius + Math.sin(angleRad) * dist;
 
             ctx.beginPath();
-            ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
+            ctx.arc(markerX, markerY, markerRadius, 0, Math.PI * 2);
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.stroke();
             ctx.beginPath();
-            ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
+            ctx.arc(markerX, markerY, markerRadius, 0, Math.PI * 2);
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 1;
             ctx.stroke();
+        }
+
+        function drawColorWheel() {
+            const canvas = document.getElementById('colorWheelCanvas');
+            if (!canvas) return;
+            renderColorWheelPixels(canvas);
+            renderColorWheelMarker(canvas, colorPickerState.h, colorPickerState.s);
         }
 
         function updateColorPickerDisplay() {

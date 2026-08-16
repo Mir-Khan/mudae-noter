@@ -428,11 +428,12 @@ module.exports = [
             await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
 
             assert.strictEqual(await page.locator('#imageCropperBorderToggle').isChecked(), false, 'expected the border off by default');
-            assert.strictEqual(await page.locator('#imageCropperBorderColorInput').inputValue(), '#ffffff', 'expected white as the default border color');
+            assert.strictEqual(await page.locator('#imageCropperBorderWidth').inputValue(), '2', 'expected the minimum width as the default');
 
             await page.check('#imageCropperBorderToggle');
-            await page.fill('#imageCropperBorderColorInput', '#ff0000');
-            await page.dispatchEvent('#imageCropperBorderColorInput', 'input');
+            assert.strictEqual(await page.locator('#imageCropperBorderHexInput').inputValue(), '#ffffff', 'expected white as the default border color');
+            await page.fill('#imageCropperBorderHexInput', '#ff0000');
+            await page.dispatchEvent('#imageCropperBorderHexInput', 'input');
             await page.fill('#imageCropperBorderWidth', '10');
             await page.dispatchEvent('#imageCropperBorderWidth', 'input');
             await page.waitForTimeout(100);
@@ -471,8 +472,10 @@ module.exports = [
             await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
 
             await page.check('#imageCropperBorderToggle');
-            await page.fill('#imageCropperBorderColorInput', '#00ff00');
-            await page.dispatchEvent('#imageCropperBorderColorInput', 'input');
+            await page.fill('#imageCropperBorderHexInput', '#00ff00');
+            await page.dispatchEvent('#imageCropperBorderHexInput', 'input');
+            await page.fill('#imageCropperBorderWidth', '10');
+            await page.dispatchEvent('#imageCropperBorderWidth', 'input');
             await page.waitForTimeout(100);
 
             await page.click('#imageCropperUseBtn');
@@ -511,8 +514,10 @@ module.exports = [
             await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
 
             await page.check('#imageCropperBorderToggle');
-            await page.fill('#imageCropperBorderColorInput', '#0000ff');
-            await page.dispatchEvent('#imageCropperBorderColorInput', 'input');
+            await page.fill('#imageCropperBorderHexInput', '#0000ff');
+            await page.dispatchEvent('#imageCropperBorderHexInput', 'input');
+            await page.fill('#imageCropperBorderWidth', '15');
+            await page.dispatchEvent('#imageCropperBorderWidth', 'input');
             await page.click('#imageCropperOverlay button:has-text("Cancel")');
             await page.waitForSelector('#imageCropperOverlay', { state: 'hidden' });
 
@@ -522,7 +527,42 @@ module.exports = [
             await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
 
             assert.strictEqual(await page.locator('#imageCropperBorderToggle').isChecked(), false, 'expected the border toggle reset to off');
-            assert.strictEqual(await page.locator('#imageCropperBorderColorInput').inputValue(), '#ffffff', 'expected the color reset back to white');
+            assert.strictEqual(await page.locator('#imageCropperBorderWidth').inputValue(), '2', 'expected the width reset back to the minimum');
+            await page.check('#imageCropperBorderToggle');
+            assert.strictEqual(await page.locator('#imageCropperBorderHexInput').inputValue(), '#ffffff', 'expected the color reset back to white');
+        }
+    },
+    {
+        name: 'the border color can be picked from the compact color wheel itself, not just typed as hex',
+        async run(page) {
+            await loadDemoCollection(page);
+            const card = page.locator('.character-card').first();
+            await card.locator('[data-action="edit-image"]').click();
+            await page.waitForSelector('#imsImagePickerOverlay', { state: 'visible' });
+            await page.click('button:has-text("Crop this image first")');
+            await page.waitForSelector('#imageCropperOverlay', { state: 'visible' });
+            await page.setInputFiles('#imageCropperFileInput', FIXTURE_IMAGE);
+            await page.waitForSelector('#imageCropperWorkspace', { state: 'visible' });
+
+            await page.check('#imageCropperBorderToggle');
+            assert.strictEqual(await page.locator('#imageCropperBorderWheelCanvas').isVisible(), true, 'expected the compact wheel to appear once the border is enabled');
+
+            // Full lightness at the center is white regardless of click position,
+            // so drop the lightness first to make a wheel click actually change the hex.
+            await page.fill('#imageCropperBorderLightnessSlider', '50');
+            await page.dispatchEvent('#imageCropperBorderLightnessSlider', 'input');
+
+            const box = await page.locator('#imageCropperBorderWheelCanvas').boundingBox();
+            // Click near the wheel's right edge (hue 0, full saturation) - should land on a red-ish hex.
+            await page.mouse.click(box.x + box.width - 4, box.y + box.height / 2);
+            await page.waitForTimeout(100);
+
+            const hexAfterClick = await page.locator('#imageCropperBorderHexInput').inputValue();
+            assert.notStrictEqual(hexAfterClick, '#ffffff', `expected the wheel click to change the color away from white, got: "${hexAfterClick}"`);
+            assert.ok(/^#[0-9a-f]{6}$/i.test(hexAfterClick), `expected a valid hex value, got: "${hexAfterClick}"`);
+
+            const swatchBg = await page.locator('#imageCropperBorderSwatch').evaluate(el => el.style.background);
+            assert.ok(swatchBg && swatchBg.length > 0, 'expected the swatch preview to update too');
         }
     }
 ];
