@@ -176,7 +176,7 @@ module.exports = [
             await page.waitForTimeout(150);
 
             await page.fill('#embedImportInput', code);
-            await page.click('button:has-text("Import")');
+            await page.click('#embedsTabPanel button:has-text("Import")');
             await page.waitForSelector('.wishlist-card:has-text("Shareable One")');
 
             const importedValue = await page.evaluate(() => {
@@ -192,7 +192,7 @@ module.exports = [
         async run(page) {
             await openEmbeds(page);
             await page.fill('#embedImportInput', 'not-a-valid-code-at-all');
-            await page.click('button:has-text("Import")');
+            await page.click('#embedsTabPanel button:has-text("Import")');
             await page.waitForTimeout(200);
 
             const messageText = await page.locator('#embedsMessage').textContent();
@@ -688,7 +688,7 @@ module.exports = [
             await page.fill('#embedTextBuilderInput', 'abc-de');
             await page.waitForTimeout(100);
             assert.strictEqual(await page.inputValue('#embedTextBuilderInput'), '-', 'expected only the allowed dash to survive, letters stripped');
-            await page.click('button:has-text("Cancel")');
+            await page.click('#embedTextBuilderOverlay button:has-text("Cancel")');
 
             await page.click('#embed-tab-tuarrange-btn');
             assert.strictEqual(await page.locator('button:has-text("Build Text")').count(), 0, 'expected no Build Text button on a tokens-syntax command');

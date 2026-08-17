@@ -2469,6 +2469,14 @@
             }
         }
 
+        .wishlist-editor-panel {
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+
         .changelog-overlay {
             position: fixed;
             inset: 0;
@@ -4249,6 +4257,117 @@
                 </div>
                 <div id="wishlistCompareResult"></div>
             </div>
+
+            <div id="wishlistModalOverlay" class="control-group wishlist-editor-panel" style="display: none;">
+                <h2 id="wishlistModalTitle">Add Wishlist</h2>
+                <p class="sort-hint" style="margin-top: 4px;">Run <code>$wishlist</code> in Discord and paste the
+                    resulting list below - one character per line. A trailing <code>⭐</code> (starwish) or
+                    <code>✅</code> (already claimed) is recognized automatically, as is a trailing <code>+N%</code>
+                    boost; any <code>:kakera:</code> icon is dropped since it's pure decoration.</p>
+                <input type="text" id="wishlistNameInput" class="color-hex-text-input" style="text-transform: none; margin-bottom: 10px;"
+                    placeholder="Whose wishlist is this? (e.g. a username)">
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; color: #d1d5db; font-size: 0.9em;">
+                    <input type="checkbox" id="wishlistIsOwnCheckbox" onchange="onWishlistIsOwnToggle()">
+                    This is my own wishlist (I run wish commands for it, and want capacity tracking)
+                </label>
+                <div id="wishlistCapacitySection" style="display: none;">
+                    <div class="control-group">
+                        <h3>Wish/Starwish Capacity</h3>
+                        <p class="sort-hint">Run <code>$bonus</code> in Discord and paste its output here to prefill your
+                            slot totals. <code>$bonus</code> only reports the <i>bonus</i> on top of the free base every
+                            account starts with (7 wishlist / 1 starwish slot, never shown in <code>$bonus</code>
+                            itself), so that base is added automatically - still, double-check the numbers below against
+                            what Mudae itself shows you and adjust them directly if your account has some other unlisted
+                            modifier, then Save Capacity. Used to show "used/capacity" on this wishlist's card, and to
+                            warn about the wishlist-slot cost of starwishing past your current limit below.</p>
+                        <textarea id="wishlistBonusInput" class="add-chars-textarea" style="min-height: 90px;"
+                            placeholder="Paste $bonus output here..."></textarea>
+                        <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                            <button type="button" onclick="parseWishlistBonusSnapshot()" class="btn btn-secondary">Prefill from $bonus</button>
+                        </div>
+                        <div id="wishlistBonusMessage"></div>
+                        <div class="wishlist-capacity-inputs">
+                            <label>Wishlist slots <input type="number" id="wishlistCapacityWishlist" min="0"></label>
+                            <label>Starwish slots <input type="number" id="wishlistCapacityStarwish" min="0"></label>
+                            <label>Wishseries slots <input type="number" id="wishlistCapacityWishseries" min="0"></label>
+                            <label title="Check $shop/$ouroshop in Discord for perk 1's current self-boost % (Mudae's own docs: &quot;a part of the spawn chance bonus applied by perk 1 is also applied to the character upgraded&quot;, 0-10%). Used to estimate a booster's own % when no neighbor in your wishlist can solve it directly - always labeled as an estimate, never treated as exact.">Ouroperk self-boost % (<code>$shop</code>) <input type="number" id="wishlistCapacitySelfBoostRate" min="0" max="10"></label>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="saveWishlistCapacityOverride()">Save Capacity</button>
+                        </div>
+                        <div id="wishlistBonusSummary" class="sort-filter-note"></div>
+                    </div>
+                </div>
+                <textarea id="wishlistTextInput" class="add-chars-textarea"
+                    placeholder="Portgas D. Ace ⭐&#10;Lightning&#10;Aerith Gainsborough&#10;Jin Sakai"></textarea>
+                <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                    <button type="button" onclick="importWishlistTextIntoRows()" class="btn btn-secondary">Import/Update
+                        from Pasted Text</button>
+                </div>
+                <p id="wishlistNewListWarning" class="sort-hint" style="display: none; color: #fbbf24; margin-top: 6px;">
+                    ⚠ Building a brand new list? <code>$wish</code>/<code>$sw</code>/<code>$wishl</code>/<code>$wishk</code>
+                    only ever <b>add</b> characters - they never overwrite an existing wishlist. If you want your real
+                    Discord wishlist to end up matching exactly what you build here, run <code>$wra</code>
+                    (<code>$wishremoveall</code>) first to clear it out, then use the commands generated below.</p>
+                <div id="wishlistModalMessage"></div>
+
+                <div class="control-group" style="margin-top: 16px;">
+                    <h3>Characters <span style="font-weight: 400; color: #9ca3af;">(drag ⠿ to reorder)</span></h3>
+                    <p class="sort-hint">Each row's own Star/Lock/Kakera-boost flags feed straight into the command
+                        builder below - any row you edit (or "Include" manually) is picked up automatically, no
+                        retyping needed. A claimed character's Booster (Ouroperk) status/% is auto-detected where the
+                        pasted order makes it solvable - it's an inference from your <code>+N%</code> markers, not a
+                        guarantee, so double-check against <code>$ouroperks</code> if a value looks off. A <code>+N%</code>
+                        marked "unexplained" doesn't match neighbor-boost math at all and isn't attributed to anyone.</p>
+                    <div class="add-chars-modal-actions" style="justify-content: flex-start; margin: -4px 0 8px;">
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(true)">Include All Rows</button>
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(false)">Include None</button>
+                    </div>
+                    <div id="wishlistRowsList" class="wishlist-rows-list"></div>
+                </div>
+
+                <div class="control-group" id="wishlistRemovalsGroup" style="margin-top: 16px; display: none;">
+                    <h3>Removed Characters</h3>
+                    <p class="sort-hint">Removing a row here only updates this tracker - Mudae's own wish commands can't
+                        overwrite or remove anything, so these were also part of the real wishlist and won't actually be
+                        gone until you run <code>$wr</code> (<code>$wishremove</code>) for them too.</p>
+                    <div id="wishlistRemovalsOutput"></div>
+                </div>
+
+                <div class="control-group" id="wishlistReorderGroup" style="margin-top: 16px; display: none;">
+                    <h3>Reorder Commands</h3>
+                    <p class="sort-hint"><code>$wish</code>/<code>$sw</code>/etc. only ever <b>add</b> - they never move
+                        an already-wished character to a new position, so dragging rows around above doesn't change
+                        anything in Discord by itself. Run <code>$wishi</code> (<code>$wishinsert</code>) below to
+                        actually move each character to match the new order.</p>
+                    <div id="wishlistReorderOutput"></div>
+                </div>
+
+                <div class="control-group" style="margin-top: 16px;">
+                    <h3>Build a Wish Command</h3>
+                    <p class="sort-hint">Covers two sources at once: character name(s) typed below (one per line, using
+                        this section's own flags), plus any row above with "Include" checked (using that row's own
+                        flags) - editing a row's Star/Lock/Kakera flags checks "Include" for you automatically. "Also
+                        Add" drops the typed names into this wishlist's rows too.</p>
+                    <textarea id="wishlistCommandNames" class="add-chars-textarea" style="min-height: 70px;"
+                        placeholder="Yoru&#10;Saber"></textarea>
+                    <div class="wishlist-command-flags">
+                        <label><input type="checkbox" id="wishlistFlagStar"> Star (<code>$starwish</code>)</label>
+                        <label><input type="checkbox" id="wishlistFlagLock"> Lock (<code>$wishl</code>)</label>
+                        <label><input type="checkbox" id="wishlistFlagKakera"> Kakera boost (<code>$wishk</code>)</label>
+                    </div>
+                    <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                        <button type="button" onclick="generateWishlistCommands()" class="btn btn-secondary">Generate
+                            Command(s)</button>
+                        <button type="button" onclick="addWishlistCommandNamesToRows()" class="btn btn-secondary">Also
+                            Add to This Wishlist</button>
+                    </div>
+                    <div id="wishlistCommandOutput"></div>
+                </div>
+
+                <div class="add-chars-modal-actions">
+                    <button onclick="closeWishlistModal()" class="btn">Cancel</button>
+                    <button onclick="submitWishlistModal()" class="btn btn-primary">Save Wishlist</button>
+                </div>
+            </div>
         </div>
 
         <div id="customImagesTabPanel" class="custom-images-panel" style="display: none;">
@@ -4682,119 +4801,6 @@
                 <button onclick="closeAntidisableModal()" class="btn">Close</button>
                 <button id="antidisableGenerateBtn" onclick="generateAntidisableCommand()"
                     class="btn btn-primary">Generate Command</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="wishlistModalOverlay" class="changelog-overlay" style="display: none;">
-        <div class="changelog-modal" style="max-width: 640px;">
-            <h2 id="wishlistModalTitle">Add Wishlist</h2>
-            <p class="sort-hint" style="margin-top: 4px;">Run <code>$wishlist</code> in Discord and paste the
-                resulting list below - one character per line. A trailing <code>⭐</code> (starwish) or
-                <code>✅</code> (already claimed) is recognized automatically, as is a trailing <code>+N%</code>
-                boost; any <code>:kakera:</code> icon is dropped since it's pure decoration.</p>
-            <input type="text" id="wishlistNameInput" class="color-hex-text-input" style="text-transform: none; margin-bottom: 10px;"
-                placeholder="Whose wishlist is this? (e.g. a username)">
-            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; color: #d1d5db; font-size: 0.9em;">
-                <input type="checkbox" id="wishlistIsOwnCheckbox" onchange="onWishlistIsOwnToggle()">
-                This is my own wishlist (I run wish commands for it, and want capacity tracking)
-            </label>
-            <div id="wishlistCapacitySection" style="display: none;">
-                <div class="control-group">
-                    <h3>Wish/Starwish Capacity</h3>
-                    <p class="sort-hint">Run <code>$bonus</code> in Discord and paste its output here to prefill your
-                        slot totals. <code>$bonus</code> only reports the <i>bonus</i> on top of the free base every
-                        account starts with (7 wishlist / 1 starwish slot, never shown in <code>$bonus</code>
-                        itself), so that base is added automatically - still, double-check the numbers below against
-                        what Mudae itself shows you and adjust them directly if your account has some other unlisted
-                        modifier, then Save Capacity. Used to show "used/capacity" on this wishlist's card, and to
-                        warn about the wishlist-slot cost of starwishing past your current limit below.</p>
-                    <textarea id="wishlistBonusInput" class="add-chars-textarea" style="min-height: 90px;"
-                        placeholder="Paste $bonus output here..."></textarea>
-                    <div class="add-chars-modal-actions" style="justify-content: flex-start;">
-                        <button type="button" onclick="parseWishlistBonusSnapshot()" class="btn btn-secondary">Prefill from $bonus</button>
-                    </div>
-                    <div id="wishlistBonusMessage"></div>
-                    <div class="wishlist-capacity-inputs">
-                        <label>Wishlist slots <input type="number" id="wishlistCapacityWishlist" min="0"></label>
-                        <label>Starwish slots <input type="number" id="wishlistCapacityStarwish" min="0"></label>
-                        <label>Wishseries slots <input type="number" id="wishlistCapacityWishseries" min="0"></label>
-                        <label title="Check $shop/$ouroshop in Discord for perk 1's current self-boost % (Mudae's own docs: &quot;a part of the spawn chance bonus applied by perk 1 is also applied to the character upgraded&quot;, 0-10%). Used to estimate a booster's own % when no neighbor in your wishlist can solve it directly - always labeled as an estimate, never treated as exact.">Ouroperk self-boost % (<code>$shop</code>) <input type="number" id="wishlistCapacitySelfBoostRate" min="0" max="10"></label>
-                        <button type="button" class="btn btn-sm btn-primary" onclick="saveWishlistCapacityOverride()">Save Capacity</button>
-                    </div>
-                    <div id="wishlistBonusSummary" class="sort-filter-note"></div>
-                </div>
-            </div>
-            <textarea id="wishlistTextInput" class="add-chars-textarea"
-                placeholder="Portgas D. Ace ⭐&#10;Lightning&#10;Aerith Gainsborough&#10;Jin Sakai"></textarea>
-            <div class="add-chars-modal-actions" style="justify-content: flex-start;">
-                <button type="button" onclick="importWishlistTextIntoRows()" class="btn btn-secondary">Import/Update
-                    from Pasted Text</button>
-            </div>
-            <p id="wishlistNewListWarning" class="sort-hint" style="display: none; color: #fbbf24; margin-top: 6px;">
-                ⚠ Building a brand new list? <code>$wish</code>/<code>$sw</code>/<code>$wishl</code>/<code>$wishk</code>
-                only ever <b>add</b> characters - they never overwrite an existing wishlist. If you want your real
-                Discord wishlist to end up matching exactly what you build here, run <code>$wra</code>
-                (<code>$wishremoveall</code>) first to clear it out, then use the commands generated below.</p>
-            <div id="wishlistModalMessage"></div>
-
-            <div class="control-group" style="margin-top: 16px;">
-                <h3>Characters <span style="font-weight: 400; color: #9ca3af;">(drag ⠿ to reorder)</span></h3>
-                <p class="sort-hint">Each row's own Star/Lock/Kakera-boost flags feed straight into the command
-                    builder below - any row you edit (or "Include" manually) is picked up automatically, no
-                    retyping needed. A claimed character's Booster (Ouroperk) status/% is auto-detected where the
-                    pasted order makes it solvable - it's an inference from your <code>+N%</code> markers, not a
-                    guarantee, so double-check against <code>$ouroperks</code> if a value looks off. A <code>+N%</code>
-                    marked "unexplained" doesn't match neighbor-boost math at all and isn't attributed to anyone.</p>
-                <div class="add-chars-modal-actions" style="justify-content: flex-start; margin: -4px 0 8px;">
-                    <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(true)">Include All Rows</button>
-                    <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(false)">Include None</button>
-                </div>
-                <div id="wishlistRowsList" class="wishlist-rows-list"></div>
-            </div>
-
-            <div class="control-group" id="wishlistRemovalsGroup" style="margin-top: 16px; display: none;">
-                <h3>Removed Characters</h3>
-                <p class="sort-hint">Removing a row here only updates this tracker - Mudae's own wish commands can't
-                    overwrite or remove anything, so these were also part of the real wishlist and won't actually be
-                    gone until you run <code>$wr</code> (<code>$wishremove</code>) for them too.</p>
-                <div id="wishlistRemovalsOutput"></div>
-            </div>
-
-            <div class="control-group" id="wishlistReorderGroup" style="margin-top: 16px; display: none;">
-                <h3>Reorder Commands</h3>
-                <p class="sort-hint"><code>$wish</code>/<code>$sw</code>/etc. only ever <b>add</b> - they never move
-                    an already-wished character to a new position, so dragging rows around above doesn't change
-                    anything in Discord by itself. Run <code>$wishi</code> (<code>$wishinsert</code>) below to
-                    actually move each character to match the new order.</p>
-                <div id="wishlistReorderOutput"></div>
-            </div>
-
-            <div class="control-group" style="margin-top: 16px;">
-                <h3>Build a Wish Command</h3>
-                <p class="sort-hint">Covers two sources at once: character name(s) typed below (one per line, using
-                    this section's own flags), plus any row above with "Include" checked (using that row's own
-                    flags) - editing a row's Star/Lock/Kakera flags checks "Include" for you automatically. "Also
-                    Add" drops the typed names into this wishlist's rows too.</p>
-                <textarea id="wishlistCommandNames" class="add-chars-textarea" style="min-height: 70px;"
-                    placeholder="Yoru&#10;Saber"></textarea>
-                <div class="wishlist-command-flags">
-                    <label><input type="checkbox" id="wishlistFlagStar"> Star (<code>$starwish</code>)</label>
-                    <label><input type="checkbox" id="wishlistFlagLock"> Lock (<code>$wishl</code>)</label>
-                    <label><input type="checkbox" id="wishlistFlagKakera"> Kakera boost (<code>$wishk</code>)</label>
-                </div>
-                <div class="add-chars-modal-actions" style="justify-content: flex-start;">
-                    <button type="button" onclick="generateWishlistCommands()" class="btn btn-secondary">Generate
-                        Command(s)</button>
-                    <button type="button" onclick="addWishlistCommandNamesToRows()" class="btn btn-secondary">Also
-                        Add to This Wishlist</button>
-                </div>
-                <div id="wishlistCommandOutput"></div>
-            </div>
-
-            <div class="add-chars-modal-actions">
-                <button onclick="closeWishlistModal()" class="btn">Cancel</button>
-                <button onclick="submitWishlistModal()" class="btn btn-primary">Save Wishlist</button>
             </div>
         </div>
     </div>
@@ -13204,7 +13210,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 version: '2026-08-17',
                 date: 'August 17, 2026',
                 items: [
-                    { type: 'feature', text: 'Drag-reordering wishlist rows now generates <code>$wishi</code> commands to actually reposition characters in Discord to match.' }
+                    { type: 'feature', text: 'Drag-reordering wishlist rows now generates <code>$wishi</code> commands to actually reposition characters in Discord to match.' },
+                    { type: 'fix', text: 'The Add/Edit Wishlist editor is now part of the Wishlists tab page itself instead of a popup.' }
                 ]
             },
             {
@@ -15190,7 +15197,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (newListWarning) newListWarning.style.display = existing ? 'none' : 'block';
 
             renderWishlistModalRows();
-            overlay.style.display = 'flex';
+            overlay.style.display = 'block';
+            overlay.scrollIntoView({ behavior: 'smooth', block: 'start' });
             if (nameField) nameField.focus();
         }
 
