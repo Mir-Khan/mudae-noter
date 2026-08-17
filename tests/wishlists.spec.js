@@ -89,10 +89,20 @@ module.exports = [
                 const lugia = entry.characters.find(c => c.name === 'Lugia');
                 return { riza, n, kim, lugia };
             });
-            assert.deepStrictEqual(flags.riza, { name: 'Riza Hawkeye', isStarWish: true, isClaimed: true });
-            assert.deepStrictEqual(flags.n, { name: 'N', isStarWish: true, isClaimed: true }, 'expected star+check to be recognized even when check comes before star and :kakera: follows');
-            assert.deepStrictEqual(flags.kim, { name: 'Kim Wexler', isStarWish: false, isClaimed: true });
-            assert.deepStrictEqual(flags.lugia, { name: 'Lugia', isStarWish: false, isClaimed: false });
+            const base = { boostPercent: null, isLocked: false, isBooster: false, boosterPercent: null, wantsKakeraBoost: false, includeInCommand: false, hasUnexplainedBoost: false, hasSelfBoostPortion: false, selfResidualPercent: null, boosterPercentEstimated: false };
+            // A claimed character's own shown +N% is NOT their own
+            // Ouroperk contribution - it's what they RECEIVE from
+            // neighbors, so their own contribution can only be solved
+            // indirectly via an adjacent unclaimed "anchor" elsewhere in
+            // the chain. This list is almost entirely claimed characters
+            // with no such anchor near any of the boosted entries, so none
+            // of them can actually be solved - correctly left un-flagged
+            // rather than guessed, same as an unclaimed character's own
+            // (unrelated, never a booster) +N%.
+            assert.deepStrictEqual(flags.riza, { name: 'Riza Hawkeye', isStarWish: true, isClaimed: true, ...base, boostPercent: 200 });
+            assert.deepStrictEqual(flags.n, { name: 'N', isStarWish: true, isClaimed: true, ...base, boostPercent: 100 }, 'expected star+check to be recognized even when check comes before star and :kakera: follows');
+            assert.deepStrictEqual(flags.kim, { name: 'Kim Wexler', isStarWish: false, isClaimed: true, ...base });
+            assert.deepStrictEqual(flags.lugia, { name: 'Lugia', isStarWish: false, isClaimed: false, ...base });
         }
     },
     {

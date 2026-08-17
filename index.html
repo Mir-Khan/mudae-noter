@@ -2828,6 +2828,188 @@
             font-size: 0.85em;
         }
 
+        .wishlist-card-capacity {
+            color: #a78bfa;
+            font-size: 0.8em;
+            margin-bottom: 10px;
+        }
+
+        .wishlist-rows-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 320px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .wishlist-row {
+            background: #1a1a24;
+            border: 2px solid #2a2a3a;
+            border-radius: 8px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e5e7eb;
+            flex-wrap: wrap;
+        }
+
+        .wishlist-row-drag-handle {
+            cursor: grab;
+            opacity: 0.45;
+            flex-shrink: 0;
+            font-size: 0.9em;
+        }
+
+        .wishlist-row-drag-handle:hover {
+            opacity: 0.9;
+        }
+
+        .wishlist-row.dragging {
+            opacity: 0.4;
+        }
+
+        .wishlist-row.drag-over {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35);
+        }
+
+        .wishlist-row-name {
+            font-weight: 600;
+            margin-right: 4px;
+            flex: 1 1 auto;
+            min-width: 70px;
+        }
+
+        .wishlist-row-markers {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .wishlist-booster-neighbor {
+            color: #34d399;
+        }
+
+        .wishlist-row-changed {
+            color: #fbbf24;
+        }
+
+        .wishlist-unexplained-boost {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .wishlist-self-boost {
+            color: #34d399;
+        }
+
+        .wishlist-row-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85em;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+
+        .wishlist-row-toggle-disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .wishlist-row-toggle-disabled input {
+            cursor: not-allowed;
+        }
+
+        /* Same sideways-drawn kakera crystal art used in the Embeds preview -
+           rotated upright here too so it reads as a gem, not lying on its side. */
+        .wishlist-kakera-icon {
+            display: inline-block;
+            width: 0.9em;
+            height: 0.9em;
+            vertical-align: -0.1em;
+            transform: rotate(-90deg);
+        }
+
+        .wishlist-row-booster-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-basis: 100%;
+        }
+
+        .wishlist-row-booster-input {
+            width: 56px;
+            padding: 4px 6px;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+
+        .wishlist-row-booster-input-estimated {
+            border-color: #34d399;
+            font-style: italic;
+        }
+
+        .wishlist-row-remove {
+            font-size: 1.2em;
+            opacity: 0.6;
+            padding: 0 6px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .wishlist-row-remove:hover {
+            opacity: 1;
+            background-color: #b91c1c;
+            color: white;
+        }
+
+        .wishlist-command-flags {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+            color: #d1d5db;
+            font-size: 0.9em;
+        }
+
+        .wishlist-command-flags label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .wishlist-capacity-inputs {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin: 10px 0;
+            color: #d1d5db;
+            font-size: 0.9em;
+        }
+
+        .wishlist-capacity-inputs label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .wishlist-capacity-inputs input[type="number"] {
+            width: 90px;
+            padding: 6px 8px;
+            background: #13131a;
+            border: 1px solid #2a2a3a;
+            color: #e5e7eb;
+            border-radius: 6px;
+        }
+
         /* ===================== Embed Customizer tab ===================== */
         .embed-command-tabs {
             margin-bottom: 14px;
@@ -4505,17 +4687,111 @@
     </div>
 
     <div id="wishlistModalOverlay" class="changelog-overlay" style="display: none;">
-        <div class="changelog-modal">
+        <div class="changelog-modal" style="max-width: 640px;">
             <h2 id="wishlistModalTitle">Add Wishlist</h2>
             <p class="sort-hint" style="margin-top: 4px;">Run <code>$wishlist</code> in Discord and paste the
                 resulting list below - one character per line. A trailing <code>⭐</code> (starwish) or
-                <code>✅</code> (already claimed) is recognized automatically; any <code>:kakera:</code> icon or
-                <code>+N%</code> kakera boost is dropped since it's not something worth keeping per character.</p>
+                <code>✅</code> (already claimed) is recognized automatically, as is a trailing <code>+N%</code>
+                boost; any <code>:kakera:</code> icon is dropped since it's pure decoration.</p>
             <input type="text" id="wishlistNameInput" class="color-hex-text-input" style="text-transform: none; margin-bottom: 10px;"
                 placeholder="Whose wishlist is this? (e.g. a username)">
+            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; color: #d1d5db; font-size: 0.9em;">
+                <input type="checkbox" id="wishlistIsOwnCheckbox" onchange="onWishlistIsOwnToggle()">
+                This is my own wishlist (I run wish commands for it, and want capacity tracking)
+            </label>
+            <div id="wishlistCapacitySection" style="display: none;">
+                <div class="control-group">
+                    <h3>Wish/Starwish Capacity</h3>
+                    <p class="sort-hint">Run <code>$bonus</code> in Discord and paste its output here to prefill your
+                        slot totals. <code>$bonus</code> only reports the <i>bonus</i> on top of the free base every
+                        account starts with (7 wishlist / 1 starwish slot, never shown in <code>$bonus</code>
+                        itself), so that base is added automatically - still, double-check the numbers below against
+                        what Mudae itself shows you and adjust them directly if your account has some other unlisted
+                        modifier, then Save Capacity. Used to show "used/capacity" on this wishlist's card, and to
+                        warn about the wishlist-slot cost of starwishing past your current limit below.</p>
+                    <textarea id="wishlistBonusInput" class="add-chars-textarea" style="min-height: 90px;"
+                        placeholder="Paste $bonus output here..."></textarea>
+                    <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                        <button type="button" onclick="parseWishlistBonusSnapshot()" class="btn btn-secondary">Prefill from $bonus</button>
+                    </div>
+                    <div id="wishlistBonusMessage"></div>
+                    <div class="wishlist-capacity-inputs">
+                        <label>Wishlist slots <input type="number" id="wishlistCapacityWishlist" min="0"></label>
+                        <label>Starwish slots <input type="number" id="wishlistCapacityStarwish" min="0"></label>
+                        <label>Wishseries slots <input type="number" id="wishlistCapacityWishseries" min="0"></label>
+                        <label title="Check $shop/$ouroshop in Discord for perk 1's current self-boost % (Mudae's own docs: &quot;a part of the spawn chance bonus applied by perk 1 is also applied to the character upgraded&quot;, 0-10%). Used to estimate a booster's own % when no neighbor in your wishlist can solve it directly - always labeled as an estimate, never treated as exact.">Ouroperk self-boost % (<code>$shop</code>) <input type="number" id="wishlistCapacitySelfBoostRate" min="0" max="10"></label>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="saveWishlistCapacityOverride()">Save Capacity</button>
+                    </div>
+                    <div id="wishlistBonusSummary" class="sort-filter-note"></div>
+                </div>
+            </div>
             <textarea id="wishlistTextInput" class="add-chars-textarea"
                 placeholder="Portgas D. Ace ⭐&#10;Lightning&#10;Aerith Gainsborough&#10;Jin Sakai"></textarea>
+            <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                <button type="button" onclick="importWishlistTextIntoRows()" class="btn btn-secondary">Import/Update
+                    from Pasted Text</button>
+            </div>
+            <p id="wishlistNewListWarning" class="sort-hint" style="display: none; color: #fbbf24; margin-top: 6px;">
+                ⚠ Building a brand new list? <code>$wish</code>/<code>$sw</code>/<code>$wishl</code>/<code>$wishk</code>
+                only ever <b>add</b> characters - they never overwrite an existing wishlist. If you want your real
+                Discord wishlist to end up matching exactly what you build here, run <code>$wra</code>
+                (<code>$wishremoveall</code>) first to clear it out, then use the commands generated below.</p>
             <div id="wishlistModalMessage"></div>
+
+            <div class="control-group" style="margin-top: 16px;">
+                <h3>Characters <span style="font-weight: 400; color: #9ca3af;">(drag ⠿ to reorder)</span></h3>
+                <p class="sort-hint">Each row's own Star/Lock/Kakera-boost flags feed straight into the command
+                    builder below - any row you edit (or "Include" manually) is picked up automatically, no
+                    retyping needed. A claimed character's Booster (Ouroperk) status/% is auto-detected where the
+                    pasted order makes it solvable - it's an inference from your <code>+N%</code> markers, not a
+                    guarantee, so double-check against <code>$ouroperks</code> if a value looks off. A <code>+N%</code>
+                    marked "unexplained" doesn't match neighbor-boost math at all and isn't attributed to anyone.</p>
+                <div class="add-chars-modal-actions" style="justify-content: flex-start; margin: -4px 0 8px;">
+                    <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(true)">Include All Rows</button>
+                    <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(false)">Include None</button>
+                </div>
+                <div id="wishlistRowsList" class="wishlist-rows-list"></div>
+            </div>
+
+            <div class="control-group" id="wishlistRemovalsGroup" style="margin-top: 16px; display: none;">
+                <h3>Removed Characters</h3>
+                <p class="sort-hint">Removing a row here only updates this tracker - Mudae's own wish commands can't
+                    overwrite or remove anything, so these were also part of the real wishlist and won't actually be
+                    gone until you run <code>$wr</code> (<code>$wishremove</code>) for them too.</p>
+                <div id="wishlistRemovalsOutput"></div>
+            </div>
+
+            <div class="control-group" id="wishlistReorderGroup" style="margin-top: 16px; display: none;">
+                <h3>Reorder Commands</h3>
+                <p class="sort-hint"><code>$wish</code>/<code>$sw</code>/etc. only ever <b>add</b> - they never move
+                    an already-wished character to a new position, so dragging rows around above doesn't change
+                    anything in Discord by itself. Run <code>$wishi</code> (<code>$wishinsert</code>) below to
+                    actually move each character to match the new order.</p>
+                <div id="wishlistReorderOutput"></div>
+            </div>
+
+            <div class="control-group" style="margin-top: 16px;">
+                <h3>Build a Wish Command</h3>
+                <p class="sort-hint">Covers two sources at once: character name(s) typed below (one per line, using
+                    this section's own flags), plus any row above with "Include" checked (using that row's own
+                    flags) - editing a row's Star/Lock/Kakera flags checks "Include" for you automatically. "Also
+                    Add" drops the typed names into this wishlist's rows too.</p>
+                <textarea id="wishlistCommandNames" class="add-chars-textarea" style="min-height: 70px;"
+                    placeholder="Yoru&#10;Saber"></textarea>
+                <div class="wishlist-command-flags">
+                    <label><input type="checkbox" id="wishlistFlagStar"> Star (<code>$starwish</code>)</label>
+                    <label><input type="checkbox" id="wishlistFlagLock"> Lock (<code>$wishl</code>)</label>
+                    <label><input type="checkbox" id="wishlistFlagKakera"> Kakera boost (<code>$wishk</code>)</label>
+                </div>
+                <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                    <button type="button" onclick="generateWishlistCommands()" class="btn btn-secondary">Generate
+                        Command(s)</button>
+                    <button type="button" onclick="addWishlistCommandNamesToRows()" class="btn btn-secondary">Also
+                        Add to This Wishlist</button>
+                </div>
+                <div id="wishlistCommandOutput"></div>
+            </div>
+
             <div class="add-chars-modal-actions">
                 <button onclick="closeWishlistModal()" class="btn">Cancel</button>
                 <button onclick="submitWishlistModal()" class="btn btn-primary">Save Wishlist</button>
@@ -5777,16 +6053,26 @@
         // to hang a resync off of, so the matching AppState.sortData entry
         // (if the Sort tab has data) needs to be kept in sync here directly,
         // or it silently keeps showing the old note/color/etc.
-        function syncSortDataForCharacter(seriesName, char) {
+        // Builds a name-keyed index of AppState.sortData once, so a loop
+        // syncing many characters at once (e.g. saveNewCharacterNotes) can
+        // pass it in and avoid an O(n) linear scan per character.
+        function buildSortDataLookup() {
+            const bySeriesAndName = new Map();
+            const byNameOnly = new Map();
+            (AppState.sortData || []).forEach(function (e) {
+                bySeriesAndName.set(normalizeMatchPart(e.series) + '::' + normalizeMatchPart(e.name), e);
+                const nameKey = normalizeMatchPart(e.name);
+                if (!byNameOnly.has(nameKey)) byNameOnly.set(nameKey, e);
+            });
+            return { bySeriesAndName: bySeriesAndName, byNameOnly: byNameOnly };
+        }
+
+        function syncSortDataForCharacter(seriesName, char, lookup) {
             if (!AppState.sortData || AppState.sortData.length === 0) return null;
 
+            const idx = lookup || buildSortDataLookup();
             const seriesKey = normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(char.name);
-            let entry = AppState.sortData.find(function (e) {
-                return normalizeMatchPart(e.series) + '::' + normalizeMatchPart(e.name) === seriesKey;
-            });
-            if (!entry) {
-                entry = AppState.sortData.find(function (e) { return normalizeMatchPart(e.name) === normalizeMatchPart(char.name); });
-            }
+            const entry = idx.bySeriesAndName.get(seriesKey) || idx.byNameOnly.get(normalizeMatchPart(char.name));
             if (!entry) return null;
 
             entry.matched = true;
@@ -5948,6 +6234,7 @@
 
             let count = 0;
             const justNoted = [];
+            const sortDataLookup = buildSortDataLookup();
             document.querySelectorAll('.new-char-note-input').forEach(function (input) {
                 const value = input.value.trim();
                 if (!value) return;
@@ -5955,7 +6242,7 @@
                 const item = pendingNewCharacterNotes[idx];
                 if (!item) return;
                 item.char.note = value;
-                syncSortDataForCharacter(item.seriesName, item.char);
+                syncSortDataForCharacter(item.seriesName, item.char, sortDataLookup);
                 justNoted.push(item);
                 count++;
             });
@@ -5992,14 +6279,18 @@
         // back up to Options just to search is the same "hard to get back
         // to a control" problem the sticky tab bar solves). Whichever one
         // the user types into, both stay in sync.
+        const debouncedNotesSearchRender = debounce(function (value) {
+            notesSearchQuery = value.trim().toLowerCase();
+            displaySeries();
+        }, 80);
+
         function onNotesSearchChange(sourceField) {
             const value = sourceField ? sourceField.value : '';
-            notesSearchQuery = value.trim().toLowerCase();
             ['notesSearchInput', 'notesSearchInputTop'].forEach(function (id) {
                 const field = document.getElementById(id);
                 if (field && field !== sourceField) field.value = value;
             });
-            displaySeries();
+            debouncedNotesSearchRender(value);
         }
 
         function clearNotesSearch() {
@@ -8521,6 +8812,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             filterOwner.value = currentVal;
         }
 
+        function debounce(fn, delay) {
+            let timer = null;
+            return function () {
+                const args = arguments;
+                clearTimeout(timer);
+                timer = setTimeout(function () { fn.apply(null, args); }, delay);
+            };
+        }
+
         function escapeHTML(str) {
             if (typeof str !== 'string') return str;
             return str.replace(/&/g, '&amp;')
@@ -9968,11 +10268,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             return indices;
         }
 
+        const debouncedSortFilterRender = debounce(function (value) {
+            sortFilterState.query = value;
+            renderSortCharacterList();
+        }, 80);
+
         function onSortFilterChange() {
             const searchField = document.getElementById('sortSearchInput');
-            sortFilterState.query = searchField ? searchField.value : '';
             lastSortClickIndex = null;
-            renderSortCharacterList();
+            debouncedSortFilterRender(searchField ? searchField.value : '');
         }
 
         function clearSortFilters() {
@@ -12691,10 +12995,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             updateColorGridSummary(entries);
         }
 
+        const debouncedColorGridRender = debounce(function (value) {
+            colorGridFilterState.query = value;
+            renderColorCharacterGrid();
+        }, 80);
+
         function onColorGridSearchChange() {
             const field = document.getElementById('colorGridSearchInput');
-            colorGridFilterState.query = field ? field.value : '';
-            renderColorCharacterGrid();
+            debouncedColorGridRender(field ? field.value : '');
         }
 
         function clearColorGridFilter() {
@@ -12890,8 +13198,33 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-15';
+        const CHANGELOG_VERSION = '2026-08-17';
         const CHANGELOG = [
+            {
+                version: '2026-08-17',
+                date: 'August 17, 2026',
+                items: [
+                    { type: 'feature', text: 'Drag-reordering wishlist rows now generates real <code>$wishi</code> (<code>$wishinsert</code>) commands, since <code>$wish</code>/<code>$sw</code>/etc. can only add characters and never actually move an already-wished one to a new position in Discord - dragging rows around here alone changed nothing there before. A new "Reorder Commands" section (only shown when the order actually changed since the last known-real order) works out the minimal set of moves needed - characters whose relative order didn\'t change need no command at all, since repositioning the others around them is enough - each command referencing the nearest unmoved character it now sits after (or position 1 for a run at the very top).' }
+                ]
+            },
+            {
+                version: '2026-08-16',
+                date: 'August 16, 2026',
+                items: [
+                    { type: 'feature', text: 'The <b>Wishlists</b> tab now has a real editor instead of just a text box: each saved wishlist shows a draggable row per character, with its own ⭐ Star/🔒 Lock/💥 Kakera-boost flags, an "Include" checkbox, and a "Booster" toggle for tracking an Ouroperk\'s adjacent-neighbor spawn boost (separate from anything <code>$bonus</code> reports) - live "+N% neighbor" indicators update as you reorder rows, since order determines who\'s adjacent to a booster.' },
+                    { type: 'feature', text: 'Added a <b>wish command builder</b> to the Wishlists tab: type character name(s), pick Star/Lock/Kakera-boost flags, and it generates the exact <code>$wish</code>/<code>$sw</code>/<code>$swlk</code>-style command(s) to run in Discord, joining same-flag characters with <code>$</code> the same way <code>$antidisable</code> does. Editing a row\'s own Star/Lock/Kakera flags now auto-checks "Include" and marks it "changed" - so reordering/reflagging characters you already saved is picked up automatically for the next Generate click without retyping their names or remembering to include them - and each row also has its own quick Copy button for just that one character\'s command.' },
+                    { type: 'feature', text: 'A wishlist paste\'s trailing <code>+N%</code> boost and 🔐 lock marker are now recognized and kept (auto-checking that row\'s Lock flag) instead of being left as stray text or discarded. Capacity tracking moved into a "This is my own wishlist" section inside each wishlist\'s own Add/Edit modal (it\'s hidden for a friend\'s wishlist you\'re only tracking to compare) - paste <code>$bonus</code> output there to prefill your wishlist/starwish/wishseries slot counts, correctly netted against any same-line deduction and with Mudae\'s free base allowance (7 wishlist / 1 starwish slot, never shown in <code>$bonus</code> itself) added automatically. It\'s your own account\'s info rather than anything private to one wishlist entry, so it saves the moment you click Save Capacity (no need to also save the wishlist) and is already filled in for every wishlist you flag "mine," including ones you create afterward - no re-entering it each time.' },
+                    { type: 'feature', text: 'Generating a command that would <code>$starwish</code> past your saved starwish capacity now warns first, with the estimated wishlist-slot cost of Mudae\'s ramping upgrade price (2, 4, 6... slots per additional starwish slot, researched and cross-checked against a real <code>$bonus</code> report), the exact wishlist capacity you\'d be left with, and - by name - which currently-wished characters would actually fall outside that shrunken capacity and get pushed out. A confirmation click is required before the command actually generates.' },
+                    { type: 'feature', text: 'Re-pasting an updated <code>$wishlist</code> into an existing entry now preserves any star/lock/booster flags you\'d already set (matched by name), instead of needing to redo them.' },
+                    { type: 'fix', text: 'The wishlist row "Booster" toggle (for tracking an Ouroperk) is now disabled for a character that isn\'t claimed - Ouroperks only exist on characters you\'ve already claimed, so it could never actually apply to one you don\'t own.' },
+                    { type: 'feature', text: 'A character\'s existing Ouroperk booster contribution is now correctly solved from a <code>$wishlist</code> paste, instead of naively reading it off their own shown <code>+N%</code> - a real report proved the shown number is actually what a character <i>receives</i> from its neighbors (never its own contribution), so its own value can only be inferred by solving the chain of shown percentages across the whole list. Researched every other documented Mudae spawn-bonus source (badges, Kakera Tower, tutorials, Boostwish, Wishprotect) - all confirmed flat/account-wide, none per-character-varying like Ouroperks. Cross-checked against a much larger, messier real wishlist, several characters\' own shown boosts didn\'t fit pure neighbor math at all - traced to a second, real Mudae mechanic confirmed in <code>$ouroshop</code>\'s own docs ("a part of the spawn chance bonus applied by perk 1 is also applied to the character upgraded"): a booster reflects a small, non-fixed part of their own investment back onto their own line too. That\'s now recognized on sight (shown as "incl. self") instead of being flagged as a mystery, and can even confirm a booster\'s status when no neighbor equation solves their exact %. A new "Ouroperk self-boost %" field (check <code>$shop</code>/<code>$ouroperks</code> for perk 1\'s current rate, 0-10%) lets those otherwise-unknown percentages get a labeled estimate instead of staying blank - applied live the moment it\'s saved, never overriding an already-solved or manually-set value. A boost that still doesn\'t add up on an unclaimed character (who can\'t have an Ouroperk at all) stays honestly flagged "unexplained." Also fixed: the wishlist wraps around for neighbor purposes - the first character\'s "previous" is the last character and vice versa (confirmed via a real report tracing an otherwise-inexplicable boost on the very last character back to the very first one\'s own contribution) - previously treated as a dead end at the list\'s boundary instead of wrapping to the other end.' },
+                    { type: 'fix', text: 'The wishlist row Kakera-boost toggle now uses the same real kakera crystal icon shown elsewhere in the app (rotated the correct direction), instead of a placeholder emoji, and its "Booster" toggle + % now sit on their own row below the others for a cleaner layout.' },
+                    { type: 'fix', text: 'Re-importing pasted <code>$wishlist</code> text into an already-tracked wishlist used to rebuild the row order to match the paste itself, silently undoing any drag-reordering already done - which also threw off command generation, since grouped-by-flag commands only reflect whatever order is actually in the list. Re-importing now keeps each existing character right where you left it and only appends genuinely new names, matching what actually gets saved and generated.' },
+                    { type: 'feature', text: 'Removing a row from a wishlist now surfaces a <code>$wr</code> (<code>$wishremove</code>) command when it was actually part of the real, previously-confirmed wishlist - <code>$wish</code>/<code>$sw</code>/etc. are purely additive and never remove anything from your real Discord wishlist, so deleting a row here alone doesn\'t either. A row only ever planned in this app (never imported/confirmed) doesn\'t prompt one, since Discord never had it. A new "run <code>$wra</code> (<code>$wishremoveall</code>) first" warning also shows when starting a brand new wishlist, since those same commands can\'t overwrite whatever\'s already there.' },
+                    { type: 'fix', text: 'Real <code>$wishlist</code> output can tack on a "· (roulette, ...)" and "· N ka" (raw kakera value) suffix after the emoji markers - left unparsed, this blocked every other marker from being recognized too, leaving the whole raw suffix stuck in the character\'s name with none of its Star/Claimed/Lock checkboxes auto-checked. Both are now stripped (without touching a real name that just happens to end in parentheses, like "Captain Marvel (Carol Danvers)").' },
+                    { type: 'fix', text: 'Search boxes on the Notes, Sort, and Colors tabs no longer rebuild the whole grid on every single keystroke, which was noticeably sluggish on large collections.' }
+                ]
+            },
             {
                 version: '2026-08-15',
                 date: 'August 15, 2026',
@@ -14300,6 +14633,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (!AppState.wishlists || typeof AppState.wishlists !== 'object') AppState.wishlists = { entries: {}, order: [] };
             if (!AppState.wishlists.entries) AppState.wishlists.entries = {};
             if (!Array.isArray(AppState.wishlists.order)) AppState.wishlists.order = Object.keys(AppState.wishlists.entries);
+            // Capacity is your own account's info, not any one wishlist
+            // entry's - saved once per collection so it's there automatically
+            // the next time you open ANY wishlist flagged "mine," instead of
+            // needing to be re-entered per entry.
+            if (!AppState.wishlists.myCapacity || typeof AppState.wishlists.myCapacity !== 'object') {
+                AppState.wishlists.myCapacity = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null };
+            }
+            if (AppState.wishlists.myCapacity.selfBoostRatePercent === undefined) AppState.wishlists.myCapacity.selfBoostRatePercent = null;
             return AppState.wishlists;
         }
 
@@ -14363,9 +14704,35 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
                 let isStarWish = false;
                 let isClaimed = false;
+                let isLocked = false;
+                let boostPercent = null;
                 let changed = true;
                 while (changed) {
                     changed = false;
+                    // Real $wishlist output can tack on "· (roulette, ...)"
+                    // and "· N ka" (the character's raw kakera value) after
+                    // the emoji markers - e.g. "Saber ✅⭐🔐 · ($wa, $wg) ·
+                    // 1,624 ka". Neither is wanted (roulette membership and
+                    // raw kakera value aren't tracked here), and left
+                    // unstripped they block every other marker below from
+                    // matching at all, since none of those patterns can see
+                    // past unrecognized trailing text. The roulette match
+                    // requires actual $-prefixed codes inside the
+                    // parentheses specifically, so a real name that just
+                    // happens to end in parentheses (e.g. "Captain Marvel
+                    // (Carol Danvers)") is never mistaken for one.
+                    const kakeraAmountMatch = line.match(/\s*·?\s*[\d,]+\s*ka\s*$/i);
+                    if (kakeraAmountMatch) {
+                        line = line.slice(0, kakeraAmountMatch.index).trim();
+                        changed = true;
+                        continue;
+                    }
+                    const rouletteMatch = line.match(/\s*·?\s*\(\s*\$[a-z]{2}(?:\s*,\s*\$[a-z]{2})*\s*\)\s*$/i);
+                    if (rouletteMatch) {
+                        line = line.slice(0, rouletteMatch.index).trim();
+                        changed = true;
+                        continue;
+                    }
                     const starMatch = line.match(/\s*⭐\s*$/);
                     if (starMatch) {
                         isStarWish = true;
@@ -14386,24 +14753,375 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                         changed = true;
                         continue;
                     }
-                    const boostMatch = line.match(/\s*\+\d+%\s*$/);
+                    // Mudae shows a 🔐 next to a character already locked in
+                    // your $wishlist - real report: it can land anywhere
+                    // relative to the other markers (before or after the
+                    // +N% boost, etc.), so like the rest it's stripped
+                    // whenever it's the current trailing token, not assumed
+                    // to be in any fixed position.
+                    const lockMatch = line.match(/\s*🔐\s*$/);
+                    if (lockMatch) {
+                        isLocked = true;
+                        line = line.slice(0, lockMatch.index).trim();
+                        changed = true;
+                        continue;
+                    }
+                    const boostMatch = line.match(/\s*\+(\d+)%\s*$/);
                     if (boostMatch) {
+                        boostPercent = parseInt(boostMatch[1], 10);
                         line = line.slice(0, boostMatch.index).trim();
                         changed = true;
                     }
                 }
 
-                if (line) characters.push({ name: line, isStarWish: isStarWish, isClaimed: isClaimed });
+                if (line) {
+                    characters.push({
+                        name: line,
+                        isStarWish: isStarWish,
+                        isClaimed: isClaimed,
+                        boostPercent: boostPercent,
+                        isLocked: isLocked,
+                        isBooster: false,
+                        boosterPercent: null,
+                        wantsKakeraBoost: false,
+                        includeInCommand: false
+                    });
+                }
             });
+            inferWishlistBoosterPercentages(characters, currentWishlists().myCapacity.selfBoostRatePercent);
             return characters;
+        }
+
+        // A claimed character's own +N% is mostly NOT their own Ouroperk
+        // contribution - it's the boost they RECEIVE from their (up to
+        // two) adjacent neighbors, same as an unclaimed character's +N%
+        // (confirmed: a real paste's numbers only add up correctly under
+        // this reading, e.g. Nico Robin's shown +160% = Makima's 100% +
+        // Luffy's 60%, not her own value at all). So a character's OWN
+        // contribution mostly never appears on their own line - only on
+        // their neighbors' - meaning it has to be solved for, not read
+        // directly.
+        //
+        // Exception, confirmed via Mudae's own $ouroshop documentation:
+        // "A part of the spawn chance bonus applied by perk 1 is also
+        // applied to the character upgraded" - i.e. a booster reflects a
+        // small part of their OWN investment back onto themselves too, on
+        // top of what they give neighbors. That self-part isn't a fixed
+        // fraction of the neighbor-facing amount (confirmed against a real
+        // paste: four different characters contributing very different
+        // amounts - 25/28/30/35 - to their neighbors all showed the exact
+        // same +3% self-reflection, while another contributing 33% showed
+        // +6% - not proportional to the total at all), so it can't be
+        // solved to an exact number from this data - but its mere
+        // presence is still useful: it PROVES that claimed character has
+        // invested in perk1 themselves, even in cases where no neighbor
+        // equation manages to solve their neighbor-facing contribution at
+        // all (e.g. a booster with two already-unclaimed neighbors, who'd
+        // otherwise be invisible to this algorithm entirely).
+        //
+        // This walks the list as a chain of equations (one per line that
+        // shows a %: shown(i) = contribution(i-1) + contribution(i+1) [+
+        // an unsolvable self-part if i is claimed and invested], with
+        // unclaimed positions fixed at a contribution of 0 since Ouroperks
+        // require claiming) and propagates known values until nothing new
+        // can be solved - e.g. an unclaimed character with only ONE
+        // claimed neighbor gives that neighbor's contribution directly,
+        // which then unlocks solving the next claimed neighbor over, and
+        // so on down the chain. A claimed character whose contribution can
+        // never be isolated this way is left unset (or, if their own
+        // line's residual proves they're still a booster, flagged as one
+        // with an unknown exact %) rather than guessed.
+        //
+        // Confirmed via a real report: the wishlist wraps around - the
+        // first character's "previous" neighbor is the last character in
+        // the list, and the last character's "next" is the first (a real
+        // mismatch was traced exactly this way: the very last character
+        // showed a boost matching the very first character's own
+        // contribution, with nothing else able to explain it). So there's
+        // no true boundary/out-of-bounds case at all - position -1 wraps
+        // to n-1, position n wraps to 0.
+        //
+        // Researched (see the plan for this change): every OTHER
+        // documented spawn-bonus source (Kakera badges/tower/tutorial,
+        // Boostwish/$bw, Wishprotect, $ouroshop's other 9 upgrades) is
+        // confirmed flat/account-wide, not per-character - so once a
+        // claimed character's own residual is accounted for by the perk-1
+        // self-part above, an UNCLAIMED character's line that still
+        // doesn't add up (impossible to be a self-part, since Ouroperks
+        // require claiming) is the only case left genuinely unexplained.
+        // selfBoostRatePercent: the account's current $ouroshop perk-1
+        // self-reflection rate (0-10%, per Mudae's own docs), if the user
+        // has told us theirs - used ONLY to estimate a booster's
+        // neighbor-facing % when no neighbor equation can solve it
+        // directly (see below); never overrides an already-solved value,
+        // since that's more reliable than a rate-derived estimate.
+        function inferWishlistBoosterPercentages(characters, selfBoostRatePercent) {
+            const n = characters.length;
+            const contribution = characters.map(function (c) { return c.isClaimed ? null : 0; });
+            const selfResidual = new Array(n).fill(null);
+            const unexplained = new Array(n).fill(false);
+
+            function getContribution(i) {
+                if (n === 0) return 0;
+                const wrapped = ((i % n) + n) % n;
+                return contribution[wrapped];
+            }
+
+            let changed = true;
+            while (changed) {
+                changed = false;
+                for (let i = 0; i < n; i++) {
+                    const shown = characters[i].boostPercent;
+                    if (shown == null) continue;
+
+                    if (n === 1) {
+                        // No real neighbor can exist at all.
+                        if (shown !== 0) unexplained[i] = true;
+                        continue;
+                    }
+
+                    const leftIdx = ((i - 1) % n + n) % n;
+                    const rightIdx = (i + 1) % n;
+
+                    if (leftIdx === rightIdx) {
+                        // Exactly 2 characters total - wrapping both ways
+                        // lands on the same single other person, so there's
+                        // only one real neighbor here, not two to sum.
+                        const known = contribution[leftIdx];
+                        if (known !== null) {
+                            const diff = shown - known;
+                            if (diff > 0 && characters[i].isClaimed) selfResidual[i] = diff;
+                            else if (diff !== 0) unexplained[i] = true;
+                        } else if (shown >= 0) {
+                            contribution[leftIdx] = shown;
+                            changed = true;
+                        }
+                        continue;
+                    }
+
+                    const left = getContribution(leftIdx);
+                    const right = getContribution(rightIdx);
+                    const leftKnown = left !== null;
+                    const rightKnown = right !== null;
+
+                    if (leftKnown && rightKnown) {
+                        const diff = shown - (left + right);
+                        // A self-reflected part can only ever ADD to what
+                        // neighbor math predicts - a negative diff can't be
+                        // that, so it's always genuinely unexplained
+                        // regardless of claim status.
+                        if (diff > 0 && characters[i].isClaimed) {
+                            selfResidual[i] = diff;
+                        } else if (diff !== 0) {
+                            unexplained[i] = true;
+                        }
+                    } else if (leftKnown && !rightKnown) {
+                        const solved = shown - left;
+                        if (solved >= 0) { contribution[rightIdx] = solved; changed = true; }
+                    } else if (rightKnown && !leftKnown) {
+                        const solved = shown - right;
+                        if (solved >= 0) { contribution[leftIdx] = solved; changed = true; }
+                    }
+                }
+            }
+
+            const rate = (selfBoostRatePercent != null && selfBoostRatePercent > 0) ? selfBoostRatePercent : null;
+
+            characters.forEach(function (c, i) {
+                c.boosterPercentEstimated = false;
+                if (c.isClaimed && contribution[i] != null && contribution[i] > 0) {
+                    c.isBooster = true;
+                    c.boosterPercent = contribution[i];
+                    c.boosterPercentEstimated = false;
+                } else if (c.isClaimed && selfResidual[i] != null) {
+                    // Confirmed invested in perk1 (their own line shows
+                    // more than neighbor math explains), but no neighbor
+                    // equation solved the neighbor-facing amount directly.
+                    // With a known self-boost rate, back-solve a rough
+                    // estimate (residual = neighbor-facing % x rate) -
+                    // still just an estimate, clearly labeled as such,
+                    // never presented as a confirmed number.
+                    c.isBooster = true;
+                    if (rate != null) {
+                        c.boosterPercent = Math.round(selfResidual[i] / (rate / 100));
+                        c.boosterPercentEstimated = true;
+                    } else {
+                        c.boosterPercent = null;
+                        c.boosterPercentEstimated = false;
+                    }
+                }
+                c.hasSelfBoostPortion = selfResidual[i] != null;
+                c.selfResidualPercent = selfResidual[i];
+                c.hasUnexplainedBoost = unexplained[i];
+            });
+        }
+
+        // Lightweight, safe counterpart to inferWishlistBoosterPercentages -
+        // fills in an estimated % for rows already confirmed as boosters
+        // with an unknown amount (selfResidualPercent recorded, boosterPercent
+        // still null), using a self-boost rate that arrived after the
+        // original parse. Deliberately touches nothing else, so it can run
+        // any time (e.g. right after Save Capacity) without risking a
+        // manual edit made in between.
+        function applyWishlistSelfBoostRateEstimate(characters, selfBoostRatePercent) {
+            if (selfBoostRatePercent == null || selfBoostRatePercent <= 0) return;
+            characters.forEach(function (c) {
+                if (c.isClaimed && c.hasSelfBoostPortion && c.boosterPercent == null && c.selfResidualPercent != null) {
+                    c.boosterPercent = Math.round(c.selfResidualPercent / (selfBoostRatePercent / 100));
+                    c.boosterPercentEstimated = true;
+                }
+            });
         }
 
         function normalizeWishName(name) {
             return name.trim().toLowerCase().replace(/\s+/g, ' ');
         }
 
+        // Merges a fresh paste (newChars, in the paste's own order) with
+        // whatever's already in the modal's working array. Critically,
+        // this PRESERVES the existing array's order (including any manual
+        // drag-reordering) rather than rebuilding it in the fresh paste's
+        // own order - a real report found that re-importing after
+        // dragging a character to a new position silently reset it back
+        // to wherever the paste itself had it, which also broke command
+        // generation (grouped-by-flag output only reflects the row order
+        // that's actually in the array, so a reset order showed up there
+        // too). Existing characters keep their position and just get
+        // their fields refreshed; only genuinely NEW names (present in the
+        // fresh paste but not previously tracked) are appended at the end,
+        // in the paste's own relative order. A tracked character simply
+        // missing from this particular paste is left untouched rather than
+        // silently dropped - that's what the explicit Remove (x) button
+        // (and its $wr reminder) is for, not a side effect of re-pasting.
+        //
+        // isStarWish, isLocked, and isBooster all trust a freshly-detected
+        // "true" from the paste (⭐/🔐/a claimed character's own +N%
+        // respectively), but a manually-set true survives even when the
+        // fresh paste shows none of these - that's the normal state for
+        // something only *planned* in this app and not actually run/
+        // visible in Discord yet. isClaimed always reflects the freshest
+        // parse (it's pure status, nothing to plan). boostPercent/
+        // boosterPercent fall back to the old value when the fresh text
+        // has none of its own (e.g. a reconstructed round-trip of an
+        // existing entry, which carries no +N%). wantsKakeraBoost/
+        // includeInCommand are manual-only (kakera-boost intent/command-
+        // selection aren't paste-able at all), always kept from the old
+        // entry.
+        function mergeWishlistCharacters(oldChars, newChars) {
+            const newMap = new Map();
+            newChars.forEach(function (c) { newMap.set(normalizeWishName(c.name), c); });
+
+            const merged = (oldChars || []).map(function (old) {
+                const c = newMap.get(normalizeWishName(old.name));
+                if (!c) return old;
+                return {
+                    name: c.name,
+                    isStarWish: !!c.isStarWish || !!old.isStarWish,
+                    isClaimed: c.isClaimed,
+                    boostPercent: c.boostPercent != null ? c.boostPercent : (old.boostPercent != null ? old.boostPercent : null),
+                    isLocked: !!c.isLocked || !!old.isLocked,
+                    isBooster: !!c.isBooster || !!old.isBooster,
+                    boosterPercent: c.boosterPercent != null ? c.boosterPercent : (old.boosterPercent != null ? old.boosterPercent : null),
+                    wantsKakeraBoost: !!old.wantsKakeraBoost,
+                    includeInCommand: !!old.includeInCommand,
+                    hasUnexplainedBoost: !!c.hasUnexplainedBoost,
+                    hasSelfBoostPortion: !!c.hasSelfBoostPortion,
+                    selfResidualPercent: c.selfResidualPercent != null ? c.selfResidualPercent : (old.selfResidualPercent != null ? old.selfResidualPercent : null),
+                    boosterPercentEstimated: c.boosterPercent != null ? !!c.boosterPercentEstimated : !!old.boosterPercentEstimated
+                };
+            });
+
+            const oldMap = new Map();
+            (oldChars || []).forEach(function (c) { oldMap.set(normalizeWishName(c.name), c); });
+            newChars.forEach(function (c) {
+                if (!oldMap.has(normalizeWishName(c.name))) merged.push(c);
+            });
+
+            return merged;
+        }
+
         function generateWishlistId() {
             return 'wl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+        }
+
+        // The modal's live, editable, orderable working copy of the
+        // wishlist being added/edited - the textarea is just the paste-in
+        // staging box that gets merged into this array via
+        // importWishlistTextFromModal()/on Save, while drag-reorder and the
+        // lock/booster toggles mutate it directly.
+        let wishlistModalCharacters = [];
+        // Tracks the textarea content that's already been folded into
+        // wishlistModalCharacters, so Save doesn't blindly re-import
+        // unchanged leftover text and clobber a drag-reorder with the
+        // paste's original line order - only genuinely new/edited text
+        // triggers an auto-import on Save.
+        let wishlistLastImportedText = '';
+        // Whether the wishlist currently being edited is flagged as "mine" -
+        // capacity/$bonus tracking and the starwish-cost warning only make
+        // sense for a wishlist you actually run commands for, not one
+        // you're just tracking for a friend to compare against.
+        let wishlistModalIsOwn = false;
+        let wishlistModalBonusSnapshot = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null };
+        // Per-character baseline (name -> {isStarWish, isLocked,
+        // wantsKakeraBoost}) captured whenever a row's current flags are
+        // "known real" - at modal open (whatever's already saved) and after
+        // each text import (what the fresh paste itself says, not what
+        // manual planning has since layered on top). A row whose current
+        // flags differ from this baseline is a change made in this editing
+        // session that hasn't been reflected in Discord yet.
+        let wishlistRowBaselines = new Map();
+        // The last known-real ORDER of this wishlist (names, in Discord's
+        // actual order) - whatever's already saved at modal open, replaced
+        // wholesale with the fresh paste's own order after each text
+        // import (that paste IS Discord's current real order at that
+        // moment). Diffed against the row list's current order to know
+        // which characters actually need a $wishi command to reposition -
+        // $wish/$sw/etc. are purely additive and never reorder an
+        // already-wished character, so drag-reordering the rows above does
+        // nothing in Discord on its own.
+        let wishlistRowOrderBaseline = [];
+        // Names known to be REAL - present when this modal was opened (a
+        // previously-saved wishlist) or confirmed via an actual text
+        // import - as opposed to a name only ever added locally through
+        // the command builder's "Also Add," which is never run in Discord.
+        // wishlistRowBaselines alone can't make this distinction (it's set
+        // for "Also Add" rows too, to support the "changed" indicator), so
+        // this is tracked separately, purely to decide whether removing a
+        // row needs a real $wr command.
+        let wishlistConfirmedRealNames = new Set();
+        // Names removed from the row list this editing session that were
+        // in wishlistConfirmedRealNames when removed - i.e. actually real
+        // in Discord, not just something only ever planned in this app.
+        // $wish/$sw/etc. are purely additive (confirmed: they never
+        // overwrite an existing wishlist), so deleting a row here doesn't
+        // touch the real Discord wishlist at all - $wr (wishremove) is the
+        // separate command that actually does, hence tracking these to
+        // surface a ready-made command for it.
+        let wishlistPendingRemovals = [];
+
+        function isWishlistRowChanged(c) {
+            const baseline = wishlistRowBaselines.get(normalizeWishName(c.name)) || { isStarWish: false, isLocked: false, wantsKakeraBoost: false };
+            return !!c.isStarWish !== !!baseline.isStarWish
+                || !!c.isLocked !== !!baseline.isLocked
+                || !!c.wantsKakeraBoost !== !!baseline.wantsKakeraBoost;
+        }
+
+        function backfillWishlistCharacterFields(c) {
+            return {
+                name: c.name,
+                isStarWish: !!c.isStarWish,
+                isClaimed: !!c.isClaimed,
+                boostPercent: c.boostPercent != null ? c.boostPercent : null,
+                isLocked: !!c.isLocked,
+                isBooster: !!c.isBooster,
+                boosterPercent: c.boosterPercent != null ? c.boosterPercent : null,
+                wantsKakeraBoost: !!c.wantsKakeraBoost,
+                includeInCommand: !!c.includeInCommand,
+                hasUnexplainedBoost: !!c.hasUnexplainedBoost,
+                hasSelfBoostPortion: !!c.hasSelfBoostPortion,
+                selfResidualPercent: c.selfResidualPercent != null ? c.selfResidualPercent : null,
+                boosterPercentEstimated: !!c.boosterPercentEstimated
+            };
         }
 
         function openWishlistModal(editId) {
@@ -14417,25 +15135,132 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             wishlistEditingId = editId || null;
             const existing = editId ? currentWishlists().entries[editId] : null;
 
+            wishlistModalCharacters = existing ? existing.characters.map(backfillWishlistCharacterFields) : [];
+
+            // Baseline = whatever's already saved (or nothing, for a brand
+            // new wishlist) - nothing has "changed" yet just from opening.
+            wishlistRowBaselines = new Map();
+            wishlistConfirmedRealNames = new Set();
+            wishlistModalCharacters.forEach(function (c) {
+                wishlistRowBaselines.set(normalizeWishName(c.name), { isStarWish: c.isStarWish, isLocked: c.isLocked, wantsKakeraBoost: c.wantsKakeraBoost });
+                wishlistConfirmedRealNames.add(normalizeWishName(c.name));
+            });
+            wishlistRowOrderBaseline = wishlistModalCharacters.map(function (c) { return c.name; });
+
+            wishlistModalIsOwn = existing ? !!existing.isOwnWishlist : false;
+            // Always the shared, collection-wide capacity - not anything
+            // private to this one entry - so it's already filled in
+            // whether this is a brand new wishlist or one you've edited
+            // (and saved capacity for) before.
+            wishlistModalBonusSnapshot = Object.assign({ wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null }, currentWishlists().myCapacity);
+
             if (title) title.textContent = existing ? 'Edit Wishlist' : 'Add Wishlist';
             if (nameField) nameField.value = existing ? existing.name : '';
+            const ownCheckbox = document.getElementById('wishlistIsOwnCheckbox');
+            if (ownCheckbox) ownCheckbox.checked = wishlistModalIsOwn;
+            onWishlistIsOwnToggle();
+            populateWishlistCapacityInputs();
+            renderWishlistBonusSummary();
+            const bonusInput = document.getElementById('wishlistBonusInput');
+            if (bonusInput) bonusInput.value = '';
+            const bonusMessage = document.getElementById('wishlistBonusMessage');
+            if (bonusMessage) bonusMessage.innerHTML = '';
+
             if (textField) {
+                // Round-trips the star/claimed markers so pasting this back
+                // in (or just re-Saving unchanged) reparses to the same
+                // characters - boostPercent/lock/booster aren't textual, they
+                // live on wishlistModalCharacters and survive via the merge
+                // in submitWishlistModal() regardless of what's in this box.
                 textField.value = existing
                     ? existing.characters.map(function (c) {
                         return c.name + (c.isStarWish ? ' ⭐' : '') + (c.isClaimed ? ' ✅' : '');
                     }).join('\n')
                     : '';
             }
+            wishlistLastImportedText = textField ? textField.value.trim() : '';
             if (message) message.innerHTML = '';
 
+            wishlistPendingRemovals = [];
+            renderWishlistRemovalsSection();
+
+            // $wish/$sw/etc. only ever ADD - they never overwrite an
+            // existing wishlist, so building a brand new list here and
+            // running its commands just layers on top of whatever's
+            // already in Discord. Only relevant when starting fresh, not
+            // when editing an already-tracked wishlist.
+            const newListWarning = document.getElementById('wishlistNewListWarning');
+            if (newListWarning) newListWarning.style.display = existing ? 'none' : 'block';
+
+            renderWishlistModalRows();
             overlay.style.display = 'flex';
             if (nameField) nameField.focus();
+        }
+
+        function onWishlistIsOwnToggle() {
+            const checkbox = document.getElementById('wishlistIsOwnCheckbox');
+            wishlistModalIsOwn = checkbox ? checkbox.checked : false;
+            const section = document.getElementById('wishlistCapacitySection');
+            if (section) section.style.display = wishlistModalIsOwn ? 'block' : 'none';
         }
 
         function closeWishlistModal() {
             const overlay = document.getElementById('wishlistModalOverlay');
             if (overlay) overlay.style.display = 'none';
             wishlistEditingId = null;
+            wishlistModalCharacters = [];
+            wishlistLastImportedText = '';
+            wishlistModalIsOwn = false;
+            wishlistModalBonusSnapshot = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null };
+            wishlistRowBaselines = new Map();
+            wishlistConfirmedRealNames = new Set();
+            wishlistRowOrderBaseline = [];
+            wishlistPendingRemovals = [];
+        }
+
+        function importWishlistTextIntoRows() {
+            const textField = document.getElementById('wishlistTextInput');
+            const message = document.getElementById('wishlistModalMessage');
+            const text = textField ? textField.value.trim() : '';
+
+            if (!text) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the wishlist\'s characters first.</p>';
+                return;
+            }
+
+            const parsed = parseWishlistText(text);
+            if (parsed.length === 0) {
+                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any character names in that text.</p>';
+                return;
+            }
+
+            wishlistModalCharacters = mergeWishlistCharacters(wishlistModalCharacters, parsed);
+            wishlistLastImportedText = text;
+
+            // Re-baseline exactly what this fresh paste confirms - a
+            // manually-planned flag the merge preserved (e.g. a star not
+            // shown in this paste yet) stays flagged as "changed" since it
+            // still hasn't actually happened in Discord.
+            parsed.forEach(function (c) {
+                const key = normalizeWishName(c.name);
+                const prevBaseline = wishlistRowBaselines.get(key);
+                wishlistRowBaselines.set(key, {
+                    isStarWish: c.isStarWish,
+                    isLocked: c.isLocked,
+                    wantsKakeraBoost: prevBaseline ? prevBaseline.wantsKakeraBoost : false
+                });
+                wishlistConfirmedRealNames.add(key);
+            });
+            // The fresh paste's own order IS Discord's real current order
+            // at this moment - it becomes the new ground truth to diff
+            // against for reorder commands, discarding whatever drag
+            // moves happened before this import (those are now reflected
+            // in the paste, or weren't real to begin with).
+            wishlistRowOrderBaseline = parsed.map(function (c) { return c.name; });
+            clearWishlistPendingRemovalsFor(parsed.map(function (c) { return c.name; }));
+
+            renderWishlistModalRows();
+            if (message) message.innerHTML = `<p class="success-message">Imported ${parsed.length} character${parsed.length === 1 ? '' : 's'} - drag to reorder below, then Save Wishlist.</p>`;
         }
 
         function submitWishlistModal() {
@@ -14444,33 +15269,746 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const message = document.getElementById('wishlistModalMessage');
 
             const name = nameField ? nameField.value.trim() : '';
-            const text = textField ? textField.value.trim() : '';
-
             if (!name) {
                 if (message) message.innerHTML = '<p class="error-message">Give this wishlist a name first.</p>';
                 return;
             }
-            if (!text) {
-                if (message) message.innerHTML = '<p class="error-message">Paste the wishlist\'s characters first.</p>';
-                return;
+
+            // Anything left un-imported in the textarea is folded in on Save
+            // too, so the simple "paste and Save" flow still works exactly
+            // as before without requiring the explicit Import button.
+            const pastedText = textField ? textField.value.trim() : '';
+            if (pastedText && pastedText !== wishlistLastImportedText) {
+                const parsed = parseWishlistText(pastedText);
+                if (parsed.length > 0) {
+                    wishlistModalCharacters = mergeWishlistCharacters(wishlistModalCharacters, parsed);
+                    wishlistLastImportedText = pastedText;
+                }
             }
 
-            const characters = parseWishlistText(text);
-            if (characters.length === 0) {
-                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any character names in that text.</p>';
+            if (wishlistModalCharacters.length === 0) {
+                if (message) message.innerHTML = '<p class="error-message">Add some characters first - paste a $wishlist above, or use the command builder below.</p>';
                 return;
             }
 
             const wishlists = currentWishlists();
             const id = wishlistEditingId || generateWishlistId();
-            wishlists.entries[id] = { id: id, name: name, characters: characters, updatedAt: Date.now() };
+            wishlists.entries[id] = {
+                id: id, name: name, characters: wishlistModalCharacters, updatedAt: Date.now(),
+                isOwnWishlist: wishlistModalIsOwn
+            };
             if (!wishlists.order.includes(id)) wishlists.order.push(id);
 
             saveToLocalStorage();
+            const count = wishlistModalCharacters.length;
             closeWishlistModal();
             renderWishlistsList();
             populateWishlistCompareSelects();
-            showMessage(`Saved "${name}"'s wishlist (${characters.length} character${characters.length === 1 ? '' : 's'}).`, 'success');
+            showMessage(`Saved "${name}"'s wishlist (${count} character${count === 1 ? '' : 's'}).`, 'success');
+        }
+
+        function findWishlistBoosterBoost(chars, idx) {
+            const n = chars.length;
+            if (n <= 1) return null; // no real neighbor can exist
+
+            // The wishlist wraps around - the first character's "previous"
+            // is the last character, and the last character's "next" is
+            // the first (confirmed via a real report tracing an
+            // otherwise-inexplicable boost on the very last character back
+            // to the very first one's own contribution). With exactly 2
+            // characters, "previous" and "next" both land on the same
+            // single other character - only counted once, not doubled.
+            const prevIdx = ((idx - 1) % n + n) % n;
+            const nextIdx = (idx + 1) % n;
+            const neighborIndexes = prevIdx === nextIdx ? [prevIdx] : [prevIdx, nextIdx];
+
+            let total = 0;
+            neighborIndexes.forEach(function (ni) {
+                const c = chars[ni];
+                // Ouroperks only exist on already-claimed characters -
+                // isClaimed is checked here too (not just at the toggle)
+                // so a stale isBooster on an unclaimed character (e.g.
+                // from data saved before this rule existed) can't silently
+                // still exert a boost.
+                if (c && c.isClaimed && c.isBooster && c.boosterPercent) total += c.boosterPercent;
+            });
+            return total > 0 ? total : null;
+        }
+
+        function wishlistRowMarkersHTML(c, idx) {
+            const boosterNeighbor = findWishlistBoosterBoost(wishlistModalCharacters, idx);
+            const bits = [];
+            if (c.isClaimed) bits.push('<span class="wishlist-marker" title="Already claimed">✅</span>');
+            if (c.boostPercent != null) {
+                if (c.hasSelfBoostPortion) {
+                    // Confirmed via Mudae's own $ouroshop docs: "a part of
+                    // the spawn chance bonus applied by perk 1 is also
+                    // applied to the character upgraded" - this character
+                    // is reflecting a bit of their own Ouroperk investment
+                    // back onto themselves, on top of what neighbors show.
+                    bits.push(`<span class="wishlist-marker wishlist-self-boost" title="Includes a self-reflected part of this character's own Ouroperk investment (confirmed Mudae mechanic: a part of perk 1's bonus also applies to the character upgraded), on top of whatever it receives from neighbors.">+${c.boostPercent}% (incl. self)</span>`);
+                } else if (c.hasUnexplainedBoost) {
+                    // Both neighbors are accounted for and still don't add
+                    // up to this, and it's not claimed (so it can't be the
+                    // self-boost case above, which requires an Ouroperk
+                    // investment) - real signal, just not attributable to
+                    // anyone's Ouroperk (most likely a different, flat
+                    // account-wide bonus that happens to only show here).
+                    bits.push(`<span class="wishlist-marker wishlist-unexplained-boost" title="This +${c.boostPercent}% doesn't match neighbor-boost math - both neighbors are already accounted for and don't add up to it, so it's likely from a different bonus source, not an Ouroperk. Not attributed to anyone as a booster.">+${c.boostPercent}% (unexplained)</span>`);
+                } else {
+                    bits.push(`<span class="wishlist-marker" title="Boost % from the $wishlist paste">+${c.boostPercent}%</span>`);
+                }
+            }
+            if (boosterNeighbor != null) bits.push(`<span class="wishlist-marker wishlist-booster-neighbor" title="Ouroperk boost from an adjacent booster character">+${boosterNeighbor}% neighbor</span>`);
+            if (isWishlistRowChanged(c)) bits.push('<span class="wishlist-marker wishlist-row-changed" title="Star/Lock/Kakera differs from the last known/imported state - included below for command generation">✏️ changed</span>');
+            return bits.join('');
+        }
+
+        function refreshWishlistRowMarkers() {
+            const container = document.getElementById('wishlistRowsList');
+            if (!container) return;
+            wishlistModalCharacters.forEach(function (c, idx) {
+                const row = container.querySelector(`.wishlist-row[data-index="${idx}"]`);
+                const markersEl = row ? row.querySelector('.wishlist-row-markers') : null;
+                if (markersEl) markersEl.innerHTML = wishlistRowMarkersHTML(c, idx);
+            });
+        }
+
+        // Editing a row's Star/Lock/Kakera flags is itself the signal that
+        // you want a command generated for it - Include auto-follows
+        // whether the row now differs from its baseline, so ticking a
+        // flag box is enough on its own, no separate manual step needed
+        // (Include can still be unchecked/checked by hand afterward too).
+        function syncWishlistRowIncludeFromChange(idx) {
+            const c = wishlistModalCharacters[idx];
+            c.includeInCommand = isWishlistRowChanged(c);
+            const container = document.getElementById('wishlistRowsList');
+            const row = container ? container.querySelector(`.wishlist-row[data-index="${idx}"]`) : null;
+            if (row) {
+                const includeBox = row.querySelector('[data-action="include"]');
+                if (includeBox) includeBox.checked = c.includeInCommand;
+            }
+            refreshWishlistRowMarkers();
+        }
+
+        function renderWishlistModalRows() {
+            const container = document.getElementById('wishlistRowsList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (wishlistModalCharacters.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No characters yet - paste a $wishlist above and click Import, or add some with the command builder below.</p>';
+                return;
+            }
+
+            wishlistModalCharacters.forEach(function (c, idx) {
+                const row = document.createElement('div');
+                row.className = 'wishlist-row';
+                row.draggable = true;
+                row.dataset.index = idx;
+
+                row.innerHTML = `
+                    <span class="wishlist-row-drag-handle" title="Drag to reorder">⠿</span>
+                    <label class="wishlist-row-toggle" title="Include this character next time you click Generate Command(s) below">
+                        <input type="checkbox" data-action="include" ${c.includeInCommand ? 'checked' : ''}> Include
+                    </label>
+                    <span class="wishlist-row-name">${escapeHTML(c.name)}</span>
+                    <span class="wishlist-row-markers">${wishlistRowMarkersHTML(c, idx)}</span>
+                    <label class="wishlist-row-toggle" title="Star this character ($starwish)">
+                        <input type="checkbox" data-action="star" ${c.isStarWish ? 'checked' : ''}> ⭐
+                    </label>
+                    <label class="wishlist-row-toggle" title="Lock this character ($wishl)">
+                        <input type="checkbox" data-action="lock" ${c.isLocked ? 'checked' : ''}> 🔒
+                    </label>
+                    <label class="wishlist-row-toggle" title="Kakera-boost this character ($wishk)">
+                        <input type="checkbox" data-action="kakera" ${c.wantsKakeraBoost ? 'checked' : ''}> <img src="docs/assets/kakera-symbol.webp" alt="Kakera boost" class="wishlist-kakera-icon">
+                    </label>
+                    <button type="button" class="btn btn-sm" data-action="copy" title="Copy this character's own $wish command, using its current Star/Lock/Kakera flags">⎘</button>
+                    <span class="wishlist-row-remove" data-action="remove" title="Remove">×</span>
+                    <div class="wishlist-row-booster-group">
+                        <label class="wishlist-row-toggle${c.isClaimed ? '' : ' wishlist-row-toggle-disabled'}" title="${c.isClaimed ? 'This character has an Ouroperk that boosts spawn chance for adjacent wishlist entries - not the same as the $bonus totals. Auto-detected from your wishlist order where possible; double-check against $ouroperks if a value looks off.' : 'Ouroperks only exist on characters you\'ve already claimed - mark this as claimed (✅ from the $wishlist paste) first'}">
+                            <input type="checkbox" data-action="booster" ${c.isBooster && c.isClaimed ? 'checked' : ''} ${c.isClaimed ? '' : 'disabled'}> Booster
+                        </label>
+                        ${(c.isBooster && c.isClaimed) ? `<input type="number" class="wishlist-row-booster-input${c.boosterPercentEstimated ? ' wishlist-row-booster-input-estimated' : ''}" data-action="boosterPercent" min="0" max="500" value="${c.boosterPercent != null ? c.boosterPercent : ''}" placeholder="%" title="${c.boosterPercentEstimated ? 'Estimated from your saved Ouroperk self-boost rate, not solved directly - edit if you know the real value.' : ''}">` : ''}
+                    </div>
+                `;
+
+                row.addEventListener('dragstart', handleWishlistRowDragStart);
+                row.addEventListener('dragover', handleWishlistRowDragOver);
+                row.addEventListener('dragleave', handleWishlistRowDragLeave);
+                row.addEventListener('drop', handleWishlistRowDrop);
+                row.addEventListener('dragend', handleWishlistRowDragEnd);
+
+                row.querySelector('[data-action="include"]').addEventListener('change', function (e) {
+                    wishlistModalCharacters[idx].includeInCommand = e.target.checked;
+                });
+                row.querySelector('[data-action="star"]').addEventListener('change', function (e) {
+                    wishlistModalCharacters[idx].isStarWish = e.target.checked;
+                    syncWishlistRowIncludeFromChange(idx);
+                });
+                row.querySelector('[data-action="lock"]').addEventListener('change', function (e) {
+                    wishlistModalCharacters[idx].isLocked = e.target.checked;
+                    syncWishlistRowIncludeFromChange(idx);
+                });
+                row.querySelector('[data-action="kakera"]').addEventListener('change', function (e) {
+                    wishlistModalCharacters[idx].wantsKakeraBoost = e.target.checked;
+                    syncWishlistRowIncludeFromChange(idx);
+                });
+                row.querySelector('[data-action="booster"]').addEventListener('change', function (e) {
+                    wishlistModalCharacters[idx].isBooster = e.target.checked;
+                    if (!e.target.checked) wishlistModalCharacters[idx].boosterPercent = null;
+                    renderWishlistModalRows();
+                });
+                const boosterInput = row.querySelector('[data-action="boosterPercent"]');
+                if (boosterInput) {
+                    boosterInput.addEventListener('input', function (e) {
+                        const val = parseInt(e.target.value, 10);
+                        wishlistModalCharacters[idx].boosterPercent = isNaN(val) ? null : val;
+                        // A manual edit is no longer just an estimate.
+                        wishlistModalCharacters[idx].boosterPercentEstimated = false;
+                        boosterInput.classList.remove('wishlist-row-booster-input-estimated');
+                        boosterInput.title = '';
+                        refreshWishlistRowMarkers();
+                    });
+                }
+                row.querySelector('[data-action="copy"]').addEventListener('click', function () {
+                    const cmd = buildWishCommands([wishlistModalCharacters[idx]])[0];
+                    if (cmd) copyToClipboard(cmd.command);
+                });
+                row.querySelector('[data-action="remove"]').addEventListener('click', function () {
+                    const removedChar = wishlistModalCharacters[idx];
+                    const wasReal = wishlistConfirmedRealNames.has(normalizeWishName(removedChar.name));
+                    wishlistModalCharacters.splice(idx, 1);
+                    if (wasReal) addWishlistPendingRemoval(removedChar.name);
+                    renderWishlistModalRows();
+                });
+
+                container.appendChild(row);
+            });
+
+            renderWishlistReorderSection();
+        }
+
+        // $wish/$sw/$wishl/$wishk are purely additive - Mudae never
+        // repositions an already-wished character just because it's typed
+        // again, so a drag-reorder above needs its own explicit command:
+        // $wishi, which can insert (move) named characters to a specific
+        // position or right after a reference character. Diffs the row
+        // list's current order against wishlistRowOrderBaseline (the last
+        // known-real Discord order) and returns the minimal set of $wishi
+        // commands needed to reproduce the new order - characters whose
+        // relative order didn't change need no command at all, since
+        // moving the others around them is enough.
+        function computeWishlistReorderCommands() {
+            const realKeys = wishlistConfirmedRealNames;
+            const currentOrder = wishlistModalCharacters
+                .map(function (c) { return c.name; })
+                .filter(function (name) { return realKeys.has(normalizeWishName(name)); });
+            const currentKeySet = new Set(currentOrder.map(normalizeWishName));
+            const baselineOrder = wishlistRowOrderBaseline.filter(function (name) { return currentKeySet.has(normalizeWishName(name)); });
+
+            const baselineIndexOf = new Map();
+            baselineOrder.forEach(function (name, i) { baselineIndexOf.set(normalizeWishName(name), i); });
+
+            // Characters not present in the baseline order at all (e.g.
+            // added via the command builder's "Also Add" and never
+            // actually wished in Discord yet) can't be diffed against a
+            // real position - they're excluded from currentOrder above via
+            // the wishlistConfirmedRealNames check, so every name reaching
+            // here has a baseline index.
+            const seq = currentOrder.map(function (name) { return baselineIndexOf.get(normalizeWishName(name)); });
+
+            // Longest increasing subsequence (by baseline index) = the
+            // largest set of characters that can stay exactly where they
+            // are relative to each other - everyone else is what actually
+            // needs to move.
+            const tails = []; // index into seq of the smallest tail value for each LIS length
+            const prev = new Array(seq.length).fill(-1);
+            seq.forEach(function (val, i) {
+                let lo = 0, hi = tails.length;
+                while (lo < hi) {
+                    const mid = (lo + hi) >> 1;
+                    if (seq[tails[mid]] < val) lo = mid + 1; else hi = mid;
+                }
+                if (lo > 0) prev[i] = tails[lo - 1];
+                tails[lo] = i;
+            });
+            const keptIndexes = new Set();
+            let k = tails.length ? tails[tails.length - 1] : -1;
+            while (k !== -1) { keptIndexes.add(k); k = prev[k]; }
+
+            // Walk the current order; consecutive runs of "moved" names
+            // between two kept anchors can share one $wishi command (they
+            // land in the right relative order automatically), referencing
+            // whichever kept character most recently preceded them, or
+            // position 1 if the run is at the very top with nothing kept
+            // before it yet.
+            const commands = [];
+            let pendingRun = [];
+            let precedingKept = null;
+            function flushRun() {
+                if (pendingRun.length === 0) return;
+                const target = precedingKept != null ? escapeHTML(precedingKept) : '1';
+                commands.push({ command: `$wishi ${target} $ ${pendingRun.map(escapeHTML).join('$')}`, names: pendingRun.slice() });
+                pendingRun = [];
+            }
+            currentOrder.forEach(function (name, i) {
+                if (keptIndexes.has(i)) {
+                    flushRun();
+                    precedingKept = name;
+                } else {
+                    pendingRun.push(name);
+                }
+            });
+            flushRun();
+
+            return commands;
+        }
+
+        function renderWishlistReorderSection() {
+            const group = document.getElementById('wishlistReorderGroup');
+            const output = document.getElementById('wishlistReorderOutput');
+            if (!group || !output) return;
+
+            const commands = computeWishlistReorderCommands();
+            if (commands.length === 0) {
+                group.style.display = 'none';
+                output.innerHTML = '';
+                return;
+            }
+
+            group.style.display = 'block';
+            output.innerHTML = commands.map(function (c, i) {
+                return `<div class="command-item">
+    <div class="command-text">${c.command}</div>
+    <button type="button" class="btn btn-sm btn-primary" data-reorder-index="${i}">Copy Command</button>
+</div>`;
+            }).join('');
+            commands.forEach(function (c, i) {
+                const btn = output.querySelector(`[data-reorder-index="${i}"]`);
+                if (btn) btn.onclick = function () { copyCommand(btn, c.command); };
+            });
+        }
+
+        function setAllWishlistRowsIncluded(included) {
+            wishlistModalCharacters.forEach(function (c) { c.includeInCommand = included; });
+            renderWishlistModalRows();
+        }
+
+        function addWishlistPendingRemoval(name) {
+            const key = normalizeWishName(name);
+            if (!wishlistPendingRemovals.some(function (n) { return normalizeWishName(n) === key; })) {
+                wishlistPendingRemovals.push(name);
+            }
+            renderWishlistRemovalsSection();
+        }
+
+        // A name coming back in (re-imported, or re-added via the command
+        // builder) cancels out any pending removal for it - it's back in
+        // the list, so there's nothing left to actually remove in Discord.
+        function clearWishlistPendingRemovalsFor(names) {
+            const keys = new Set(names.map(normalizeWishName));
+            wishlistPendingRemovals = wishlistPendingRemovals.filter(function (n) { return !keys.has(normalizeWishName(n)); });
+            renderWishlistRemovalsSection();
+        }
+
+        function renderWishlistRemovalsSection() {
+            const group = document.getElementById('wishlistRemovalsGroup');
+            const output = document.getElementById('wishlistRemovalsOutput');
+            if (!group || !output) return;
+
+            if (wishlistPendingRemovals.length === 0) {
+                group.style.display = 'none';
+                output.innerHTML = '';
+                return;
+            }
+
+            group.style.display = 'block';
+            const command = `$wr ${wishlistPendingRemovals.join('$')}`;
+            output.innerHTML = `<div class="command-item">
+    <div class="command-text">${escapeHTML(command)}</div>
+    <button type="button" class="btn btn-sm btn-primary" id="wishlistRemovalsCopyBtn">Copy Command</button>
+</div>`;
+            const btn = document.getElementById('wishlistRemovalsCopyBtn');
+            if (btn) btn.onclick = function () { copyCommand(btn, command); };
+        }
+
+        let wishlistRowDragFromIndex = null;
+
+        function handleWishlistRowDragStart(e) {
+            wishlistRowDragFromIndex = parseInt(e.currentTarget.dataset.index, 10);
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleWishlistRowDragOver(e) {
+            if (wishlistRowDragFromIndex === null) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleWishlistRowDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleWishlistRowDrop(e) {
+            if (wishlistRowDragFromIndex === null) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('drag-over');
+
+            const toIndex = parseInt(e.currentTarget.dataset.index, 10);
+            const fromIndex = wishlistRowDragFromIndex;
+            if (fromIndex === toIndex) return;
+
+            const [moved] = wishlistModalCharacters.splice(fromIndex, 1);
+            wishlistModalCharacters.splice(toIndex, 0, moved);
+
+            renderWishlistModalRows();
+        }
+
+        function handleWishlistRowDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('#wishlistRowsList .drag-over').forEach(function (el) { el.classList.remove('drag-over'); });
+            wishlistRowDragFromIndex = null;
+        }
+
+        // Confirmed syntax: $sw (starwish) combines the same lock/kakera
+        // flag letters $wish itself documents ($swlk = starwish+lock+kakera
+        // in one command). Combining lock+kakera on a plain (non-star) $wish
+        // isn't confirmed anywhere as a single command, so that combination
+        // deliberately falls back to two separate commands rather than
+        // guessing at unverified syntax.
+        function buildWishCommands(chars) {
+            const groups = new Map();
+            chars.forEach(function (c) {
+                const star = !!c.isStarWish;
+                const lock = !!c.isLocked;
+                const kakera = !!c.wantsKakeraBoost;
+                const key = (star ? 's' : '') + (lock ? 'l' : '') + (kakera ? 'k' : '');
+                if (!groups.has(key)) groups.set(key, { star: star, lock: lock, kakera: kakera, names: [] });
+                groups.get(key).names.push(c.name);
+            });
+
+            const commands = [];
+            groups.forEach(function (g) {
+                let bases;
+                if (g.star) {
+                    let base = '$sw';
+                    if (g.lock) base += 'l';
+                    if (g.kakera) base += 'k';
+                    bases = [base];
+                } else if (g.lock && g.kakera) {
+                    bases = ['$wishl', '$wishk'];
+                } else if (g.lock) {
+                    bases = ['$wishl'];
+                } else if (g.kakera) {
+                    bases = ['$wishk'];
+                } else {
+                    bases = ['$wish'];
+                }
+                bases.forEach(function (base) {
+                    commands.push({ command: `${base} ${g.names.join('$')}`, names: g.names.slice() });
+                });
+            });
+            return commands;
+        }
+
+        function readWishlistCommandBuilderInput() {
+            const namesField = document.getElementById('wishlistCommandNames');
+            const names = (namesField ? namesField.value : '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+            const star = document.getElementById('wishlistFlagStar').checked;
+            const lock = document.getElementById('wishlistFlagLock').checked;
+            const kakera = document.getElementById('wishlistFlagKakera').checked;
+            return { names: names, star: star, lock: lock, kakera: kakera };
+        }
+
+        // Combines two sources into one Generate click: names freshly typed
+        // into the textarea (using this section's own Star/Lock/Kakera
+        // checkboxes), and any existing rows above with "Include" checked
+        // (using each row's OWN current flags, not these checkboxes) - so
+        // reordering/flagging rows you already have and generating a
+        // command for them doesn't require retyping their names here too.
+        // Set true only for the single re-entrant call made by the
+        // "Generate Anyway" confirm button, so the capacity check below is
+        // skipped exactly once and doesn't loop back into another warning.
+        let wishlistGenerateSkipCapacityCheck = false;
+
+        // Which named characters would fall outside a shrunken wishlist
+        // capacity is scoped ONLY to what's actually in the row list below
+        // (the real tracked wishlist), in its current drag-order - names
+        // freshly typed into the command builder's textarea above aren't
+        // part of the saved wishlist yet (that's what "Also Add" is for),
+        // so they're deliberately excluded here even though they still
+        // count toward the starwish-slots-needed math elsewhere.
+        function currentWishlistOrder() {
+            return wishlistModalCharacters.map(function (c) { return c.name; });
+        }
+
+        function generateWishlistCommands() {
+            const input = readWishlistCommandBuilderInput();
+            const output = document.getElementById('wishlistCommandOutput');
+            if (!output) return;
+
+            const typedChars = input.names.map(function (n) {
+                return { name: n, isStarWish: input.star, isLocked: input.lock, wantsKakeraBoost: input.kakera };
+            });
+            const includedChars = wishlistModalCharacters
+                .filter(function (c) { return c.includeInCommand; })
+                .map(function (c) { return { name: c.name, isStarWish: c.isStarWish, isLocked: c.isLocked, wantsKakeraBoost: c.wantsKakeraBoost }; });
+            const chars = typedChars.concat(includedChars);
+
+            if (chars.length === 0) {
+                output.innerHTML = '<p class="error-message">Type at least one character name, or check "Include" on a row below, first.</p>';
+                return;
+            }
+
+            // Only meaningful for your own wishlist (capacity is an account
+            // property, not something a friend's tracked wishlist has data
+            // for), only when this batch actually stars someone new, and
+            // only when a real starwish capacity number is on file.
+            const capacity = wishlistModalBonusSnapshot.starwishSlots;
+            const involvesStar = chars.some(function (c) { return c.isStarWish; });
+            if (!wishlistGenerateSkipCapacityCheck && wishlistModalIsOwn && involvesStar && capacity != null) {
+                const totalStarwishAfter = wishlistModalCharacters.filter(function (c) { return c.isStarWish; }).length
+                    + typedChars.filter(function (c) { return c.isStarWish; }).length;
+                if (totalStarwishAfter > capacity) {
+                    const slotsNeeded = totalStarwishAfter - capacity;
+                    const estCost = estimateStarwishUpgradeCost(capacity, slotsNeeded);
+                    const oldWishlistCapacity = wishlistModalBonusSnapshot.wishlistSlots;
+
+                    let warningHTML = `<p class="error-message">⚠ This needs ${slotsNeeded} more \$starwish slot${slotsNeeded === 1 ? '' : 's'} than your saved capacity (${capacity}) - Mudae will likely ask to sacrifice roughly <b>${estCost} wishlist slot${estCost === 1 ? '' : 's'}</b> to raise the limit (Mudae's own ramping cost: 2, 4, 6... wishlist slots per additional starwish slot).</p>`;
+
+                    if (oldWishlistCapacity != null) {
+                        const newWishlistCapacity = oldWishlistCapacity - estCost;
+                        if (newWishlistCapacity < 0) {
+                            warningHTML += `<p class="error-message">⚠ You may not even have enough wishlist slots to afford this upgrade (need ${estCost}, only have ${oldWishlistCapacity}).</p>`;
+                        } else {
+                            const combinedOrder = currentWishlistOrder();
+                            const lost = combinedOrder.slice(Math.max(newWishlistCapacity, 0));
+                            warningHTML += `<p class="sort-hint">That would take your wishlist capacity from <b>${oldWishlistCapacity}</b> down to <b>${newWishlistCapacity}</b>.</p>`;
+                            if (lost.length > 0) {
+                                warningHTML += `<p class="error-message">⚠ You're using ${combinedOrder.length} of your ${oldWishlistCapacity} wishlist slots right now - dropping to ${newWishlistCapacity} would push out the lowest-priority ${lost.length} character${lost.length === 1 ? '' : 's'}: <b>${lost.map(escapeHTML).join(', ')}</b>. Drag them higher in the list first if you want to keep them.</p>`;
+                            } else {
+                                warningHTML += `<p class="sort-hint">You have enough room - no characters would be pushed out.</p>`;
+                            }
+                        }
+                    } else {
+                        warningHTML += `<p class="sort-hint">Set your wishlist slot capacity above too for the exact numbers and to see if this would push any characters out.</p>`;
+                    }
+
+                    warningHTML += `<p class="sort-hint">Update the capacity above first if these numbers are stale, or confirm to continue anyway.</p>
+<button type="button" class="btn btn-primary" id="wishlistGenerateConfirmBtn">Generate Anyway</button>`;
+
+                    output.innerHTML = warningHTML;
+                    const confirmBtn = document.getElementById('wishlistGenerateConfirmBtn');
+                    if (confirmBtn) {
+                        confirmBtn.onclick = function () {
+                            wishlistGenerateSkipCapacityCheck = true;
+                            generateWishlistCommands();
+                            wishlistGenerateSkipCapacityCheck = false;
+                        };
+                    }
+                    return;
+                }
+            }
+
+            const commands = buildWishCommands(chars);
+            const anyUnstarredLockAndKakera = chars.some(function (c) { return !c.isStarWish && c.isLocked && c.wantsKakeraBoost; });
+            const unconfirmedNote = anyUnstarredLockAndKakera
+                ? '<p class="sort-hint" style="margin-top: 6px;">Combining Lock + Kakera boost without Star isn\'t a confirmed single command in Mudae, so two separate commands are generated instead.</p>'
+                : '';
+
+            output.innerHTML = commands.map(function (c, i) {
+                return `<div class="command-item">
+    <div class="command-text">${escapeHTML(c.command)}</div>
+    <button type="button" class="btn btn-sm btn-primary" data-command-index="${i}">Copy Command</button>
+</div>`;
+            }).join('') + unconfirmedNote;
+
+            commands.forEach(function (c, i) {
+                const btn = output.querySelector(`[data-command-index="${i}"]`);
+                if (btn) btn.onclick = function () { copyCommand(btn, c.command); };
+            });
+        }
+
+        function addWishlistCommandNamesToRows() {
+            const input = readWishlistCommandBuilderInput();
+            if (input.names.length === 0) return;
+
+            input.names.forEach(function (n) {
+                wishlistModalCharacters.push({
+                    name: n, isStarWish: input.star, isClaimed: false, boostPercent: null,
+                    isLocked: input.lock, isBooster: false, boosterPercent: null,
+                    wantsKakeraBoost: input.kakera, includeInCommand: true, hasUnexplainedBoost: false, hasSelfBoostPortion: false,
+                    selfResidualPercent: null, boosterPercentEstimated: false
+                });
+                // Brand new to this wishlist - baseline is "nothing set"
+                // so it shows as changed/included right away.
+                wishlistRowBaselines.set(normalizeWishName(n), { isStarWish: false, isLocked: false, wantsKakeraBoost: false });
+            });
+            clearWishlistPendingRemovalsFor(input.names);
+            renderWishlistModalRows();
+
+            const message = document.getElementById('wishlistModalMessage');
+            if (message) message.innerHTML = `<p class="success-message">Added ${input.names.length} character${input.names.length === 1 ? '' : 's'} to this wishlist's rows below - Save Wishlist to keep them.</p>`;
+        }
+
+        function parseWishlistBonusText(text) {
+            // A slot line isn't always just one number - Mudae shows a
+            // trailing deduction on the same line for slots you've sacrificed
+            // to raise another limit (e.g. "Wishlist slots: +47 (...) -20
+            // ($sw)" after upgrading the $starwish cap), so the real total is
+            // every signed number on the line summed together, not just the
+            // first one. Each parenthetical is just a breakdown explanation
+            // and contributes no number of its own once stripped.
+            function extractNetSlots(label) {
+                const lineRe = new RegExp('^.*' + label + '\\s*slots?\\s*:?.*$', 'im');
+                const lineMatch = text.match(lineRe);
+                if (!lineMatch) return null;
+
+                const afterLabel = lineMatch[0].replace(/^.*?slots?\s*:?\s*/i, '');
+                const withoutParens = afterLabel.replace(/\([^)]*\)/g, '');
+                const numbers = withoutParens.match(/[+-]?\d+/g);
+                if (!numbers) return null;
+
+                return numbers.reduce(function (sum, n) { return sum + parseInt(n, 10); }, 0);
+            }
+            return {
+                wishlistSlots: extractNetSlots('wishlist'),
+                starwishSlots: extractNetSlots('starwish'),
+                wishseriesSlots: extractNetSlots('wishseries')
+            };
+        }
+
+        // Mudae's $bonus command only reports the BONUS on top of a free
+        // base allowance it never lists itself anywhere - every account
+        // starts with 7 wishlist slots and 1 starwish slot with zero
+        // bonuses applied (confirmed against multiple community Mudae
+        // guides/calculators, e.g. https://github.com/fa-dlan/boost-wish-calculator's
+        // own docs describing $bonus's numbers as an addition on top of a
+        // base rather than a total; and matched exactly against a real
+        // report: bonus 27 + base 7 = a real 34 total, bonus 4 + base 1 = a
+        // real 5 total). Wishseries has no separate base - Mudae's own
+        // output already shows it as an absolute total ("10 (premium)",
+        // no leading sign), unlike wishlist/starwish's "+N" bonus-only form.
+        const WISHLIST_BASE_SLOTS = 7;
+        const STARWISH_BASE_SLOTS = 1;
+
+        // Each additional $starwish slot beyond your current limit costs
+        // more wishlist slots than the last, ramping by a fixed +2 per step
+        // (1st extra slot = 2 wl, 2nd = 4 wl, 3rd = 6 wl, ...) - confirmed
+        // against multiple Mudae community guides, and cross-checked against
+        // a real $bonus report: a player with 4 slots bought via $sw (0 via
+        // $kl) showed exactly a -20 wishlist-slot deduction, matching
+        // 2+4+6+8=20 for 4 ramped slots exactly. Since $bonus's own total
+        // doesn't separate how many of your current bonus slots came from
+        // $kl vs $sw specifically, this assumes all of them did (the
+        // common case, and the only assumption that can be verified from
+        // what's available) - it's an estimate, not a guarantee.
+        const STARWISH_SLOT_RAMP_STEP = 2;
+
+        function estimateStarwishUpgradeCost(currentStarwishCapacity, slotsNeeded) {
+            const alreadyRamped = Math.max(0, currentStarwishCapacity - STARWISH_BASE_SLOTS);
+            let cost = 0;
+            for (let k = 1; k <= slotsNeeded; k++) {
+                cost += STARWISH_SLOT_RAMP_STEP * (alreadyRamped + k);
+            }
+            return cost;
+        }
+
+        // Prefills the editable number inputs below (base + parsed bonus,
+        // landing on the real total in the common case) - doesn't save by
+        // itself, since Mudae could change these base defaults, or an
+        // account could have some other unlisted modifier - Save Capacity
+        // is a deliberate separate step so the numbers stay correctable.
+        function parseWishlistBonusSnapshot() {
+            const input = document.getElementById('wishlistBonusInput');
+            const message = document.getElementById('wishlistBonusMessage');
+            const text = input ? input.value.trim() : '';
+
+            if (!text) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the $bonus output first.</p>';
+                return;
+            }
+
+            const parsed = parseWishlistBonusText(text);
+            if (parsed.wishlistSlots == null && parsed.starwishSlots == null && parsed.wishseriesSlots == null) {
+                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any slot counts in that text - make sure it\'s the $bonus output.</p>';
+                return;
+            }
+
+            const wishlistField = document.getElementById('wishlistCapacityWishlist');
+            const starwishField = document.getElementById('wishlistCapacityStarwish');
+            const wishseriesField = document.getElementById('wishlistCapacityWishseries');
+            if (wishlistField) wishlistField.value = parsed.wishlistSlots != null ? (parsed.wishlistSlots + WISHLIST_BASE_SLOTS) : '';
+            if (starwishField) starwishField.value = parsed.starwishSlots != null ? (parsed.starwishSlots + STARWISH_BASE_SLOTS) : '';
+            if (wishseriesField) wishseriesField.value = parsed.wishseriesSlots != null ? parsed.wishseriesSlots : '';
+
+            if (message) message.innerHTML = '<p class="success-message">Prefilled below (bonus + Mudae\'s free base allowance) - double check against Mudae\'s own total before saving, since this assumes the standard 7 wishlist / 1 starwish base.</p>';
+        }
+
+        // Capacity is the user's own account info, not tied to any one
+        // wishlist entry's own save lifecycle - Save Capacity commits
+        // straight to the shared collection-wide value and persists right
+        // away (independent of Save Wishlist/Cancel), so it's already
+        // there the next time ANY wishlist is flagged "mine," including
+        // ones created after this point.
+        function saveWishlistCapacityOverride() {
+            const message = document.getElementById('wishlistBonusMessage');
+            function readField(id) {
+                const el = document.getElementById(id);
+                const val = el ? parseInt(el.value, 10) : NaN;
+                return isNaN(val) ? null : val;
+            }
+
+            const myCapacity = currentWishlists().myCapacity;
+            myCapacity.wishlistSlots = readField('wishlistCapacityWishlist');
+            myCapacity.starwishSlots = readField('wishlistCapacityStarwish');
+            myCapacity.wishseriesSlots = readField('wishlistCapacityWishseries');
+            myCapacity.selfBoostRatePercent = readField('wishlistCapacitySelfBoostRate');
+            myCapacity.updatedAt = Date.now();
+            wishlistModalBonusSnapshot = Object.assign({}, myCapacity);
+
+            saveToLocalStorage();
+            renderWishlistBonusSummary();
+            renderWishlistsList();
+            // A newly-saved self-boost rate can retroactively fill in rows
+            // that were already confirmed as boosters but had no % (only
+            // those, and only if still unset - never re-running the full
+            // solve here, which could clobber a manual edit made since the
+            // last import).
+            applyWishlistSelfBoostRateEstimate(wishlistModalCharacters, myCapacity.selfBoostRatePercent);
+            renderWishlistModalRows();
+            if (message) message.innerHTML = '<p class="success-message">Capacity saved - it\'ll be here for any wishlist you flag as "mine".</p>';
+        }
+
+        function populateWishlistCapacityInputs() {
+            const bonus = wishlistModalBonusSnapshot;
+            const wishlistField = document.getElementById('wishlistCapacityWishlist');
+            const starwishField = document.getElementById('wishlistCapacityStarwish');
+            const wishseriesField = document.getElementById('wishlistCapacityWishseries');
+            const selfBoostField = document.getElementById('wishlistCapacitySelfBoostRate');
+            if (wishlistField) wishlistField.value = (bonus && bonus.wishlistSlots != null) ? bonus.wishlistSlots : '';
+            if (starwishField) starwishField.value = (bonus && bonus.starwishSlots != null) ? bonus.starwishSlots : '';
+            if (wishseriesField) wishseriesField.value = (bonus && bonus.wishseriesSlots != null) ? bonus.wishseriesSlots : '';
+            if (selfBoostField) selfBoostField.value = (bonus && bonus.selfBoostRatePercent != null) ? bonus.selfBoostRatePercent : '';
+        }
+
+        function renderWishlistBonusSummary() {
+            const el = document.getElementById('wishlistBonusSummary');
+            if (!el) return;
+            const bonus = wishlistModalBonusSnapshot;
+            if (!bonus || bonus.updatedAt == null) {
+                el.textContent = '';
+                return;
+            }
+            const parts = [];
+            if (bonus.wishlistSlots != null) parts.push(`${bonus.wishlistSlots} wishlist slots`);
+            if (bonus.starwishSlots != null) parts.push(`${bonus.starwishSlots} starwish slots`);
+            if (bonus.wishseriesSlots != null) parts.push(`${bonus.wishseriesSlots} wishseries slots`);
+            el.textContent = parts.length ? `Last parsed: ${parts.join(', ')} (${new Date(bonus.updatedAt).toLocaleString()})` : '';
         }
 
         function deleteWishlist(id) {
@@ -14499,9 +16037,20 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 const entry = wishlists.entries[id];
                 if (!entry) return '';
                 const starCount = entry.characters.filter(function (c) { return c.isStarWish; }).length;
+                const lockCount = entry.characters.filter(function (c) { return c.isLocked; }).length;
+                // Capacity is your own account's info, shared across every
+                // wishlist entry flagged "mine" (so it's never re-entered
+                // per entry) - a friend's wishlist you're only tracking for
+                // comparison has its own (unknown to us) capacity, so it
+                // never shows one regardless of what's saved here.
+                const bonus = entry.isOwnWishlist ? wishlists.myCapacity : null;
+                const capacityHTML = (bonus && bonus.wishlistSlots != null)
+                    ? `<div class="wishlist-card-capacity">${entry.characters.length}/${bonus.wishlistSlots} $wl${bonus.starwishSlots != null ? `, ${starCount}/${bonus.starwishSlots} $sw` : ''}</div>`
+                    : '';
                 return `<div class="wishlist-card">
             <div class="wishlist-card-name">${escapeHTML(entry.name)}</div>
-            <div class="wishlist-card-count">${entry.characters.length} character${entry.characters.length === 1 ? '' : 's'}${starCount ? ` - ${starCount} starwish${starCount === 1 ? '' : 'es'}` : ''}</div>
+            <div class="wishlist-card-count">${entry.characters.length} character${entry.characters.length === 1 ? '' : 's'}${starCount ? ` - ${starCount} starwish${starCount === 1 ? '' : 'es'}` : ''}${lockCount ? ` - ${lockCount} locked` : ''}</div>
+            ${capacityHTML}
             <div class="wishlist-card-actions">
                 <button class="btn btn-sm" onclick="openWishlistModal('${id}')">Edit</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteWishlist('${id}')">Delete</button>
