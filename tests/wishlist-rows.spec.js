@@ -936,6 +936,61 @@ Bullseye +100%`;
         }
     },
     {
+        // Regression test for a real report: pasting an updated $wishlist
+        // that no longer included a couple of previously-real characters
+        // (removed via $wr/$wp/claiming in Discord) left them stuck in the
+        // row list forever, since the merge only ever preserves/appends
+        // and was never told anything had actually left Discord's real
+        // list. A fresh $wishlist paste is Discord's own current/complete
+        // listing, so a previously-confirmed-real name missing from it
+        // means it's genuinely gone now.
+        name: 're-importing a $wishlist paste that dropped a previously-real character removes it from the row list too',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'DroppedOnReimport');
+            await page.fill('#wishlistTextInput', 'Alpha\nBeta\nGamma\nDelta');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+            assert.deepStrictEqual(await page.locator('.wishlist-row-name').allTextContents(), ['Alpha', 'Beta', 'Gamma', 'Delta']);
+
+            // Gamma and Delta are gone from this fresh paste (removed in
+            // Discord), Epsilon is a genuinely new addition.
+            await page.fill('#wishlistTextInput', 'Alpha\nBeta\nEpsilon');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            assert.deepStrictEqual(await page.locator('.wishlist-row-name').allTextContents(), ['Alpha', 'Beta', 'Epsilon'],
+                'expected Gamma and Delta to be dropped since they are no longer in the real $wishlist paste');
+
+            const message = await page.locator('#wishlistModalMessage').innerHTML();
+            assert.ok(/2 characters no longer in this paste were removed/i.test(message), `expected the drop to be mentioned in the message, got: ${message}`);
+        }
+    },
+    {
+        name: 'a row only ever planned locally (never confirmed real) survives a re-import even when it is not in the fresh paste',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'PlannedSurvives');
+            await page.fill('#wishlistTextInput', 'Alpha\nBeta');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            // Planned locally via the command builder's "Also Add" - never
+            // actually run in Discord, so it's not in wishlistConfirmedRealNames.
+            await page.fill('#wishlistCommandNames', 'PlannedOnly');
+            await page.click('button:has-text("Also Add to This Wishlist")');
+            await page.waitForTimeout(100);
+            assert.deepStrictEqual(await page.locator('.wishlist-row-name').allTextContents(), ['Alpha', 'Beta', 'PlannedOnly']);
+
+            // Re-importing the same real paste (PlannedOnly was never part
+            // of it) must not remove the still-pending planned row.
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+            assert.deepStrictEqual(await page.locator('.wishlist-row-name').allTextContents(), ['Alpha', 'Beta', 'PlannedOnly'],
+                'expected the purely-planned row to survive, since its absence from a real paste is expected, not evidence it was removed');
+        }
+    },
+    {
         name: 'the Reorder Commands section is hidden until the row order actually diverges from the last known-real order',
         async run(page) {
             await openAddWishlistModal(page);

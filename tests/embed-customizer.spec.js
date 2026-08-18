@@ -8,6 +8,13 @@ async function openEmbeds(page) {
 }
 
 async function dragAndDrop(page, source, target) {
+    // Raw mouse events (unlike locator .click()) never auto-scroll their
+    // target into view first - a source/target sitting below the fold
+    // (e.g. on a page that's grown taller since this test was written)
+    // would otherwise get a real boundingBox() whose coordinates fall
+    // outside the actual viewport, silently no-op'ing the whole drag.
+    await source.scrollIntoViewIfNeeded();
+    await target.scrollIntoViewIfNeeded();
     const sBox = await source.boundingBox();
     const tBox = await target.boundingBox();
     await page.mouse.move(sBox.x + sBox.width / 2, sBox.y + sBox.height / 2);

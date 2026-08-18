@@ -2469,6 +2469,186 @@
             }
         }
 
+        /* Compact grid for the Ourosphere tab's tracked-character picker -
+           smaller than the Sort tab's own .grid variant, so it can sit
+           side by side with the selected character's perk breakdown
+           instead of taking the full width. */
+        .ouro-character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            max-height: 55vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .ouro-character-card {
+            display: flex;
+            flex-direction: column;
+            background: #1a1a24;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .ouro-character-card:hover {
+            border-color: #4b5563;
+        }
+
+        .ouro-character-card.selected {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35);
+        }
+
+        .ouro-card-thumb {
+            width: 100%;
+            height: 90px;
+            object-fit: cover;
+            background: #13131a;
+            display: block;
+        }
+
+        .ouro-card-thumb-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            color: #6b7280;
+        }
+
+        .ouro-card-name {
+            font-size: 0.78em;
+            font-weight: 600;
+            padding: 4px 6px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ouro-card-series {
+            font-size: 0.68em;
+            color: #9ca3af;
+            padding: 0 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ouro-card-badge {
+            font-size: 0.7em;
+            color: #34d399;
+            padding: 2px 6px 6px;
+        }
+
+        .ouro-perk-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a3a;
+            flex-wrap: wrap;
+        }
+
+        .ouro-perk-row:last-child {
+            border-bottom: none;
+        }
+
+        .ouro-perk-status {
+            flex: 0 0 60px;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+
+        .ouro-perk-label {
+            flex: 1 1 260px;
+            color: #d1d5db;
+        }
+
+        .ouro-perk-value {
+            flex: 0 0 70px;
+            color: #34d399;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .ouro-perk-cost {
+            flex: 0 0 auto;
+            color: #9ca3af;
+            font-size: 0.9em;
+        }
+
+        .ouro-perk-current-select {
+            flex: 0 0 auto;
+            background: #1a1a24;
+            color: #a78bfa;
+            border: 1px solid #4c1d95;
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 0.85em;
+        }
+
+        .ouro-perk-current-checkbox {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85em;
+            color: #a78bfa;
+            cursor: pointer;
+        }
+
+        .ouro-plan-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .ouro-plan-breakdown-item {
+            background: #1a1a24;
+            border: 1px solid #4c1d95;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 0.82em;
+            color: #d1d5db;
+        }
+
+        .ouro-perk-target-select {
+            flex: 0 0 auto;
+            background: #1a1a24;
+            color: #e5e7eb;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 0.85em;
+        }
+
+        .ouro-perk-target-checkbox {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85em;
+            color: #d1d5db;
+            cursor: pointer;
+        }
+
+        .ouro-perk-target-done {
+            flex: 0 0 auto;
+            font-size: 0.8em;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .ouro-perk-plan-cost {
+            flex: 0 0 auto;
+            color: #fbbf24;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
         .wishlist-editor-panel {
             background: #13131a;
             border: 1px solid #2a2a3a;
@@ -3582,6 +3762,8 @@
                     onclick="switchAppTab('customimages')">🖼️ Custom Images &amp; Cropper</button>
                 <button type="button" id="tab-embeds-btn" class="app-tab" onclick="switchAppTab('embeds')">🖋️
                     Embeds</button>
+                <button type="button" id="tab-ourosphere-btn" class="app-tab" onclick="switchAppTab('ourosphere')">🔮
+                    Ourosphere</button>
             </div>
             <div id="mobileUndoDock" class="mobile-undo-dock"></div>
         </div>
@@ -4290,9 +4472,11 @@
                             <label>Wishlist slots <input type="number" id="wishlistCapacityWishlist" min="0"></label>
                             <label>Starwish slots <input type="number" id="wishlistCapacityStarwish" min="0"></label>
                             <label>Wishseries slots <input type="number" id="wishlistCapacityWishseries" min="0"></label>
-                            <label title="Check $shop/$ouroshop in Discord for perk 1's current self-boost % (Mudae's own docs: &quot;a part of the spawn chance bonus applied by perk 1 is also applied to the character upgraded&quot;, 0-10%). Used to estimate a booster's own % when no neighbor in your wishlist can solve it directly - always labeled as an estimate, never treated as exact.">Ouroperk self-boost % (<code>$shop</code>) <input type="number" id="wishlistCapacitySelfBoostRate" min="0" max="10"></label>
+                            <label title="Ourosphere Shop perk 1's level determines this (10% per level, confirmed via the Mudae wiki: &quot;a part of the spawn chance bonus applied by perk 1 is also applied to the character upgraded&quot;). Used to estimate a booster's own % when no neighbor in your wishlist can solve it directly - always labeled as an estimate, never treated as exact.">Ourosphere self-boost % <input type="number" id="wishlistCapacitySelfBoostRate" min="0" max="100"></label>
                             <button type="button" class="btn btn-sm btn-primary" onclick="saveWishlistCapacityOverride()">Save Capacity</button>
                         </div>
+                        <button type="button" class="btn btn-sm" id="wishlistPrefillFromOuroshopBtn" style="display: none; margin-top: 8px;"
+                            onclick="prefillSelfBoostRateFromOuroshop()">Prefill from Ouroshop tracker</button>
                         <div id="wishlistBonusSummary" class="sort-filter-note"></div>
                     </div>
                 </div>
@@ -4486,6 +4670,118 @@
                     placeholder="Paste a shared code...">
                 <div class="add-chars-modal-actions" style="justify-content: flex-start; margin-top: 8px;">
                     <button type="button" class="btn btn-sm" onclick="importEmbedSharedCode()">Import</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="ourosphereTabPanel" style="display: none;">
+            <div id="ourosphereMessage"></div>
+            <h2>Ourosphere</h2>
+            <p class="sort-hint">Track your Ourosphere investments - Mudae has no single command that lists them
+                all at once, so this works by pasting each relevant command's own output. Tied to this collection,
+                same as everything else here.</p>
+
+            <div class="button-group" style="margin-bottom: 16px;">
+                <button type="button" id="ouro-tab-perks-btn" class="btn btn-sm active"
+                    onclick="switchOuroSubTab('perks')">Character Perks</button>
+                <button type="button" id="ouro-tab-shop-btn" class="btn btn-sm"
+                    onclick="switchOuroSubTab('shop')">Account Shop</button>
+            </div>
+
+            <div id="ouroPerksSubPanel">
+                <div class="control-group">
+                    <h3>Investment Totals</h3>
+                    <p class="sort-hint">Run <code>$mmz=</code> (sorted by highest Ourosphere investment) in Discord
+                        and paste the output here - gives a quick overview of who to bother pasting <code>$opp</code>
+                        for below. Any note text you've added after a <code>|</code> is ignored automatically.</p>
+                    <textarea id="ouroInvestmentInput" class="add-chars-textarea" style="min-height: 100px;"
+                        placeholder="Total invested: 75,000 :sp:&#10;&#10;Nico Robin | <3 11,000 sp&#10;Saber | :) 11,000 sp"></textarea>
+                    <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                        <button type="button" class="btn btn-secondary" onclick="importOuroperksInvestmentText()">Import
+                            Investment Totals</button>
+                    </div>
+                    <div id="ouroInvestmentMessage"></div>
+                </div>
+
+                <div class="control-group" id="ouroPerksPlanBar">
+                    <div class="sort-toolbar">
+                        <h3 style="margin: 0;">Plan Summary</h3>
+                        <button type="button" class="btn btn-sm" id="ouroPerksClearPlanBtn" style="display: none;"
+                            onclick="handleClearAllOuroperksPlans()">Clear All Plans</button>
+                    </div>
+                    <div id="ouroPerksPlanSummary" class="sort-filter-note"></div>
+                    <div id="ouroPerksPlanBreakdown" class="ouro-plan-breakdown"></div>
+                </div>
+
+                <div class="embed-builder-layout">
+                    <div class="embed-builder-column">
+                        <div class="control-group">
+                            <div class="sort-toolbar">
+                                <input type="text" id="ouroPerksSearchInput" class="color-hex-text-input"
+                                    style="text-transform: none; max-width: 220px;" placeholder="Search tracked characters..."
+                                    oninput="renderOuroperksCharacterList()">
+                                <select id="ouroPerksFilterPerk" class="color-hex-text-input" style="text-transform: none; max-width: 220px;"
+                                    onchange="renderOuroperksCharacterList()">
+                                    <option value="">Filter: any perk</option>
+                                </select>
+                                <select id="ouroPerksFilterState" class="color-hex-text-input" style="text-transform: none; max-width: 160px;"
+                                    onchange="renderOuroperksCharacterList()">
+                                    <option value="maxed">Maxed</option>
+                                    <option value="inprogress">In progress</option>
+                                    <option value="notstarted">Not started</option>
+                                </select>
+                            </div>
+                            <div id="ouroPerksCharacterList" class="ouro-character-grid"></div>
+                        </div>
+                    </div>
+
+                    <div class="embed-builder-column">
+                        <div class="control-group" id="ouroPerksDetailGroup">
+                            <div class="sort-toolbar" style="justify-content: space-between;">
+                                <h3 id="ouroPerksDetailTitle" style="margin: 0;">Character Perks</h3>
+                                <button type="button" class="btn btn-sm" id="ouroPerksResetPlanBtn" style="display: none;"
+                                    onclick="handleResetOuroperksPlan()">Reset This Character's Plan</button>
+                            </div>
+                            <p class="sort-hint" id="ouroPerksDetailHint">Pick a tracked character on the left, then run
+                                <code>$opp &lt;character name&gt;</code> in Discord and paste the output here.</p>
+                            <div id="ouroPerksDetailBody" style="display: none;">
+                                <textarea id="ouroPerksPasteInput" class="add-chars-textarea" style="min-height: 140px;"
+                                    placeholder="[LVL 6]  Spawn chance increased for character(s) next to this one in your $wishlist: 100%"></textarea>
+                                <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                                    <button type="button" class="btn btn-secondary" onclick="importOuroperksPasteText()">Import
+                                        Perks</button>
+                                </div>
+                                <div id="ouroPerksDetailMessage"></div>
+                                <p class="sort-hint">Each perk's <b>Current</b> dropdown can also be set/corrected by
+                                    hand - no need to re-paste $opp just to fix or fill in one perk. Pick a
+                                    <b>Target</b> for any perk you want to plan future investment for (defaults to its
+                                    current level, meaning "no plan") - the cost shown updates live, and counts toward
+                                    the running total above across every tracked character.</p>
+                                <div id="ouroPerksDetailList" class="ouro-perk-list"></div>
+                                <div id="ouroPerksDetailSummary" class="sort-filter-note"></div>
+                                <div id="ouroPerksDetailPlanSummary" class="sort-filter-note"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ouroShopSubPanel" style="display: none;">
+                <div class="control-group">
+                    <h3>Account Shop</h3>
+                    <p class="sort-hint">Run <code>$ouroshop</code> (<code>$os</code>) in Discord and paste the
+                        whole output here - account-wide, not tied to any one character. Re-importing replaces the
+                        tracked levels wholesale, same as re-pasting <code>$bonus</code> on the Wishlists tab. Each
+                        perk's <b>Current</b> dropdown below can also be set/corrected by hand instead.</p>
+                    <textarea id="ouroShopPasteInput" class="add-chars-textarea" style="min-height: 160px;"
+                        placeholder="[LVL 0]  A part of the spawn chance bonus applied by perk 1 is also applied to the character upgraded. Part: 0% > 10%"></textarea>
+                    <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                        <button type="button" class="btn btn-secondary" onclick="importOuroshopPasteText()">Import
+                            Shop Levels</button>
+                    </div>
+                    <div id="ouroShopMessage"></div>
+                    <div id="ouroShopList" class="ouro-perk-list"></div>
+                    <div id="ouroShopSummary" class="sort-filter-note"></div>
                 </div>
             </div>
         </div>
@@ -9709,6 +10005,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const wishlistsPanel = document.getElementById('wishlistsTabPanel');
             const customImagesPanel = document.getElementById('customImagesTabPanel');
             const embedsPanel = document.getElementById('embedsTabPanel');
+            const ourospherePanel = document.getElementById('ourosphereTabPanel');
             const notesBtn = document.getElementById('tab-notes-btn');
             const sortBtn = document.getElementById('tab-sort-btn');
             const seriesBtn = document.getElementById('tab-series-btn');
@@ -9716,6 +10013,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const wishlistsBtn = document.getElementById('tab-wishlists-btn');
             const customImagesBtn = document.getElementById('tab-customimages-btn');
             const embedsBtn = document.getElementById('tab-embeds-btn');
+            const ourosphereBtn = document.getElementById('tab-ourosphere-btn');
             const notesInstructions = document.getElementById('notesInstructions');
             const sortInstructions = document.getElementById('sortInstructions');
             const seriesInstructions = document.getElementById('seriesInstructions');
@@ -9728,7 +10026,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const showWishlists = tab === 'wishlists';
             const showCustomImages = tab === 'customimages';
             const showEmbeds = tab === 'embeds';
-            const showNotes = !showSort && !showSeries && !showColors && !showWishlists && !showCustomImages && !showEmbeds;
+            const showOurosphere = tab === 'ourosphere';
+            const showNotes = !showSort && !showSeries && !showColors && !showWishlists && !showCustomImages && !showEmbeds && !showOurosphere;
 
             if (notesPanel) notesPanel.style.display = showNotes ? '' : 'none';
             if (sortPanel) sortPanel.style.display = showSort ? '' : 'none';
@@ -9737,6 +10036,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (wishlistsPanel) wishlistsPanel.style.display = showWishlists ? '' : 'none';
             if (customImagesPanel) customImagesPanel.style.display = showCustomImages ? '' : 'none';
             if (embedsPanel) embedsPanel.style.display = showEmbeds ? '' : 'none';
+            if (ourospherePanel) ourospherePanel.style.display = showOurosphere ? '' : 'none';
             if (notesBtn) notesBtn.classList.toggle('active', showNotes);
             if (sortBtn) sortBtn.classList.toggle('active', showSort);
             if (seriesBtn) seriesBtn.classList.toggle('active', showSeries);
@@ -9744,6 +10044,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (wishlistsBtn) wishlistsBtn.classList.toggle('active', showWishlists);
             if (customImagesBtn) customImagesBtn.classList.toggle('active', showCustomImages);
             if (embedsBtn) embedsBtn.classList.toggle('active', showEmbeds);
+            if (ourosphereBtn) ourosphereBtn.classList.toggle('active', showOurosphere);
 
             // On mobile, the tab strip scrolls horizontally instead of
             // wrapping - without this, switching to a tab near the end (e.g.
@@ -9788,6 +10089,11 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
             if (showEmbeds) {
                 initEmbedCustomizer();
+            }
+
+            if (showOurosphere) {
+                renderOuroperksCharacterList();
+                renderOuroshopList();
             }
         }
 
@@ -13211,7 +13517,11 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 date: 'August 17, 2026',
                 items: [
                     { type: 'feature', text: 'Drag-reordering wishlist rows now generates <code>$wishi</code> commands to actually reposition characters in Discord to match.' },
-                    { type: 'fix', text: 'The Add/Edit Wishlist editor is now part of the Wishlists tab page itself instead of a popup.' }
+                    { type: 'fix', text: 'The Add/Edit Wishlist editor is now part of the Wishlists tab page itself instead of a popup.' },
+                    { type: 'feature', text: 'New <b>Ourosphere</b> tab: track <b>Character Perks</b> (paste <code>$mmz=</code> and <code>$opp &lt;name&gt;</code>, or enter levels by hand) and account-wide <b>Shop</b> levels (paste <code>$ouroshop</code>, or by hand), browsable as a grid with per-perk filtering.' },
+                    { type: 'feature', text: 'The Ourosphere tab also doubles as a planner - pick a target level for any perk on any number of characters to see a per-character and grand-total sphere cost, without touching what\'s already invested.' },
+                    { type: 'fix', text: 'The Wishlist tab\'s Ourosphere self-boost % field now allows up to 100% instead of capping at 10%, and can be prefilled from a tracked Shop 1 level.' },
+                    { type: 'fix', text: 'Re-pasting an updated <code>$wishlist</code> that no longer included a character removed in Discord (via <code>$wr</code>, <code>$wp</code>, claiming it, etc.) used to leave it stuck in the row list forever - since Discord\'s own listing is authoritative, a previously-confirmed-real character missing from a fresh paste is now removed from the tracked rows too. A row that was only ever planned locally (never actually run in Discord) is unaffected.' }
                 ]
             },
             {
@@ -14859,9 +15169,36 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // neighbor-facing % when no neighbor equation can solve it
         // directly (see below); never overrides an already-solved value,
         // since that's more reliable than a rate-derived estimate.
+        // Perk 1's own level (tracked on the Ourosphere tab via a pasted
+        // $opp result) gives a claimed character's exact neighbor-boost
+        // contribution directly - no inference needed for that character
+        // at all, and knowing it outright can also help solve OTHER
+        // characters' contributions in the same chain (fed in below as an
+        // already-known value, exactly like an unclaimed character's
+        // fixed 0). Matched by name only, same as every other Ourosphere
+        // paste (wishlist/$opp text never includes a series).
+        function buildOuroperksPerk1Lookup() {
+            const store = currentOuroperks();
+            const byName = new Map();
+            const values = OUROPERK_BONUS_VALUES[0];
+            store.order.forEach(function (key) {
+                const entry = store.entries[key];
+                const p1 = entry ? entry.perks[0] : null;
+                if (!p1 || p1.level <= 0) return;
+                const value = p1.maxed ? values[values.length - 1] : values[p1.level - 1];
+                byName.set(normalizeWishName(entry.name), value);
+            });
+            return byName;
+        }
+
         function inferWishlistBoosterPercentages(characters, selfBoostRatePercent) {
             const n = characters.length;
-            const contribution = characters.map(function (c) { return c.isClaimed ? null : 0; });
+            const perk1Lookup = buildOuroperksPerk1Lookup();
+            const contribution = characters.map(function (c) {
+                if (!c.isClaimed) return 0;
+                const confirmed = perk1Lookup.get(normalizeWishName(c.name));
+                return confirmed != null ? confirmed : null;
+            });
             const selfResidual = new Array(n).fill(null);
             const unexplained = new Array(n).fill(false);
 
@@ -15223,6 +15560,32 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             wishlistPendingRemovals = [];
         }
 
+        // A fresh $wishlist paste is Discord's own CURRENT, complete list -
+        // unlike $wish/$sw (which only ever add), the listing itself is
+        // authoritative. A name that was previously confirmed real but is
+        // missing from a fresh paste means something already removed it in
+        // Discord ($wr, $wp, claiming it, etc.) - drop it from the tracked
+        // rows too, instead of leaving a phantom entry behind forever (a
+        // real report: re-pasting an updated $wishlist that had dropped a
+        // couple of characters left them stuck in the row list, since the
+        // merge only ever preserves/appends and was never told anything
+        // had actually left). A row that was only ever planned locally
+        // (never confirmed real) is left alone - its absence from a real
+        // paste is expected, not evidence it was removed. Returns how many
+        // were dropped, purely for the success message.
+        function reconcileRemovedRealCharacters(parsed) {
+            const parsedKeys = new Set(parsed.map(function (c) { return normalizeWishName(c.name); }));
+            const droppedKeys = new Set();
+            wishlistConfirmedRealNames.forEach(function (key) {
+                if (!parsedKeys.has(key)) droppedKeys.add(key);
+            });
+            if (droppedKeys.size === 0) return 0;
+
+            wishlistModalCharacters = wishlistModalCharacters.filter(function (c) { return !droppedKeys.has(normalizeWishName(c.name)); });
+            droppedKeys.forEach(function (key) { wishlistConfirmedRealNames.delete(key); });
+            return droppedKeys.size;
+        }
+
         function importWishlistTextIntoRows() {
             const textField = document.getElementById('wishlistTextInput');
             const message = document.getElementById('wishlistModalMessage');
@@ -15239,6 +15602,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 return;
             }
 
+            const droppedCount = reconcileRemovedRealCharacters(parsed);
             wishlistModalCharacters = mergeWishlistCharacters(wishlistModalCharacters, parsed);
             wishlistLastImportedText = text;
 
@@ -15265,7 +15629,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             clearWishlistPendingRemovalsFor(parsed.map(function (c) { return c.name; }));
 
             renderWishlistModalRows();
-            if (message) message.innerHTML = `<p class="success-message">Imported ${parsed.length} character${parsed.length === 1 ? '' : 's'} - drag to reorder below, then Save Wishlist.</p>`;
+            const droppedNote = droppedCount > 0
+                ? ` ${droppedCount} character${droppedCount === 1 ? '' : 's'} no longer in this paste ${droppedCount === 1 ? 'was' : 'were'} removed from the list too.`
+                : '';
+            if (message) message.innerHTML = `<p class="success-message">Imported ${parsed.length} character${parsed.length === 1 ? '' : 's'} - drag to reorder below, then Save Wishlist.${droppedNote}</p>`;
         }
 
         function submitWishlistModal() {
@@ -15286,6 +15653,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (pastedText && pastedText !== wishlistLastImportedText) {
                 const parsed = parseWishlistText(pastedText);
                 if (parsed.length > 0) {
+                    reconcileRemovedRealCharacters(parsed);
                     wishlistModalCharacters = mergeWishlistCharacters(wishlistModalCharacters, parsed);
                     wishlistLastImportedText = pastedText;
                 }
@@ -15999,6 +16367,25 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (starwishField) starwishField.value = (bonus && bonus.starwishSlots != null) ? bonus.starwishSlots : '';
             if (wishseriesField) wishseriesField.value = (bonus && bonus.wishseriesSlots != null) ? bonus.wishseriesSlots : '';
             if (selfBoostField) selfBoostField.value = (bonus && bonus.selfBoostRatePercent != null) ? bonus.selfBoostRatePercent : '';
+
+            // Only offered once Shop 1 has actually been tracked via the
+            // Ourosphere tab - otherwise there's nothing to prefill from.
+            const prefillBtn = document.getElementById('wishlistPrefillFromOuroshopBtn');
+            if (prefillBtn) {
+                const shop1 = currentOuroshop().levels[0];
+                prefillBtn.style.display = (shop1 && shop1.level > 0) ? '' : 'none';
+            }
+        }
+
+        // Shop 1's level directly determines this field (10% per level,
+        // confirmed via the Mudae wiki) - a one-click alternative to typing
+        // it in by hand, same non-destructive prefill-then-Save pattern as
+        // "Prefill from $bonus" right above it (doesn't save by itself).
+        function prefillSelfBoostRateFromOuroshop() {
+            const shop1 = currentOuroshop().levels[0];
+            const selfBoostField = document.getElementById('wishlistCapacitySelfBoostRate');
+            if (!shop1 || !selfBoostField) return;
+            selfBoostField.value = shop1.level * 10;
         }
 
         function renderWishlistBonusSummary() {
@@ -16139,6 +16526,873 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
             result.innerHTML = `<p class="sort-hint" style="margin-top: 14px;">${overlap.length} character${overlap.length === 1 ? '' : 's'} on both <b>${escapeHTML(wlA.name)}</b>'s and <b>${escapeHTML(wlB.name)}</b>'s wishlist:</p>
         <div class="wishlist-overlap-list">${items}</div>`;
+        }
+
+        // ===================== Ourosphere Perks & Shop =====================
+        // Two related but separate Mudae systems, both spending the same
+        // "Ourosphere" currency:
+        //   - $ouroperks/$op/$opp <name>: 10 PER-CHARACTER perks (only
+        //     exist on claimed characters).
+        //   - $ouroshop/$os: 10 ACCOUNT-WIDE upgrades, each amplifying
+        //     what the matching-numbered $ouroperks perk does (e.g. Shop 1
+        //     reflects part of Perk 1's wishlist-neighbor boost onto the
+        //     character itself - the exact mechanic the Wishlist tab's
+        //     booster self-boost-rate field already models).
+        // Neither has a bulk "show my whole collection" command, so both
+        // are tracked here by pasting each command's own output - $opp per
+        // character, $ouroshop once for the whole account.
+
+        // Perks 1-5 have levels 1-6 (a free bonus tier - 115%/150%/55%/
+        // 30%/23% - is only granted once ALL 10 of a character's perks are
+        // individually maxed, not a further purchase). Perks 6-10 are a
+        // single purchase (level 0 -> MAX). Costs/bonus values confirmed
+        // against the Mudae Fandom wiki's own tables, cross-checked
+        // against real screenshots (perks 2/3/5 cost 200 for level 0->1;
+        // perks 6-9 cost 1K for their one level - both match this table).
+        const OUROPERK_LEVEL_COSTS = [200, 400, 600, 800, 1000, 2000]; // cost of level 1..6, perks 1-5
+        const OUROPERK_SINGLE_LEVEL_COST = 1000; // perks 6-10, one purchase
+        const OUROPERK_MAX_LEVEL = 6; // perks 1-5 (perks 6-10 cap at 1)
+
+        // [level1, level2, level3, level4, level5, level6, maxBonus]
+        // Perk 4's level-6 value is 25, not the wiki table's listed 26 -
+        // two separate real $opp screenshots of a level-6 (not yet
+        // maxed-bonus) character both showed 25%, so the real account
+        // data overrides the wiki here (same category of correction as
+        // the Ouroshop level-8 cumulative-cost typo caught earlier).
+        const OUROPERK_BONUS_VALUES = [
+            [15, 30, 45, 60, 75, 100, 115],
+            [20, 40, 60, 80, 100, 130, 150],
+            [7, 14, 21, 28, 35, 48, 55],
+            [4, 8, 12, 16, 20, 25, 30],
+            [3, 6, 9, 12, 15, 19, 23]
+        ];
+
+        // Fixed order, index 0-9 = perk 1-10. Matched against pasted text
+        // via a short, distinctive substring rather than the full
+        // sentence (still unique enough not to collide with any other
+        // perk), so parsing doesn't depend on Mudae never rewording the
+        // rest of a perk's description.
+        const OUROPERK_DEFS = [
+            { match: 'next to this one in your $wishlist', label: 'Spawn chance for neighbors on your $wishlist', leveled: true, unit: '%' },
+            { match: 'Base kakera value increased', label: 'Base kakera value increased', leveled: true, unit: '' },
+            { match: '+1 kakera button under this character', label: 'Chance for +1 kakera button', leveled: true, unit: '%' },
+            { match: '+1 key for this character', label: 'Chance for +1 key', leveled: true, unit: '%' },
+            { match: 'Spheres earned per kakera button', label: 'Spheres earned per kakera button clicked', leveled: true, unit: '' },
+            { match: 'automatically appear after you roll this character', label: 'Auto-wish spawn chance + Omega keys', leveled: false },
+            { match: 'turn into chaos kakera', label: 'Chaos kakera chance', leveled: false },
+            { match: 'Spawn with 4 kakera buttons', label: 'Discounted first-roll kakera buttons', leveled: false },
+            { match: 'A sphere button appears when you roll this character', label: 'Daily sphere button', leveled: false },
+            { match: 'first $oh of the day generates', label: 'Boosted first $oh of the day', leveled: false }
+        ];
+
+        // Current bonus magnitude for a perk, given its stored {level,
+        // maxed} record (or null if never pasted) - e.g. "25%" for Perk 4
+        // at level 5, "30%" once the free completion bonus is confirmed
+        // (maxed:true), or "-" for a perk that's never been leveled.
+        // Perks 6-10 have no variable magnitude (single purchase), so
+        // their value is just whether they're bought.
+        function formatOuroperkValue(idx, perk) {
+            const def = OUROPERK_DEFS[idx];
+            if (!def.leveled) return (perk && perk.maxed) ? 'Active' : '-';
+            const level = perk ? perk.level : 0;
+            if (level <= 0) return '-';
+            const values = OUROPERK_BONUS_VALUES[idx];
+            const value = (perk && perk.maxed) ? values[values.length - 1] : values[level - 1];
+            return value + def.unit;
+        }
+
+        // Ouroshop: 10 ACCOUNT-WIDE upgrades, levels 1-10, one shared cost
+        // curve (level N costs 4000*N spheres). The wiki's own cumulative
+        // total for level 8 (114000) doesn't match the arithmetic of the
+        // rows around it (112000 + 32000 = 144000, and level 9's own
+        // listed total of 180000 only checks out against 144000, not
+        // 114000) - treated as a wiki typo and corrected here rather than
+        // trusted as-is.
+        const OUROSHOP_LEVEL_COST = 4000; // cost of level N = N * OUROSHOP_LEVEL_COST
+        const OUROSHOP_MAX_LEVEL = 10;
+
+        function ouroshopCumulativeCost(level) {
+            return OUROSHOP_LEVEL_COST * level * (level + 1) / 2;
+        }
+
+        // Value per level 1-10 - a plain array, or an array of [primary,
+        // secondary] pairs for shop perks 6 and 9, which each grant two
+        // separate bonuses per level per the wiki.
+        const OUROSHOP_BONUS_VALUES = [
+            [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+            [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+            [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+            [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+            [0.014, 0.028, 0.042, 0.056, 0.070, 0.084, 0.098, 0.112, 0.126, 0.140],
+            [[1, 50], [2, 100], [3, 150], [4, 200], [5, 250], [6, 300], [7, 350], [8, 400], [9, 450], [10, 500]],
+            [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+            [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+            [[1, 10], [2, 20], [3, 30], [4, 40], [5, 50], [6, 60], [7, 70], [8, 80], [9, 90], [10, 100]],
+            [0.25, 0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50]
+        ];
+
+        const OUROSHOP_DEFS = [
+            { match: 'spawn chance bonus applied by perk 1', label: 'Reflects part of Perk 1\'s boost onto the character itself', unit: '%' },
+            { match: 'megasphere has 1/50', label: 'More rewards per megasphere', unit: '' },
+            { match: 'never include blue kakera', label: 'Chance Perk 3\'s extra button skips blue/yellow kakera', unit: '%' },
+            { match: 'key thanks to perk 4', label: 'Chance a Perk 4 key becomes an Omega key', unit: '%' },
+            { match: 'kakera button gives spheres thanks to perk 5', label: 'Chance for +1 $ot per sphere from Perk 5', unit: '%' },
+            { match: 'wish spawned from perk 6', label: 'Free-claim chance / Omega key chance on Perk 6 wishes', pairUnits: ['%', '%'] },
+            { match: 'chaos kakera spawned by perk 7', label: 'Chance for double rewards on Perk 7 chaos kakera', unit: '%' },
+            { match: 'kakera buttons of perk 8', label: 'More kakera from Perk 8 buttons on fully-upgraded characters', unit: '%' },
+            { match: 'sphere buttons spawned by perk 9', label: 'Extra daily Perk 9 sphere clicks / bonus spheres', pairUnits: ['', '%'] },
+            { match: 'for each character you have fully upgraded', label: 'Bonus $ot per fully-upgraded character', unit: '%' }
+        ];
+
+        // Current bonus magnitude for a shop perk at its stored level -
+        // "Active" once bought for the (rare) case where the wiki gives no
+        // numeric value to show alongside it, or the level's real number(s)
+        // otherwise. Shop perks 6 and 9 grant two separate bonuses per
+        // level (pairUnits), formatted as "a / b".
+        function formatOuroshopValue(idx, level) {
+            if (!level || level <= 0) return '-';
+            const def = OUROSHOP_DEFS[idx];
+            const value = OUROSHOP_BONUS_VALUES[idx][level - 1];
+            if (def.pairUnits) return `${value[0]}${def.pairUnits[0]} / ${value[1]}${def.pairUnits[1]}`;
+            return value + def.unit;
+        }
+
+        function currentOuroperks() {
+            if (!AppState.ouroperks) AppState.ouroperks = {};
+            const o = AppState.ouroperks;
+            if (!o.entries) o.entries = {};
+            if (!o.order) o.order = [];
+            if (o.totalAccountInvestedSp === undefined) o.totalAccountInvestedSp = null;
+            if (o.totalAccountUpdatedAt === undefined) o.totalAccountUpdatedAt = null;
+            // plannedLevels is a per-perk TARGET level for the planner
+            // (null = no target set, meaning "same as current") - backfill
+            // it for entries saved before the planner existed.
+            Object.keys(o.entries).forEach(function (key) {
+                const entry = o.entries[key];
+                if (!entry.plannedLevels || entry.plannedLevels.length !== 10) {
+                    entry.plannedLevels = OUROPERK_DEFS.map(function () { return null; });
+                }
+            });
+            return o;
+        }
+
+        function currentOuroshop() {
+            if (!AppState.ouroshop) AppState.ouroshop = {};
+            const o = AppState.ouroshop;
+            if (!o.levels || o.levels.length !== 10) {
+                const existing = o.levels || [];
+                o.levels = [];
+                for (let i = 0; i < 10; i++) {
+                    o.levels.push(existing[i] && existing[i].level != null ? existing[i] : { level: 0 });
+                }
+            }
+            if (o.updatedAt === undefined) o.updatedAt = null;
+            return o;
+        }
+
+        // Ourosphere pastes only ever give a bare character name (no
+        // series), so matching against the loaded collection is name-only
+        // - first match wins on a duplicate name across series, same as
+        // the Notes-lookup's own "name alone" fallback (buildNotesLookupFromSeriesData).
+        function buildOuroperksNameLookup() {
+            const byName = new Map();
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const key = normalizeMatchPart(char.name);
+                    if (!byName.has(key)) byName.set(key, { seriesName: seriesName, char: char });
+                });
+            }
+            return byName;
+        }
+
+        function ouroperksEntryKey(seriesName, name) {
+            return normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(name);
+        }
+
+        function getOrCreateOuroperksEntry(name, lookup) {
+            const store = currentOuroperks();
+            const match = lookup.get(normalizeMatchPart(name)) || null;
+            const seriesName = match ? match.seriesName : null;
+            const key = ouroperksEntryKey(seriesName || '', name);
+
+            let entry = store.entries[key];
+            if (!entry) {
+                entry = {
+                    key: key, name: name, series: seriesName,
+                    perks: OUROPERK_DEFS.map(function () { return null; }),
+                    plannedLevels: OUROPERK_DEFS.map(function () { return null; }),
+                    totalInvestedSp: null, perksUpdatedAt: null, investmentUpdatedAt: null
+                };
+                store.entries[key] = entry;
+                store.order.push(key);
+            } else if (seriesName && !entry.series) {
+                // A later paste resolved a match this entry didn't have
+                // yet (e.g. the collection was parsed after this entry was
+                // first tracked) - fill in the thumbnail/series link.
+                entry.series = seriesName;
+            }
+            return entry;
+        }
+
+        // Parses one $opp <character> block: 10 lines, each
+        // "[LVL N]  <desc>" or "[MAX]  <desc>". Matched against
+        // OUROPERK_DEFS by substring rather than position, so a paste
+        // with lines in a different order still parses correctly.
+        function parseOuroperksPasteText(text) {
+            const lines = (text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+            const perks = OUROPERK_DEFS.map(function () { return null; });
+
+            lines.forEach(function (line) {
+                const match = line.match(/^\[?(LVL\s+(\d+)|MAX)\]\s*(.*)$/i);
+                if (!match) return;
+                const isMax = match[2] === undefined;
+                const rest = match[3] || '';
+
+                const idx = OUROPERK_DEFS.findIndex(function (def) { return rest.includes(def.match); });
+                if (idx === -1) return;
+
+                const def = OUROPERK_DEFS[idx];
+                if (def.leveled) {
+                    perks[idx] = isMax ? { level: OUROPERK_MAX_LEVEL, maxed: true } : { level: parseInt(match[2], 10), maxed: false };
+                } else {
+                    perks[idx] = { level: isMax ? 1 : 0, maxed: isMax };
+                }
+            });
+
+            return perks;
+        }
+
+        // Parses $mmz=-style bulk output: a "Total invested: N :sp:"
+        // header, then one "Name | <notes...> N,NNN sp" line per
+        // character - the "| ..." part is the user's own manually-added
+        // note text, not anything Mudae generates (confirmed by the
+        // user), safe to discard. A message containing an inline
+        // character image can copy as a stray literal "Image" line -
+        // skipped, same category of artifact as the $ims image picker's
+        // own handling of interleaved placeholder lines.
+        function parseOuroperksInvestmentText(text) {
+            const lines = (text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+            const result = { totalInvestedSp: null, characters: [] };
+
+            lines.forEach(function (line) {
+                if (line === 'Image') return;
+
+                const totalMatch = line.match(/^Total invested:\s*([\d,]+)/i);
+                if (totalMatch) {
+                    result.totalInvestedSp = parseInt(totalMatch[1].replace(/,/g, ''), 10);
+                    return;
+                }
+
+                const spMatch = line.match(/^(.*?)\s+([\d,]+)\s*sp$/i);
+                if (!spMatch) return;
+
+                let namePart = spMatch[1];
+                const barIdx = namePart.indexOf('|');
+                if (barIdx !== -1) namePart = namePart.slice(0, barIdx);
+
+                const name = namePart.trim();
+                if (!name) return;
+
+                result.characters.push({ name: name, sp: parseInt(spMatch[2].replace(/,/g, ''), 10) });
+            });
+
+            return result;
+        }
+
+        // Parses $ouroshop output: normally one "[LVL N]  <desc>"/
+        // "[MAX]  <desc>" line per perk, but two real-world wrinkles
+        // confirmed from an actual paste: the very first line can be
+        // missing its leading "[" (a copy artifact), and perks 6/9 (which
+        // each have TWO separate bonus effects per the wiki) wrap their
+        // second effect onto its own line with no bracket at all - that
+        // continuation line belongs to whichever perk block came before
+        // it, not a new entry. Lines that are blank, or contain only a
+        // zero-width space (a copy artifact of Discord's own field
+        // separators), are skipped entirely.
+        const ZERO_WIDTH_CHARS_RE = new RegExp('[​‌‍﻿]', 'g');
+
+        function parseOuroshopPasteText(text) {
+            const rawLines = (text || '').split('\n');
+            const blocks = [];
+
+            rawLines.forEach(function (rawLine) {
+                const line = rawLine.replace(ZERO_WIDTH_CHARS_RE, '').trim();
+                if (!line) return;
+
+                const startMatch = line.match(/^\[?\s*(LVL\s+(\d+)|MAX)\]\s*(.*)$/i);
+                if (startMatch) {
+                    const isMax = startMatch[2] === undefined;
+                    blocks.push({ level: isMax ? OUROSHOP_MAX_LEVEL : parseInt(startMatch[2], 10), desc: startMatch[3] || '' });
+                } else if (blocks.length > 0) {
+                    blocks[blocks.length - 1].desc += ' ' + line;
+                }
+            });
+
+            const levels = OUROSHOP_DEFS.map(function () { return null; });
+            blocks.forEach(function (block) {
+                const idx = OUROSHOP_DEFS.findIndex(function (def) { return block.desc.includes(def.match); });
+                if (idx !== -1) levels[idx] = { level: block.level };
+            });
+            return levels;
+        }
+
+        function ouroperkCostRemaining(perk, def) {
+            if (!def.leveled) return (!perk || !perk.maxed) ? OUROPERK_SINGLE_LEVEL_COST : 0;
+            const currentLevel = perk ? perk.level : 0;
+            let remaining = 0;
+            for (let lvl = currentLevel + 1; lvl <= OUROPERK_MAX_LEVEL; lvl++) remaining += OUROPERK_LEVEL_COSTS[lvl - 1];
+            return remaining;
+        }
+
+        function ouroperksCharacterTotalRemaining(entry) {
+            let total = 0;
+            OUROPERK_DEFS.forEach(function (def, i) { total += ouroperkCostRemaining(entry.perks[i], def); });
+            return total;
+        }
+
+        function ouroperksCharacterMaxedCount(entry) {
+            let count = 0;
+            OUROPERK_DEFS.forEach(function (def, i) {
+                const p = entry.perks[i];
+                if (!p) return;
+                if (def.leveled ? p.level >= OUROPERK_MAX_LEVEL : p.maxed) count++;
+            });
+            return count;
+        }
+
+        // ===== Planner: hypothetical future investment, separate from
+        // what's actually been paste-confirmed as already owned. A target
+        // level is only ever >= the current level (you can't "un-invest"),
+        // and null means "no target set for this perk" (not zero cost -
+        // just excluded from the plan entirely).
+
+        // Cost to move ONE perk from its current level to a chosen target
+        // level - the planner's per-perk building block, as opposed to
+        // ouroperkCostRemaining (which always targets the cap).
+        function ouroperkCostToTarget(perk, def, targetLevel) {
+            if (targetLevel == null) return 0;
+            if (!def.leveled) return (perk && perk.maxed) ? 0 : OUROPERK_SINGLE_LEVEL_COST;
+            const currentLevel = perk ? perk.level : 0;
+            let cost = 0;
+            for (let lvl = currentLevel + 1; lvl <= targetLevel; lvl++) cost += OUROPERK_LEVEL_COSTS[lvl - 1];
+            return cost;
+        }
+
+        function ouroperksCharacterPlannedCost(entry) {
+            let total = 0;
+            OUROPERK_DEFS.forEach(function (def, i) {
+                total += ouroperkCostToTarget(entry.perks[i], def, entry.plannedLevels[i]);
+            });
+            return total;
+        }
+
+        // Grand total across every tracked character's plan - the number
+        // the user actually asked for ("add x levels to various perks of
+        // multiple characters so they can see the total sphere cost").
+        function ouroperksTotalPlannedCost() {
+            const store = currentOuroperks();
+            let total = 0;
+            store.order.forEach(function (key) {
+                const entry = store.entries[key];
+                if (entry) total += ouroperksCharacterPlannedCost(entry);
+            });
+            return total;
+        }
+
+        function clearOuroperksPlanForEntry(entry) {
+            entry.plannedLevels = OUROPERK_DEFS.map(function () { return null; });
+        }
+
+        function clearAllOuroperksPlans() {
+            const store = currentOuroperks();
+            store.order.forEach(function (key) {
+                const entry = store.entries[key];
+                if (entry) clearOuroperksPlanForEntry(entry);
+            });
+        }
+
+        function ouroshopCostRemaining(currentLevel) {
+            let remaining = 0;
+            for (let lvl = (currentLevel || 0) + 1; lvl <= OUROSHOP_MAX_LEVEL; lvl++) remaining += lvl * OUROSHOP_LEVEL_COST;
+            return remaining;
+        }
+
+        let ouroperksSelectedEntryKey = null;
+
+        function switchOuroSubTab(sub) {
+            const perksBtn = document.getElementById('ouro-tab-perks-btn');
+            const shopBtn = document.getElementById('ouro-tab-shop-btn');
+            const perksPanel = document.getElementById('ouroPerksSubPanel');
+            const shopPanel = document.getElementById('ouroShopSubPanel');
+            const showPerks = sub === 'perks';
+            if (perksBtn) perksBtn.classList.toggle('active', showPerks);
+            if (shopBtn) shopBtn.classList.toggle('active', !showPerks);
+            if (perksPanel) perksPanel.style.display = showPerks ? '' : 'none';
+            if (shopPanel) shopPanel.style.display = showPerks ? 'none' : '';
+        }
+
+        function importOuroperksInvestmentText() {
+            const textField = document.getElementById('ouroInvestmentInput');
+            const message = document.getElementById('ouroInvestmentMessage');
+            const text = textField ? textField.value.trim() : '';
+            if (!text) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the $mmz= output first.</p>';
+                return;
+            }
+
+            const parsed = parseOuroperksInvestmentText(text);
+            if (parsed.characters.length === 0) {
+                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any "Name ... N sp" lines in that text.</p>';
+                return;
+            }
+
+            const store = currentOuroperks();
+            const lookup = buildOuroperksNameLookup();
+            let unmatchedCount = 0;
+            parsed.characters.forEach(function (c) {
+                const entry = getOrCreateOuroperksEntry(c.name, lookup);
+                entry.totalInvestedSp = c.sp;
+                entry.investmentUpdatedAt = Date.now();
+                if (!entry.series) unmatchedCount++;
+            });
+
+            if (parsed.totalInvestedSp != null) {
+                store.totalAccountInvestedSp = parsed.totalInvestedSp;
+                store.totalAccountUpdatedAt = Date.now();
+            }
+
+            saveToLocalStorage();
+            renderOuroperksCharacterList();
+
+            const unmatchedNote = unmatchedCount > 0
+                ? ` ${unmatchedCount} name${unmatchedCount === 1 ? '' : 's'} didn't match anyone in this collection - still tracked, just shown without a thumbnail.`
+                : '';
+            if (message) message.innerHTML = `<p class="success-message">Imported investment totals for ${parsed.characters.length} character${parsed.characters.length === 1 ? '' : 's'}.${unmatchedNote}</p>`;
+        }
+
+        // Whether a single perk's state on one entry matches a filter
+        // state ('maxed' / 'inprogress' / 'notstarted') - shared by the
+        // perk-state filter below. "Maxed" here means "nothing left to
+        // buy" (level at the cap for a leveled perk, or bought for a
+        // single-purchase one) - the SAME definition ouroperksCharacterMaxedCount
+        // and the cost column's own "fully maxed" text already use.
+        // perk.maxed is a separate, narrower flag (the free completion
+        // bonus, only confirmed once ALL 10 of a character's perks are
+        // done) and deliberately isn't required here - a real report
+        // found a character stuck at "[LVL 6]" (maxed:false, bonus not
+        // yet unlocked) correctly showing "fully maxed" everywhere else
+        // in the UI but silently excluded from this filter.
+        function ouroperkMatchesFilterState(perk, def, state) {
+            const level = perk ? perk.level : 0;
+            const maxed = def.leveled ? level >= OUROPERK_MAX_LEVEL : !!(perk && perk.maxed);
+            if (state === 'maxed') return maxed;
+            if (state === 'notstarted') return level <= 0;
+            if (state === 'inprogress') return level > 0 && !maxed;
+            return true;
+        }
+
+        // The perk filter dropdown mirrors OUROPERK_DEFS - populated once
+        // here (idempotent) rather than hardcoded in the HTML, so the
+        // options always match the same single source of truth the
+        // parser/detail view use.
+        function populateOuroperksFilterOptions() {
+            const select = document.getElementById('ouroPerksFilterPerk');
+            if (!select || select.options.length > 1) return;
+            OUROPERK_DEFS.forEach(function (def, i) {
+                const opt = document.createElement('option');
+                opt.value = String(i);
+                opt.textContent = `Perk ${i + 1}: ${def.label}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function getVisibleOuroperksEntries() {
+            const store = currentOuroperks();
+            const query = (document.getElementById('ouroPerksSearchInput') || {}).value || '';
+            const q = query.trim().toLowerCase();
+            const filterPerkEl = document.getElementById('ouroPerksFilterPerk');
+            const filterStateEl = document.getElementById('ouroPerksFilterState');
+            const filterPerkIdx = filterPerkEl && filterPerkEl.value !== '' ? parseInt(filterPerkEl.value, 10) : null;
+            const filterState = filterStateEl ? filterStateEl.value : '';
+
+            let entries = store.order.map(function (key) { return store.entries[key]; }).filter(Boolean);
+            if (q) {
+                entries = entries.filter(function (e) {
+                    return (e.name + ' ' + (e.series || '')).toLowerCase().includes(q);
+                });
+            }
+            // The state dropdown has no "any" option (it's always a real
+            // filter) - filtering is entirely gated on whether a specific
+            // perk is picked, so "any perk" alone is the one and only way
+            // to mean "don't filter," instead of two different dropdown
+            // combinations both silently doing the same thing.
+            if (filterPerkIdx != null) {
+                entries = entries.filter(function (e) {
+                    return ouroperkMatchesFilterState(e.perks[filterPerkIdx], OUROPERK_DEFS[filterPerkIdx], filterState);
+                });
+            }
+            // Highest investment first, matching the user's own $mmz=
+            // workflow - untracked investment (null) sorts last.
+            entries.sort(function (a, b) { return (b.totalInvestedSp || -1) - (a.totalInvestedSp || -1); });
+            return entries;
+        }
+
+        // Compact grid of small cards (rather than a full-width scrollable
+        // list) so the character picker and the selected character's perk
+        // breakdown can sit side by side without either one dominating.
+        function renderOuroperksCharacterList() {
+            const container = document.getElementById('ouroPerksCharacterList');
+            if (!container) return;
+
+            populateOuroperksFilterOptions();
+            // The plan total is global (every tracked character, not just
+            // whatever's currently filtered/visible), so it's refreshed
+            // here unconditionally rather than after the early-returns
+            // below.
+            renderOuroperksPlanBar();
+
+            const store = currentOuroperks();
+            if (store.order.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No characters tracked yet - paste $mmz= output above, or paste a $opp result on the right to track one directly.</p>';
+                return;
+            }
+
+            const entries = getVisibleOuroperksEntries();
+            if (entries.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No tracked characters match the current search/filter.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            entries.forEach(function (entry) {
+                const char = entry.series ? AppState.seriesData[entry.series].characters.find(function (c) { return normalizeMatchPart(c.name) === normalizeMatchPart(entry.name); }) : null;
+                const el = document.createElement('div');
+                el.className = 'ouro-character-card';
+                if (entry.key === ouroperksSelectedEntryKey) el.classList.add('selected');
+
+                const thumb = (char && char.image)
+                    ? `<img class="ouro-card-thumb" src="${escapeHTML(char.image)}" alt="${escapeHTML(entry.name)}" loading="lazy" onerror="handleImageError(this)">`
+                    : `<div class="ouro-card-thumb ouro-card-thumb-placeholder">No Image</div>`;
+
+                const maxedCount = ouroperksCharacterMaxedCount(entry);
+                const badgeParts = [];
+                if (entry.totalInvestedSp != null) badgeParts.push(`${entry.totalInvestedSp.toLocaleString()} sp`);
+                badgeParts.push(`${maxedCount}/10`);
+
+                el.innerHTML = `
+                    ${thumb}
+                    <div class="ouro-card-name" title="${escapeHTML(entry.name)}">${escapeHTML(entry.name)}</div>
+                    <div class="ouro-card-series">${entry.series ? escapeHTML(entry.series) : '<i>not in collection</i>'}</div>
+                    <div class="ouro-card-badge">${badgeParts.join(' · ')}</div>
+                `;
+
+                el.addEventListener('click', function () {
+                    ouroperksSelectedEntryKey = entry.key;
+                    renderOuroperksCharacterList();
+                    renderOuroperksDetail();
+                });
+
+                container.appendChild(el);
+            });
+        }
+
+        function renderOuroperksDetail() {
+            const title = document.getElementById('ouroPerksDetailTitle');
+            const hint = document.getElementById('ouroPerksDetailHint');
+            const body = document.getElementById('ouroPerksDetailBody');
+            if (!body) return;
+
+            const store = currentOuroperks();
+            const entry = ouroperksSelectedEntryKey ? store.entries[ouroperksSelectedEntryKey] : null;
+            if (!entry) {
+                if (title) title.textContent = 'Character Perks';
+                if (hint) hint.style.display = '';
+                body.style.display = 'none';
+                return;
+            }
+
+            if (hint) hint.style.display = 'none';
+            body.style.display = '';
+            if (title) title.textContent = `${entry.name}'s Perks`;
+
+            const listEl = document.getElementById('ouroPerksDetailList');
+            const summaryEl = document.getElementById('ouroPerksDetailSummary');
+            const planSummaryEl = document.getElementById('ouroPerksDetailPlanSummary');
+            const resetPlanBtn = document.getElementById('ouroPerksResetPlanBtn');
+            if (listEl) {
+                listEl.innerHTML = OUROPERK_DEFS.map(function (def, i) {
+                    const p = entry.perks[i];
+                    const level = p ? p.level : 0;
+                    const maxedOut = def.leveled ? level >= OUROPERK_MAX_LEVEL : !!(p && p.maxed);
+                    const statusText = !p ? 'not pasted yet' : (def.leveled ? (p.maxed ? 'MAX' : `LVL ${level}`) : (p.maxed ? 'MAX' : 'LVL 0'));
+                    const remaining = ouroperkCostRemaining(p, def);
+                    const costText = remaining > 0 ? `${remaining.toLocaleString()} sp to fully max` : 'fully maxed';
+                    const valueText = formatOuroperkValue(i, p);
+
+                    const target = entry.plannedLevels[i];
+                    const planCost = ouroperkCostToTarget(p, def, target);
+                    let targetControl;
+                    if (maxedOut) {
+                        targetControl = '<span class="ouro-perk-target-done">fully maxed</span>';
+                    } else if (def.leveled) {
+                        const options = [];
+                        for (let lvl = level; lvl <= OUROPERK_MAX_LEVEL; lvl++) {
+                            options.push(`<option value="${lvl}"${(target == null ? level : target) === lvl ? ' selected' : ''}>${lvl === level ? 'No plan' : `Target: LVL ${lvl}`}</option>`);
+                        }
+                        targetControl = `<select class="ouro-perk-target-select" onchange="handleOuroperkPlanTargetChange(${i}, this.value)">${options.join('')}</select>`;
+                    } else {
+                        targetControl = `<label class="ouro-perk-target-checkbox"><input type="checkbox" ${target != null ? 'checked' : ''}
+                            onchange="handleOuroperkPlanTargetChange(${i}, this.checked ? 1 : null)"> Plan to buy</label>`;
+                    }
+                    const planCostText = planCost > 0 ? `<span class="ouro-perk-plan-cost">+${planCost.toLocaleString()} sp</span>` : '';
+
+                    // Manual override for the CURRENT level - lets someone
+                    // fill this in (or correct it) without needing a fresh
+                    // $opp paste every time. Leveled perks distinguish
+                    // "LVL 6" from the separate bonus-confirmed "MAX" tier,
+                    // same distinction the parser makes from a real paste.
+                    let currentControl;
+                    if (def.leveled) {
+                        const selectedValue = (p && p.maxed) ? 'max' : String(level);
+                        const currentOpts = [];
+                        for (let lvl = 0; lvl <= OUROPERK_MAX_LEVEL; lvl++) {
+                            currentOpts.push(`<option value="${lvl}"${String(lvl) === selectedValue ? ' selected' : ''}>Current: LVL ${lvl}</option>`);
+                        }
+                        currentOpts.push(`<option value="max"${selectedValue === 'max' ? ' selected' : ''}>Current: MAX (bonus confirmed)</option>`);
+                        currentControl = `<select class="ouro-perk-current-select" onchange="handleOuroperkCurrentLevelChange(${i}, this.value)">${currentOpts.join('')}</select>`;
+                    } else {
+                        currentControl = `<label class="ouro-perk-current-checkbox"><input type="checkbox" ${(p && p.maxed) ? 'checked' : ''}
+                            onchange="handleOuroperkCurrentLevelChange(${i}, this.checked)"> Currently owned</label>`;
+                    }
+
+                    return `<div class="ouro-perk-row">
+                        <span class="ouro-perk-status">${escapeHTML(statusText)}</span>
+                        <span class="ouro-perk-label">${escapeHTML(def.label)}</span>
+                        <span class="ouro-perk-value">${escapeHTML(valueText)}</span>
+                        <span class="ouro-perk-cost">${costText}</span>
+                        ${currentControl}
+                        ${targetControl}
+                        ${planCostText}
+                    </div>`;
+                }).join('');
+            }
+            if (summaryEl) {
+                const total = ouroperksCharacterTotalRemaining(entry);
+                summaryEl.textContent = total > 0
+                    ? `${total.toLocaleString()} spheres left to fully max every perk on ${entry.name}.`
+                    : `${entry.name} has every perk fully purchased.`;
+            }
+            const plannedCost = ouroperksCharacterPlannedCost(entry);
+            if (planSummaryEl) {
+                planSummaryEl.textContent = plannedCost > 0
+                    ? `Planned for ${entry.name}: ${plannedCost.toLocaleString()} spheres.`
+                    : '';
+            }
+            if (resetPlanBtn) resetPlanBtn.style.display = plannedCost > 0 ? '' : 'none';
+
+            renderOuroperksPlanBar();
+        }
+
+        // Lets the current level be set/corrected by hand, as an
+        // alternative (or supplement) to pasting a fresh $opp result - not
+        // everyone wants to re-paste just to fix or fill in one perk.
+        function handleOuroperkCurrentLevelChange(perkIdx, rawValue) {
+            const store = currentOuroperks();
+            const entry = ouroperksSelectedEntryKey ? store.entries[ouroperksSelectedEntryKey] : null;
+            if (!entry) return;
+
+            const def = OUROPERK_DEFS[perkIdx];
+            let newPerk;
+            if (def.leveled) {
+                newPerk = rawValue === 'max' ? { level: OUROPERK_MAX_LEVEL, maxed: true } : { level: parseInt(rawValue, 10), maxed: false };
+            } else {
+                newPerk = { level: rawValue ? 1 : 0, maxed: !!rawValue };
+            }
+            entry.perks[perkIdx] = newPerk;
+
+            // A planned target that the new current level has already met
+            // or passed is stale - clear it rather than leaving a
+            // zero-cost target sitting around.
+            const target = entry.plannedLevels[perkIdx];
+            if (target != null && target <= newPerk.level) entry.plannedLevels[perkIdx] = null;
+
+            entry.perksUpdatedAt = Date.now();
+            saveToLocalStorage();
+            renderOuroperksDetail();
+            renderOuroperksCharacterList();
+        }
+
+        function handleOuroperkPlanTargetChange(perkIdx, rawValue) {
+            const store = currentOuroperks();
+            const entry = ouroperksSelectedEntryKey ? store.entries[ouroperksSelectedEntryKey] : null;
+            if (!entry) return;
+
+            const level = rawValue === null || rawValue === '' ? null : parseInt(rawValue, 10);
+            const currentLevel = entry.perks[perkIdx] ? entry.perks[perkIdx].level : 0;
+            // A target equal to the current level is the same as "no
+            // plan" - store null instead of a redundant no-op target, so
+            // ouroperksCharacterPlannedCost/the plan bar don't have to
+            // special-case a zero-cost "target".
+            entry.plannedLevels[perkIdx] = (level != null && level > currentLevel) ? level : null;
+
+            saveToLocalStorage();
+            renderOuroperksDetail();
+            renderOuroperksCharacterList();
+        }
+
+        function handleResetOuroperksPlan() {
+            const store = currentOuroperks();
+            const entry = ouroperksSelectedEntryKey ? store.entries[ouroperksSelectedEntryKey] : null;
+            if (!entry) return;
+            clearOuroperksPlanForEntry(entry);
+            saveToLocalStorage();
+            renderOuroperksDetail();
+            renderOuroperksCharacterList();
+        }
+
+        function handleClearAllOuroperksPlans() {
+            clearAllOuroperksPlans();
+            saveToLocalStorage();
+            renderOuroperksDetail();
+            renderOuroperksCharacterList();
+        }
+
+        // The running breakdown + grand total across EVERY tracked
+        // character's plan - shown above the character grid, independent
+        // of which one (if any) is currently selected, so building a plan
+        // spanning several characters shows exactly where the cost comes
+        // from, not just one opaque number.
+        function renderOuroperksPlanBar() {
+            const summaryEl = document.getElementById('ouroPerksPlanSummary');
+            const breakdownEl = document.getElementById('ouroPerksPlanBreakdown');
+            const clearBtn = document.getElementById('ouroPerksClearPlanBtn');
+            if (!summaryEl) return;
+
+            const store = currentOuroperks();
+            const breakdown = store.order
+                .map(function (key) { return store.entries[key]; })
+                .filter(Boolean)
+                .map(function (entry) { return { name: entry.name, cost: ouroperksCharacterPlannedCost(entry) }; })
+                .filter(function (item) { return item.cost > 0; })
+                .sort(function (a, b) { return b.cost - a.cost; });
+
+            const total = breakdown.reduce(function (sum, item) { return sum + item.cost; }, 0);
+
+            if (total === 0) {
+                summaryEl.textContent = 'No plan set yet - pick a Target on any perk below to start building one.';
+                if (breakdownEl) breakdownEl.innerHTML = '';
+                if (clearBtn) clearBtn.style.display = 'none';
+                return;
+            }
+
+            summaryEl.innerHTML = `<b>${total.toLocaleString()} spheres</b> needed across your whole plan (${breakdown.length} character${breakdown.length === 1 ? '' : 's'}).`;
+            if (breakdownEl) {
+                breakdownEl.innerHTML = breakdown.map(function (item) {
+                    return `<span class="ouro-plan-breakdown-item">${escapeHTML(item.name)}: ${item.cost.toLocaleString()} sp</span>`;
+                }).join('');
+            }
+            if (clearBtn) clearBtn.style.display = '';
+        }
+
+        function importOuroperksPasteText() {
+            const textField = document.getElementById('ouroPerksPasteInput');
+            const message = document.getElementById('ouroPerksDetailMessage');
+            const text = textField ? textField.value.trim() : '';
+            if (!text) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the $opp output first.</p>';
+                return;
+            }
+            if (!ouroperksSelectedEntryKey) {
+                if (message) message.innerHTML = '<p class="error-message">Pick a tracked character above first.</p>';
+                return;
+            }
+
+            const parsed = parseOuroperksPasteText(text);
+            if (parsed.every(function (p) { return !p; })) {
+                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any "[LVL N]"/"[MAX]" perk lines in that text.</p>';
+                return;
+            }
+
+            const store = currentOuroperks();
+            const entry = store.entries[ouroperksSelectedEntryKey];
+            if (!entry) return;
+
+            parsed.forEach(function (p, i) { if (p) entry.perks[i] = p; });
+            entry.perksUpdatedAt = Date.now();
+
+            saveToLocalStorage();
+            renderOuroperksCharacterList();
+            renderOuroperksDetail();
+            if (message) message.innerHTML = '<p class="success-message">Perks updated.</p>';
+        }
+
+        function importOuroshopPasteText() {
+            const textField = document.getElementById('ouroShopPasteInput');
+            const message = document.getElementById('ouroShopMessage');
+            const text = textField ? textField.value.trim() : '';
+            if (!text) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the $ouroshop output first.</p>';
+                return;
+            }
+
+            const parsed = parseOuroshopPasteText(text);
+            if (parsed.every(function (p) { return !p; })) {
+                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any "[LVL N]"/"[MAX]" shop lines in that text.</p>';
+                return;
+            }
+
+            const store = currentOuroshop();
+            parsed.forEach(function (p, i) { if (p) store.levels[i] = p; });
+            store.updatedAt = Date.now();
+
+            saveToLocalStorage();
+            renderOuroshopList();
+            if (message) message.innerHTML = '<p class="success-message">Account shop levels updated.</p>';
+        }
+
+        // Manual override for one shop perk's level - same idea as the
+        // Character Perks one, for filling in/correcting a level by hand
+        // instead of needing a fresh $ouroshop paste every time.
+        function handleOuroshopCurrentLevelChange(perkIdx, rawValue) {
+            const store = currentOuroshop();
+            store.levels[perkIdx] = { level: parseInt(rawValue, 10) };
+            store.updatedAt = Date.now();
+            saveToLocalStorage();
+            renderOuroshopList();
+        }
+
+        function renderOuroshopList() {
+            const listEl = document.getElementById('ouroShopList');
+            const summaryEl = document.getElementById('ouroShopSummary');
+            if (!listEl) return;
+
+            const store = currentOuroshop();
+            listEl.innerHTML = OUROSHOP_DEFS.map(function (def, i) {
+                const level = store.levels[i].level || 0;
+                const maxed = level >= OUROSHOP_MAX_LEVEL;
+                const remaining = ouroshopCostRemaining(level);
+                const costText = maxed ? 'fully maxed' : `${remaining.toLocaleString()} sp to fully max`;
+                const valueText = formatOuroshopValue(i, level);
+                const currentOpts = [];
+                for (let lvl = 0; lvl <= OUROSHOP_MAX_LEVEL; lvl++) {
+                    currentOpts.push(`<option value="${lvl}"${lvl === level ? ' selected' : ''}>Current: ${lvl === OUROSHOP_MAX_LEVEL ? 'MAX' : `LVL ${lvl}`}</option>`);
+                }
+                return `<div class="ouro-perk-row">
+                    <span class="ouro-perk-status">${maxed ? 'MAX' : `LVL ${level}`}</span>
+                    <span class="ouro-perk-label">${escapeHTML(def.label)}</span>
+                    <span class="ouro-perk-value">${escapeHTML(valueText)}</span>
+                    <span class="ouro-perk-cost">${costText}</span>
+                    <select class="ouro-perk-current-select" onchange="handleOuroshopCurrentLevelChange(${i}, this.value)">${currentOpts.join('')}</select>
+                </div>`;
+            }).join('');
+
+            if (summaryEl) {
+                let total = 0;
+                store.levels.forEach(function (l) { total += ouroshopCostRemaining(l.level || 0); });
+                summaryEl.textContent = total > 0
+                    ? `${total.toLocaleString()} spheres left to fully max your account shop.`
+                    : 'Your account shop is fully maxed.';
+            }
         }
 
         // Run after every function/const/let above is declared - some of
