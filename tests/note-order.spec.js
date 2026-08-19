@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { loadDemoCollection } = require('./helpers');
+const { loadDemoCollection, dismissChangelogIfPresent } = require('./helpers');
 
 module.exports = [
     {
@@ -313,6 +313,50 @@ module.exports = [
             await page.waitForTimeout(100);
             const panelVisible = await page.locator('#recentlyNotedPanel').isVisible();
             assert.ok(!panelVisible, 'expected Clear to hide the panel entirely');
+        }
+    },
+    {
+        // Regression test for a real report: bulk-noting more than 50
+        // characters at once used to silently drop everything past the
+        // last 50 added, so "Generate $n Command" could never cover the
+        // full batch. The queue should now be worked through 50 at a time
+        // via a "Next Batch" button instead of losing data.
+        name: 'bulk-noting more than 50 characters queues the rest instead of dropping them, worked through via "Next Batch"',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+
+            const lines = ['BigBatch - 60/60'];
+            for (let i = 1; i <= 60; i++) {
+                lines.push(`Character${i} 100 ka - https://example.com/img${i}.png`);
+            }
+            await page.fill('#input', lines.join('\n'));
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForSelector('.series-card');
+
+            const group = page.locator('.series-card').filter({ hasText: 'BigBatch' });
+            await group.locator('.note-input').first().fill('Big Note');
+            await group.locator('[data-action="bulk-note"][data-target="all"]').click();
+            await page.waitForTimeout(200);
+
+            let panelText = await page.locator('#recentlyNotedPanel').textContent();
+            assert.ok(/50 of 60/.test(panelText), `expected the label to show 50 of 60 queued, got: "${panelText}"`);
+            assert.strictEqual(await page.locator('.recently-noted-chip').count(), 50, 'expected only 50 chips shown at once');
+            const nextBatchBtn = page.locator('#recentlyNotedPanel button:has-text("Next Batch")');
+            assert.ok(await nextBatchBtn.isVisible(), 'expected a "Next Batch" button while more than 50 are queued');
+
+            // Generating a command only covers the visible batch, not the whole queue.
+            await page.click('#recentlyNotedPanel button:has-text("Generate $n Command")');
+            await page.waitForTimeout(100);
+            const commandText = await page.locator('#recentlyNotedCommandOutput').textContent();
+            const nameCountInCommand = (commandText.match(/Character\d+/g) || []).length;
+            assert.strictEqual(nameCountInCommand, 50, `expected the generated command to cover exactly the 50-character batch, got ${nameCountInCommand} names`);
+
+            await nextBatchBtn.click();
+            await page.waitForTimeout(150);
+            panelText = await page.locator('#recentlyNotedPanel').textContent();
+            assert.ok(/\(10\):/.test(panelText), `expected the remaining 10 to be revealed as their own batch, got: "${panelText}"`);
+            assert.strictEqual(await page.locator('.recently-noted-chip').count(), 10);
+            assert.ok(!(await page.locator('#recentlyNotedPanel button:has-text("Next Batch")').isVisible()), 'expected "Next Batch" gone once everything fits in one batch');
         }
     },
     {

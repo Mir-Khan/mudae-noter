@@ -6671,9 +6671,11 @@
         // blend in with everything else already deselected, with no other
         // trace of what was just done. Session-only (not part of AppState),
         // a rolling list rather than just the latest batch (re-noting a
-        // character moves it back to the front instead of duplicating it),
-        // capped so it stays a quick-reference list rather than growing
-        // unbounded over a long session.
+        // character moves it back to the front instead of duplicating it).
+        // RECENTLY_NOTED_MAX is a visible/working BATCH size, not a hard
+        // cap on the queue - a bulk-note larger than this stays fully
+        // queued (see advanceRecentlyNotedBatch), so nothing gets silently
+        // dropped when tagging more than 50 characters at once.
         const RECENTLY_NOTED_MAX = 50;
         let recentlyNotedEntries = [];
 
@@ -6693,9 +6695,10 @@
                 recentlyNotedEntries = recentlyNotedEntries.filter(function (e) { return e.char !== item.char; });
                 recentlyNotedEntries.unshift(item);
             });
-            if (recentlyNotedEntries.length > RECENTLY_NOTED_MAX) {
-                recentlyNotedEntries.length = RECENTLY_NOTED_MAX;
-            }
+            // No cap here - a bulk-note of more than RECENTLY_NOTED_MAX
+            // characters used to silently truncate (and lose) everything
+            // past the last 50 added. The full queue is kept; only the
+            // panel/generator below work through it a batch at a time.
             renderRecentlyNotedPanel();
         }
 
@@ -6709,6 +6712,15 @@
             renderRecentlyNotedPanel();
         }
 
+        // Removes just the current visible batch (the one already acted
+        // on via Generate $n Command), revealing the next up-to-50 queued
+        // behind it - lets a bulk-note of, say, 237 characters be worked
+        // through 50 at a time instead of losing anything past the first/last 50.
+        function advanceRecentlyNotedBatch() {
+            recentlyNotedEntries.splice(0, Math.min(RECENTLY_NOTED_MAX, recentlyNotedEntries.length));
+            renderRecentlyNotedPanel();
+        }
+
         function renderRecentlyNotedPanel() {
             const panel = document.getElementById('recentlyNotedPanel');
             if (!panel) return;
@@ -6719,18 +6731,24 @@
                 return;
             }
 
-            const chips = recentlyNotedEntries.map(function (item, idx) {
+            const batch = recentlyNotedEntries.slice(0, RECENTLY_NOTED_MAX);
+            const hasMoreBatches = recentlyNotedEntries.length > RECENTLY_NOTED_MAX;
+            const chips = batch.map(function (item, idx) {
                 const noteLabel = (item.char.note || '').trim() || '(blank note)';
                 return `<span class="recently-noted-chip" data-index="${idx}" title="${escapeHTML(noteLabel)} - click to jump, × to remove from this list">${escapeHTML(item.char.name)}<span class="recently-noted-chip-remove" data-index="${idx}">×</span></span>`;
             }).join('');
+            const label = hasMoreBatches
+                ? `Recently noted (${batch.length} of ${recentlyNotedEntries.length}):`
+                : `Recently noted (${batch.length}):`;
 
             panel.innerHTML = `
                 <div class="recently-noted-panel-top">
-                    <span class="recently-noted-panel-label">Recently noted (${recentlyNotedEntries.length}):</span>
+                    <span class="recently-noted-panel-label">${label}</span>
                     <div class="recently-noted-panel-names">${chips}</div>
                     <div class="recently-noted-panel-actions">
                         <button type="button" class="btn btn-sm btn-primary" onclick="generateNotesForRecentlyNoted()">Generate $n Command</button>
-                        <button type="button" class="btn btn-sm" onclick="clearRecentlyNotedBatch()">Clear</button>
+                        ${hasMoreBatches ? '<button type="button" class="btn btn-sm" onclick="advanceRecentlyNotedBatch()" title="Remove this batch and move to the next 50 queued">Next Batch</button>' : ''}
+                        <button type="button" class="btn btn-sm" onclick="clearRecentlyNotedBatch()">${hasMoreBatches ? 'Clear All' : 'Clear'}</button>
                     </div>
                 </div>
                 <div id="recentlyNotedCommandOutput"></div>
@@ -6779,8 +6797,11 @@
                 return;
             }
 
+            // Scoped to the currently-visible batch only, matching what's
+            // actually shown on screen - the rest stays queued until
+            // "Next Batch" reveals it.
             const commandsByNote = {};
-            recentlyNotedEntries.forEach(function (item) {
+            recentlyNotedEntries.slice(0, RECENTLY_NOTED_MAX).forEach(function (item) {
                 const note = (item.char.note || '').trim();
                 if (!commandsByNote[note]) commandsByNote[note] = [];
                 commandsByNote[note].push(item.char.name);
@@ -13551,8 +13572,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-18';
+        const CHANGELOG_VERSION = '2026-08-19';
         const CHANGELOG = [
+            {
+                version: '2026-08-19',
+                date: 'August 19, 2026',
+                items: [
+                    { type: 'fix', text: 'Bulk-noting more than 50 characters at once used to silently drop everything past the last 50 from the "Recently noted" panel, so "Generate $n Command" could never cover the full batch. It now keeps the whole queue and works through it 50 at a time - a "Next Batch" button clears the current batch and reveals the next chunk until the queue is empty.' }
+                ]
+            },
             {
                 version: '2026-08-18',
                 date: 'August 18, 2026',
