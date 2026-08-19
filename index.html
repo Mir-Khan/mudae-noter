@@ -8306,18 +8306,22 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 aiConfirmBtn.className = 'btn btn-sm confirm-applied-btn';
                 aiConfirmBtn.textContent = '✓ Ran this in Discord';
                 aiConfirmBtn.onclick = function () {
-                    applyImsImagePickerImage(link);
-                    imsImageUploadPending = false;
-                    imsImagePendingUploadLink = null;
                     imsImageAiConfirmed = true;
                     aiConfirmBtn.textContent = '✓ Applied';
                     aiConfirmBtn.disabled = true;
                     aiConfirmBtn.classList.add('confirm-applied-done');
-                    // Nothing else left to confirm - close immediately, same
-                    // as picking a thumbnail + Save Image already does. If
-                    // there's also a $c command below, stay open until
-                    // that's confirmed too, so it doesn't get forgotten.
-                    if (!hasCCommand) closeImsImagePickerModal();
+                    // $ai only adds the image to Mudae's pool - it doesn't
+                    // make it active. When there's also a $c command
+                    // pending, the app's own local image should only
+                    // update once THAT'S confirmed too, so what's shown
+                    // here actually matches what Mudae is showing. With no
+                    // $c command at all, there's nothing else to wait for,
+                    // so this is the only confirmation there'll ever be.
+                    if (hasCCommand) return;
+                    applyImsImagePickerImage(link);
+                    imsImageUploadPending = false;
+                    imsImagePendingUploadLink = null;
+                    closeImsImagePickerModal();
                 };
                 statusDiv.appendChild(aiConfirmBtn);
 
@@ -8344,6 +8348,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                             showImsPickerMessage('Run and confirm the $ai command above first - $c only works once the image has actually been added to the pool.', 'error');
                             return;
                         }
+                        // This is the actual point Mudae switches the
+                        // active image, so it's the point the app applies
+                        // it locally too - not the earlier $ai confirm.
+                        applyImsImagePickerImage(link);
+                        imsImageUploadPending = false;
+                        imsImagePendingUploadLink = null;
                         cConfirmBtn.textContent = '✓ Applied';
                         cConfirmBtn.disabled = true;
                         cConfirmBtn.classList.add('confirm-applied-done');
@@ -8356,6 +8366,22 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     hint.style.marginTop = '10px';
                     hint.textContent = "Paste this character's $imsi- DM above first if you also want the $c command to make this new upload the active image.";
                     statusDiv.appendChild(hint);
+
+                    // No known image count means no reliable $c number can
+                    // be generated - offer a plain $im command instead so
+                    // the user can see the numbered gallery themselves
+                    // (with actual image previews, unlike $imsi-'s
+                    // text-only list) and figure out the number to use for
+                    // a manual $c, if they want to set it right away.
+                    const imCommand = `$im ${char.name}`;
+                    const imBlock = document.createElement('div');
+                    imBlock.className = 'command-item';
+                    imBlock.style.marginTop = '8px';
+                    imBlock.innerHTML = `
+ <div class="command-text">${escapeHTML(imCommand)}</div>
+ <button type="button" class="btn btn-sm btn-primary" id="imgChestImCopyBtn">Copy Command</button>`;
+                    statusDiv.appendChild(imBlock);
+                    document.getElementById('imgChestImCopyBtn').onclick = function () { copyCommand(this, imCommand); };
                 }
 
                 showImsPickerMessage('Image uploaded!', 'success');
@@ -14561,7 +14587,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 items: [
                     { type: 'feature', text: 'Added <b>Export / Import</b>: download a collection (or all of them) as a JSON file, and re-import it on another device/browser as a new collection or an overwrite.' },
                     { type: 'feature', text: 'Added <b>Dynamic Note Suffixes</b> on the Notes tab: rules that append a live-updating suffix to a note based on keys, kakera, or color, using your own symbols and thresholds.' },
-                    { type: 'fix', text: 'A very large series group on the Notes tab used to stretch the whole page to an unwieldy scroll length - its character list now caps its own height and scrolls internally instead.' }
+                    { type: 'fix', text: 'A very large series group on the Notes tab used to stretch the whole page to an unwieldy scroll length - its character list now caps its own height and scrolls internally instead.' },
+                    { type: 'fix', text: 'The image picker used to update a character\'s image here the moment the $ai command was confirmed, even when a $c command was still pending - $ai only adds an image to Mudae\'s pool, it doesn\'t make it active, so the app now waits for $c (the one that actually does) before updating locally. When no $c command can be generated, a plain $im command is now also offered so you can see the numbered gallery yourself.' }
                 ]
             },
             {

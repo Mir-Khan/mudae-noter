@@ -90,7 +90,7 @@ module.exports = [
             await page.click('#imgChestUploadBtn');
             await page.waitForSelector('#imgChestUploadStatus .command-text');
 
-            const commandText = await page.locator('#imgChestUploadStatus .command-text').textContent();
+            const commandText = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$ai ' }).textContent();
             assert.strictEqual(commandText, `$ai ${name}$https://cdn.imgchest.com/files/test123.png`, `expected the exact $ai command for "${name}", got: "${commandText}"`);
 
             await page.click('#imgChestUploadStatus button:has-text("Copy Command")');
@@ -155,7 +155,13 @@ module.exports = [
         // command still waiting to be run - easy to forget about it once the
         // modal's gone. Now the modal only closes once BOTH have been
         // confirmed (when there is a $c command to confirm).
-        name: 'with a $c command present, confirming $ai alone does not close the modal - confirming $c does',
+        // Regression test for a real report: $ai only adds an image to
+        // Mudae's pool, it doesn't make it active - $c does that. The app
+        // used to sync its own local image the moment $ai was confirmed,
+        // which didn't match reality whenever a $c command was still
+        // pending - the local image now only updates once $c itself is
+        // confirmed.
+        name: 'with a $c command present, confirming $ai alone neither applies the image nor closes the modal - confirming $c does both',
         async run(page) {
             await page.route('https://api.imgchest.com/v1/post', (route) => {
                 route.fulfill({
@@ -166,6 +172,7 @@ module.exports = [
             });
 
             const { card } = await openUploadSectionForFirstCharacter(page);
+            const originalImage = await card.locator('img').getAttribute('src');
             await page.fill('#imsImagePasteArea', '1. https://mudae.net/uploads/1/a.png');
             await page.waitForSelector('.ims-image-thumb');
 
@@ -193,10 +200,17 @@ module.exports = [
                 const index = parseInt(el.dataset.originalIndex, 10);
                 return AppState.seriesData[series].characters[index].image;
             });
-            assert.strictEqual(imageAfterAi, 'https://cdn.imgchest.com/files/test123.png', 'expected confirming $ai to still apply the image right away');
+            assert.strictEqual(imageAfterAi, originalImage, 'expected confirming $ai alone to NOT apply the image yet - $c is what actually activates it in Mudae');
 
             await cConfirmBtn.click();
             await page.waitForSelector('#imsImagePickerOverlay', { state: 'hidden' });
+
+            const imageAfterC = await card.evaluate(el => {
+                const series = el.dataset.originalSeries;
+                const index = parseInt(el.dataset.originalIndex, 10);
+                return AppState.seriesData[series].characters[index].image;
+            });
+            assert.strictEqual(imageAfterC, 'https://cdn.imgchest.com/files/test123.png', 'expected confirming $c to be the point the image actually gets applied');
         }
     },
     {
@@ -266,6 +280,49 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real request: with no $c command possible
+        // (the character's own image count is unknown), a plain $im
+        // command is offered instead - a real numbered gallery with actual
+        // image previews (unlike $imsi-'s text-only list), so the user can
+        // see for themselves which number the new upload landed at and run
+        // a manual $c if they want. No confirm button, since running $im
+        // alone changes nothing that needs syncing back into the app.
+        name: 'with no $c command, a plain $im command is offered too, with no confirm button of its own',
+        async run(page) {
+            await page.route('https://api.imgchest.com/v1/post', (route) => {
+                route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ data: { images: [{ link: 'https://cdn.imgchest.com/files/test123.png' }] } })
+                });
+            });
+
+            const { name } = await openUploadSectionForFirstCharacter(page);
+            await page.fill('#imgChestTokenInput', 'my-test-token');
+            await page.click('button:has-text("Save Token")');
+            await page.setInputFiles('#imgChestFileInput', FIXTURE_IMAGE);
+            await page.click('#imgChestUploadBtn');
+            await page.waitForSelector('#imgChestUploadStatus .command-text');
+
+            const imCommandText = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$im ' }).textContent();
+            assert.strictEqual(imCommandText, `$im ${name}`, `expected a plain "$im <name>" command, got: "${imCommandText}"`);
+
+            // Exactly one "Ran this in Discord" button (the $ai one) - the
+            // $im command has no confirm button of its own.
+            const confirmButtonCount = await page.locator('#imgChestUploadStatus').locator('button:has-text("Ran this in Discord")').count();
+            assert.strictEqual(confirmButtonCount, 1, 'expected only the $ai command to have a confirm button, not $im');
+
+            await page.evaluate(() => {
+                window.__copiedText = null;
+                navigator.clipboard.writeText = (text) => { window.__copiedText = text; return Promise.resolve(); };
+            });
+            const imBlock = page.locator('#imgChestUploadStatus .command-item', { hasText: '$im ' });
+            await imBlock.locator('button:has-text("Copy Command")').click();
+            const copied = await page.evaluate(() => window.__copiedText);
+            assert.strictEqual(copied, `$im ${name}`, 'expected the $im command\'s own Copy button to copy exactly that command');
+        }
+    },
+    {
         // Regression test for a real report: Mudae rejects $ai links hosted
         // on imgchest.com that end in .jpg/.jpeg outright ("The links of
         // the images hosted with imgchest can't end with '.jpg' or
@@ -311,7 +368,7 @@ module.exports = [
             assert.ok(uploadedFilename && /\.png$/i.test(uploadedFilename), `expected the uploaded filename to end in .png, got: "${uploadedFilename}"`);
             assert.strictEqual(uploadedContentType, 'image/png', `expected the uploaded file's content type to be image/png, got: "${uploadedContentType}"`);
 
-            const commandText = await page.locator('#imgChestUploadStatus .command-text').textContent();
+            const commandText = await page.locator('#imgChestUploadStatus .command-text', { hasText: '$ai ' }).textContent();
             assert.ok(commandText.endsWith('.png'), `expected the generated $ai command to reference a .png link, got: "${commandText}"`);
         }
     },
