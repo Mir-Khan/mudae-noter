@@ -11,9 +11,11 @@ Designed for use with the [Mudae bot](https://top.gg/bot/432610292342587392) on 
 
 - Import your collection from the `$mmsaty+ri-c+x+ko` command and show characters with their images, series, kakera, and key values.
 - Manage multiple collections at once - create, duplicate, rename, delete, and switch between them.
+- Export a collection (or all of them) as a JSON file, and re-import it on another device/browser as a new collection or as an overwrite of an existing one.
 - Group and sort characters by series, note, color, keys, kakera, gender, roulette, or owner; filter by kakera/key range, owner, gender, roulette, Imgur status, or disabled-only series.
 - A ranking system to number characters, with drag-and-drop or click-a-badge reordering.
 - Bulk-apply notes or hex colors to entire series or selected groups, or add a key count to one character directly.
+- Dynamic Note Suffixes: define rules that append a live-computed suffix to a note based on keys, kakera thresholds, or color, using your own symbols/text and thresholds - the typed note itself is never touched, and the suffix stays live as that data changes.
 - Click a character's picture to generate a Mudae `$ims` command, paste the whole DM back in, and pick visually from a thumbnail grid - each pick generates the matching `$c` command to make it the active image.
 - Upload a new image in-app (via [ImgChest](https://imgchest.com/)) tied to that character - get both the `$ai` command to add it and the `$c` command to activate it, with a confirm button that updates the app once you've run it.
 - Crop an image (including animated GIFs, with the animation preserved) to 225×350 - the size Mudae's own images use - before uploading, with drag-to-pan and zoom, and an optional colored border (white by default, matching the slight edge Mudae's own images already show once Discord embeds them).
@@ -101,6 +103,19 @@ On desktop, a **Visual (drag & drop)** mode is also available alongside the text
 
 ![Embeds tab visual drag-and-drop builder demo](docs/assets/embeds-visual-builder-demo.gif)
 
+### 9. Back up or move a collection
+
+Click **Export / Import** in the collections bar to download a collection (or every collection) as a JSON file, and re-import it later - on this device or another one - as a new collection or an overwrite of an existing one.
+
+![Export / Import panel](docs/screenshots/export-import.png)
+
+### 10. Add dynamic suffixes to your notes
+
+On the Notes tab, **Dynamic Note Suffixes** let you define rules that append a live-computed suffix to a note based on keys, kakera, or color - your own symbols and thresholds. Turn a rule on for characters via a series group's "All"/"Selected" buttons; the suffix stays in sync automatically and shows up in generated `$n` commands, without ever touching what you actually typed.
+
+![Dynamic Note Suffixes panel](docs/screenshots/dynamic-note-suffixes.png)
+![A character card showing a note with a dynamic suffix](docs/screenshots/dynamic-note-suffixes-card.png)
+
 ### Keeping up with changes
 
 The app shows a "What's New" popup the first time it sees a new release, and you can reopen the full history any time from the link next to the title.
@@ -140,6 +155,7 @@ Test files live in `tests/*.spec.js`, one per feature area. Add a new `*.spec.js
 Everything below was added on top of [Arczeus's original project](https://github.com/Arczeus/mudae-noter):
 
 - **Multi-collection support** - create, duplicate, rename, delete, and switch between separate collections, each with its own saved state and its own Imgur-only filter + `$ai` command generator.
+- **Export / Import** - download a collection (or every collection) as a JSON file to back it up or move it to another device/browser; importing adds it as a new collection by default, or can overwrite an existing one. Your ImgChest token is never included.
 - **Compare & Transfer** - compare two collections to see what's only in one or the other, and generate commands to transfer notes or colors from matching characters in Collection A onto Collection B (color transfers require at least 1 key on both sides, so nothing gets applied to a character you don't actually own there).
 - **Sort tab** - drag-and-drop or type-a-position reordering of your whole collection, with detailed/compact/grid views, search plus multi-select series filtering, multi-select drag-and-move, and `$sm`/`$smpos` command generation for both full reorders and small position-only fixes.
 - **Series Order tab** - the same reordering/search/multi-select workflow, but for series instead of individual characters, with a cover-art grid view (each series pictured by its highest-kakera character) and `$smseries` command generation.
@@ -149,6 +165,7 @@ Everything below was added on top of [Arczeus's original project](https://github
 - **More reliable alias matching** - the Sort tab's `$mmmka+s` import falls back to matching characters by series + kakera value, so a character renamed with Mudae's `$alias` command still gets its notes/image/color pulled in correctly, and a "missing from Sort tab" indicator flags characters with no matching entry at all so nobody silently vanishes from Sort tab search.
 - **Colors tab** - a canvas-based color wheel + lightness slider (or type a hex directly) for picking colors visually. Its "Pick Characters" list is its own grid scoped to keyed characters, fully independent from whatever's selected on the Notes tab, with a "No Color Only" filter to quickly find who's still uncolored.
 - **Sort by Notes** - a section on the Notes tab that lists every note in use, lets you drag them into a priority order, and generates a `$smnote` command from it - the same drag/select workflow as Series Order, without leaving the Notes tab.
+- **Dynamic Note Suffixes** - also on the Notes tab: rules (keys count, kakera thresholds, or color) that append a live-computed suffix to a note, using your own symbols/text and thresholds. The typed note itself is never touched, and the suffix stays in sync automatically as the underlying data changes. Off by default - opt characters in via a series group's "All"/"Selected" buttons.
 - **Quick Notes** - a sidebar of reusable notes/emojis/hex colors for fast copy-paste, reorderable by drag-and-drop, and available as click-to-fill chips in the new-character note prompt too.
 - **Recently Noted panel** - applying a note to your selected characters deselects them afterward (so you can immediately pick the next batch for a different note), and this panel keeps a scrollable, most-recent-first list of who you just tagged, with click-to-jump chips, individual removal, a "Clear" button, and its own scoped `$n` command generator. Also picks up characters noted through the new-character prompt.
 - **Click-to-add Keys** - click the Keys stat on any character card to add to their key count directly, without a `$ec`-style Discord round-trip.

@@ -744,6 +744,11 @@
             font-size: 0.65em;
         }
 
+        .dynamic-note-indicator {
+            margin-left: 3px;
+            opacity: 0.85;
+        }
+
         .character-owner-badge {
             background-color: rgba(10, 10, 15, 0.8);
             color: #4ade80;
@@ -3939,6 +3944,7 @@
                 <button onclick="toggleCompareCollectionsPanel('compare')" class="btn btn-sm">Compare</button>
                 <button onclick="toggleCompareCollectionsPanel('transfer')" class="btn btn-sm">Transfer Notes</button>
                 <button onclick="toggleCompareCollectionsPanel('color')" class="btn btn-sm">Transfer Colors</button>
+                <button onclick="toggleDataPanel()" class="btn btn-sm">Export / Import</button>
                 <button onclick="deleteCollection()" class="btn btn-sm btn-danger">Delete</button>
             </div>
         </div>
@@ -3979,6 +3985,29 @@
                 between characters you hold on both sides (at least 1 key in Collection A and Collection B), so it
                 won't paint a color onto a character in B you don't actually own yet. Matching uses global rank,
                 image, and kakera value first, falling back to series + name only when those aren't available.</p>
+        </div>
+
+        <div id="dataPanel" class="compare-panel" style="display: none;">
+            <h3 class="compare-panel-title">Export / Import</h3>
+            <div class="compare-panel-row">
+                <div class="filter-control">
+                    <label><input type="checkbox" id="exportIncludeEmbedLayouts"> Include saved embed layouts</label>
+                </div>
+                <div class="compare-panel-actions">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="exportActiveCollection()">Export This Collection</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="exportAllCollections()">Export All Collections</button>
+                    <button onclick="toggleDataPanel()" class="btn btn-sm btn-secondary">Close</button>
+                </div>
+            </div>
+            <p class="compare-panel-hint">Downloads a JSON file you can re-import on another device/browser. Your
+                ImgChest upload token is never included - re-enter it there if you use ImgChest uploads.</p>
+            <div class="compare-panel-row">
+                <div class="filter-control">
+                    <label for="importFileInput">Import a file</label>
+                    <input type="file" id="importFileInput" accept="application/json,.json" onchange="handleImportFileChosen(this)">
+                </div>
+            </div>
+            <div id="importPreview"></div>
         </div>
 
         <div class="input-section">
@@ -4221,6 +4250,38 @@
                         <button onclick="generateNoteOrderCommand()" class="btn btn-primary"
                             style="margin-top: 12px; width: 100%;">Generate $smnote Command</button>
                         <div id="noteOrderCommandOutput"></div>
+                    </div>
+
+                    <div class="control-group" id="dynamic-notes-section">
+                        <h3>Dynamic Note Suffixes</h3>
+                        <p class="sort-hint" style="margin: 0 0 10px;">Appends a live-computed suffix to a
+                            character's note based on other tracked data (keys, kakera, color) - your typed note is
+                            never touched, and the suffix updates automatically as that data changes. Off by
+                            default: turn a rule on for specific characters below via a series group's bulk
+                            "All"/"Selected" buttons once a rule exists. <code>$smnote</code>, note search, and
+                            note-based grouping are unaffected - only the character card and generated
+                            <code>$n</code> commands include the suffix.</p>
+                        <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+                            <input type="checkbox" id="dynamicNotesEnabledToggle" onchange="toggleDynamicNotesEnabled(this.checked)">
+                            Enabled
+                        </label>
+                        <div class="sort-toolbar" style="margin-bottom: 10px;">
+                            <div class="filter-control">
+                                <label for="dynamicNoteSeparatorInput">Separator (before the suffix)</label>
+                                <input type="text" id="dynamicNoteSeparatorInput" oninput="updateDynamicNoteSeparator(this.value)">
+                            </div>
+                            <div class="filter-control">
+                                <label for="dynamicNoteJoinerInput">Joiner (between multiple active rules)</label>
+                                <input type="text" id="dynamicNoteJoinerInput" oninput="updateDynamicNoteJoiner(this.value)">
+                            </div>
+                        </div>
+                        <p class="sort-hint" id="dynamicNotePreview"></p>
+                        <div id="dynamicRulesList" class="sort-series-list-wide" style="max-height: 260px;"></div>
+                        <div class="sort-toolbar" style="margin-top: 10px;">
+                            <select id="dynamicRuleTypeSelect"></select>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addDynamicRule()">+ Add Rule</button>
+                        </div>
+                        <div id="dynamicRuleEditor"></div>
                     </div>
                 </div>
             </div>
@@ -5156,6 +5217,13 @@
         // rather than living inside AppState.
         const EMBED_LAYOUTS_KEY = 'mudaeEmbedLayouts';
 
+        // File-based collection export/import. `v` is the migration hinge
+        // (same role as the `{v:1}` tag on encodeEmbedShareCode's share
+        // codes) - importing a payload with a newer v than this is
+        // refused rather than half-read.
+        const EXPORT_FORMAT_VERSION = 1;
+        const EXPORT_FILE_KIND = 'mudae-noter-export';
+
         // Category lists/defaults verified directly against the live bot
         // (screenshots the user provided) and cross-checked against the
         // Mudae Wiki's List_of_Commands - the wiki's $arrangeim entry matched
@@ -5330,31 +5398,39 @@
             }
         };
 
-        const AppState = {
-            seriesData: {},
-            rawInput: '',
-            quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
-            preFilterCharacterStates: null,
-            sortData: [],
-            sortRawInput: '',
-            seriesOrder: [],
-            noteOrder: [],
-            wishlists: { entries: {}, order: [] },
-            ui: {
-                grouping: 'series',
-                sortMethod: 'count',
-                rankingEnabled: false,
-                showDeselected: true,
-                showDisabledIcon: true,
-                showOnlyDisabledSeries: false,
-                preferredColumns: 3,
-                fitToScreen: false,
-                sortCompactView: false,
-                sortViewMode: 'detailed',
-                seriesViewMode: 'list',
-                gameMode: 1
-            }
-        };
+        // The canonical shape of a fresh per-collection AppState - the
+        // single source of truth both the initial AppState below AND
+        // collection import (normalizeImportedState) build from, so a new
+        // default field only ever needs adding in one place.
+        function defaultCollectionState() {
+            return {
+                seriesData: {},
+                rawInput: '',
+                quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
+                preFilterCharacterStates: null,
+                sortData: [],
+                sortRawInput: '',
+                seriesOrder: [],
+                noteOrder: [],
+                wishlists: { entries: {}, order: [] },
+                ui: {
+                    grouping: 'series',
+                    sortMethod: 'count',
+                    rankingEnabled: false,
+                    showDeselected: true,
+                    showDisabledIcon: true,
+                    showOnlyDisabledSeries: false,
+                    preferredColumns: 3,
+                    fitToScreen: false,
+                    sortCompactView: false,
+                    sortViewMode: 'detailed',
+                    seriesViewMode: 'list',
+                    gameMode: 1
+                }
+            };
+        }
+
+        const AppState = defaultCollectionState();
 
         function initQuickNotes() {
             displayQuickNotes();
@@ -5731,6 +5807,7 @@
                         if (mainInputField) mainInputField.value = AppState.rawInput;
 
                         valueEl.textContent = char.keys;
+                        refreshCardNoteDisplay(card, char, series);
                         saveToLocalStorage();
                         refreshSortTabIfVisible();
                     }
@@ -5791,11 +5868,7 @@
                         if (AppState.ui.grouping === 'note') {
                             needsFullRender = true;
                         } else {
-                            const hasNote = char.note && char.note.trim() !== '';
-                            target.textContent = hasNote ? char.note : 'No note!';
-                            target.title = hasNote ? char.note : 'Click to add note';
-                            target.style.color = hasNote ? '#9ca3af' : '#dc2626';
-                            target.style.fontWeight = hasNote ? 'normal' : 'bold';
+                            refreshCardNoteDisplay(card, char, series);
                         }
                     }
 
@@ -5899,6 +5972,16 @@
                     const charList = groupCard.querySelector('.characters-list');
                     charList.innerHTML = groupCharsData.map(char => createCharacterCardHTML(char)).join('');
 
+                    // Keeps getGroupChars() (read by every bulk-apply
+                    // widget below) in the just-picked sort order instead
+                    // of the group's original render order - otherwise
+                    // any bulk action taken after sorting would visually
+                    // snap the list back to its pre-sort order.
+                    groupCard.dataset.characters = JSON.stringify(groupCharsData.map(char => ({
+                        series: char.originalSeries,
+                        index: char.originalIndex
+                    })));
+
                     groupCard.querySelectorAll('[data-action="sort"]').forEach(btn => btn.classList.remove('active'));
                     target.classList.add('active');
                     break;
@@ -5967,6 +6050,34 @@
                         if (applyingSelectedNotes) updateGroupUI(groupCard);
                     }
                     refreshSortTabIfVisible();
+                    break;
+                }
+
+                case 'bulk-dynamic-on':
+                case 'bulk-dynamic-off': {
+                    const applyTo = target.dataset.target;
+                    const turningOn = action === 'bulk-dynamic-on';
+                    const select = target.closest('.bulk-apply-group').querySelector('.dynamic-rule-select');
+                    const ruleId = select ? select.value : null;
+                    const dn = currentDynamicNotes();
+                    const rule = ruleId ? dn.rules[ruleId] : null;
+                    if (!rule) break;
+
+                    // Only touches rule.appliesTo - no character data
+                    // changes, so no syncSortDataForCharacter/raw-text
+                    // re-serialize needed (unlike bulk-note/bulk-color).
+                    getGroupChars().forEach(function (char) {
+                        const applies = (applyTo === 'all') || (applyTo === 'selected' && !char.excluded);
+                        if (!applies) return;
+                        const key = dynamicNoteCharKey(char.originalSeries, char);
+                        const idx = rule.appliesTo.indexOf(key);
+                        if (turningOn && idx === -1) rule.appliesTo.push(key);
+                        else if (!turningOn && idx !== -1) rule.appliesTo.splice(idx, 1);
+                    });
+
+                    const charList = groupCard.querySelector('.characters-list');
+                    charList.innerHTML = getGroupChars().map(char => createCharacterCardHTML(char)).join('');
+                    renderDynamicRulesList();
                     break;
                 }
             }
@@ -6158,6 +6269,12 @@
         // leave characters added to an already-existing series sitting in
         // a second, duplicate "SeriesName - X/Y" block at the bottom
         // instead of grouped with the rest of that series.
+        //
+        // Must keep writing the BASE note only (char.note), never
+        // getDisplayNote's dynamic-suffixed version - if it ever wrote the
+        // display note, the next parseCollectionText round-trip would
+        // permanently bake the suffix into char.note, defeating the whole
+        // point of computing it live instead of storing it.
         function serializeSeriesDataToText(seriesData) {
             const blocks = [];
 
@@ -6606,6 +6723,10 @@
 
         function characterMatchesNotesSearch(char) {
             if (!notesSearchQuery) return true;
+            // Intentionally char.note (base only), not getDisplayNote - a
+            // dynamic suffix isn't something you typed, so it shouldn't be
+            // searchable text either. Same reasoning as note-order/grouping
+            // staying base-only.
             const haystack = `${char.name} ${char.originalSeries || ''} ${char.note || ''} ${char.owner || ''}`.toLowerCase();
             return haystack.includes(notesSearchQuery);
         }
@@ -6855,6 +6976,9 @@
 
             const colorCode = char.color || '#670d08';
             const hasNote = char.note && char.note.trim() !== '';
+            const dynamicSuffix = computeDynamicNoteSuffix(char, char.originalSeries);
+            const displayNote = getDisplayNote(char, char.originalSeries);
+            const hasDynamicSuffix = !!dynamicSuffix;
 
             const genders = new Set();
             if (char.mudaeTags) {
@@ -6911,7 +7035,7 @@ ${(() => {
                 ${escapeHTML(char.owner)}
             </div>`;
                 })()}
-<div class="character-note" data-action="edit-note" title="${hasNote ? escapeHTML(char.note) : 'Click to add note'}" style="background: #13131a; padding: 4px; font-size: 0.7em; color: ${hasNote ? '#9ca3af' : '#dc2626; font-weight: bold'}; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-radius: 4px;">${hasNote ? escapeHTML(char.note) : 'No note!'}</div>
+<div class="character-note" data-action="edit-note" title="${(hasNote || hasDynamicSuffix) ? escapeHTML(displayNote) : 'Click to add note'}" style="background: #13131a; padding: 4px; font-size: 0.7em; color: ${(hasNote || hasDynamicSuffix) ? '#9ca3af' : '#dc2626; font-weight: bold'}; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-radius: 4px;">${(hasNote || hasDynamicSuffix) ? escapeHTML(displayNote) : 'No note!'}${hasDynamicSuffix ? '<span class="dynamic-note-indicator" title="This note includes a live dynamic suffix (shown just before this icon) - the suffix itself IS included when you generate $n commands, but this ✨ marker is NOT - it only flags that part of the text was not typed by you">✨</span>' : ''}</div>
 <div class="character-stats">
 <div class="stat-badge"><div class="stat-badge-label">Rank</div><div class="stat-badge-value">${char.globalRank ? '#' + char.globalRank : '#?'}</div></div>
 <div class="stat-badge"><div class="stat-badge-label">Ka</div><div class="stat-badge-value">${char.kakera || '?'}</div></div>
@@ -7169,6 +7293,14 @@ ${rouletteBarHTML}
 <button data-action="bulk-color" data-target="selected" class="btn">Selected</button>
 </div>
 </div>
+${currentDynamicNotes().order.length > 0 ? `<div class="bulk-apply-group">
+<select class="dynamic-rule-select">${currentDynamicNotes().order.map(function (id) { const r = currentDynamicNotes().rules[id]; return `<option value="${id}">${escapeHTML(r.name)}</option>`; }).join('')}</select>
+<div class="apply-btn-group">
+<button data-action="bulk-dynamic-on" data-target="all" class="btn">All</button>
+<button data-action="bulk-dynamic-on" data-target="selected" class="btn">Selected</button>
+<button data-action="bulk-dynamic-off" data-target="all" class="btn">Off</button>
+</div>
+</div>` : ''}
 </div>
 </div>
 <div class="characters-list">${charactersHTML}</div>
@@ -7200,6 +7332,7 @@ ${rouletteBarHTML}
             }
 
             renderNoteOrderList();
+            syncDynamicNotesControls();
         }
 
         function toggleCharacter(seriesName, charIdx) {
@@ -7403,13 +7536,19 @@ ${rouletteBarHTML}
             const orderedSelectedChars = Array.from(allSelectedCards).map(card => {
                 const seriesName = card.dataset.originalSeries;
                 const charIndex = parseInt(card.dataset.originalIndex, 10);
-                return AppState.seriesData[seriesName].characters[charIndex];
+                return { char: AppState.seriesData[seriesName].characters[charIndex], seriesName: seriesName };
             });
 
-            for (const char of orderedSelectedChars) {
+            // Buckets by the full DISPLAY note (base + any dynamic suffix),
+            // not just the base note - two characters sharing a base note
+            // but differing in suffix (e.g. different key counts) need
+            // separate $n commands, since Discord needs the literal full
+            // text set per character.
+            for (const entry of orderedSelectedChars) {
+                const char = entry.char;
                 if (!char.excluded) {
                     totalSelectedCharacters++;
-                    const note = char.note ? char.note.trim() : '';
+                    const note = getDisplayNote(char, entry.seriesName);
                     if (!commandsByNote[note]) {
                         commandsByNote[note] = [];
                     }
@@ -9415,6 +9554,302 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             location.reload();
         }
 
+        // ==================== Export / Import ====================
+        // File-based, not a sync system: download a collection (or all of
+        // them) as a JSON file, re-import that file elsewhere. No backend,
+        // no auth - the envelope below is just shaped so a future sync
+        // layer could build on it without a format change (see `v`/`kind`).
+
+        function downloadJSONFile(filename, obj) {
+            const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        }
+
+        function slugifyForFilename(name) {
+            const slug = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+            return slug || 'collection';
+        }
+
+        // Deliberately excludes `activeId` (device-local navigation state)
+        // and the ImgChest token (a personal API secret that should never
+        // end up in a file the user might send to someone else). The
+        // per-collection `id` is carried for display only - import always
+        // mints a fresh one, never reuses it.
+        function buildCollectionExportPayload(ids, options) {
+            const meta = ensureCollectionsMeta();
+            const collections = [];
+            ids.forEach(function (id) {
+                const col = meta.collections[id];
+                if (!col) return;
+                try {
+                    const raw = localStorage.getItem(collectionStateKey(id));
+                    const state = raw ? JSON.parse(raw) : defaultCollectionState();
+                    collections.push({ id: id, name: col.name, state: state });
+                } catch (e) {
+                    console.error('Skipped a collection that failed to read/parse during export:', col.name, e);
+                }
+            });
+
+            const payload = {
+                kind: EXPORT_FILE_KIND,
+                v: EXPORT_FORMAT_VERSION,
+                exportedAt: Date.now(),
+                appVersion: CHANGELOG_VERSION,
+                collections: collections
+            };
+            if (options && options.includeEmbedLayouts) {
+                try {
+                    const raw = localStorage.getItem(EMBED_LAYOUTS_KEY);
+                    if (raw) payload.globals = { embedLayouts: JSON.parse(raw) };
+                } catch (e) {
+                    console.error('Failed to include embed layouts in export:', e);
+                }
+            }
+            return payload;
+        }
+
+        function exportActiveCollection() {
+            saveToLocalStorage();
+            const meta = ensureCollectionsMeta();
+            const includeEmbedLayouts = !!(document.getElementById('exportIncludeEmbedLayouts') || {}).checked;
+            const payload = buildCollectionExportPayload([meta.activeId], { includeEmbedLayouts: includeEmbedLayouts });
+            const name = meta.collections[meta.activeId] ? meta.collections[meta.activeId].name : 'collection';
+            downloadJSONFile(`mudae-${slugifyForFilename(name)}-${new Date().toISOString().slice(0, 10)}.json`, payload);
+            showMessage(`Exported "${name}".`, 'success');
+        }
+
+        function exportAllCollections() {
+            saveToLocalStorage();
+            const meta = ensureCollectionsMeta();
+            const includeEmbedLayouts = !!(document.getElementById('exportIncludeEmbedLayouts') || {}).checked;
+            const payload = buildCollectionExportPayload(meta.order, { includeEmbedLayouts: includeEmbedLayouts });
+            downloadJSONFile(`mudae-all-collections-${new Date().toISOString().slice(0, 10)}.json`, payload);
+            showMessage(`Exported ${payload.collections.length} collection${payload.collections.length === 1 ? '' : 's'}.`, 'success');
+        }
+
+        // Structural validation only - not a schema-perfect check, just
+        // enough to refuse obviously-wrong/foreign JSON with a clear
+        // message instead of importing garbage or throwing partway through.
+        function validateImportPayload(parsed) {
+            if (!parsed || typeof parsed !== 'object') {
+                return { ok: false, error: "That file isn't a valid export - it doesn't look like JSON produced by this app." };
+            }
+            const looksLikeExport = parsed.kind === EXPORT_FILE_KIND
+                || (typeof parsed.v === 'number' && Array.isArray(parsed.collections));
+            if (!looksLikeExport) {
+                return { ok: false, error: "That file doesn't look like a Mudae Noter export." };
+            }
+            if (typeof parsed.v === 'number' && parsed.v > EXPORT_FORMAT_VERSION) {
+                return { ok: false, error: 'This file was exported by a newer version of the app - please update the app before importing it.' };
+            }
+            if (!Array.isArray(parsed.collections) || parsed.collections.length === 0) {
+                return { ok: false, error: "That file doesn't contain any collections to import." };
+            }
+            for (const entry of parsed.collections) {
+                if (!entry || typeof entry !== 'object' || !entry.state || typeof entry.state !== 'object' || typeof entry.state.seriesData !== 'object' || entry.state.seriesData === null) {
+                    return { ok: false, error: 'One of the collections in that file is missing or malformed.' };
+                }
+            }
+            return { ok: true, payload: parsed };
+        }
+
+        // Deep-clones then merges every top-level default (especially the
+        // whole `ui` object) onto an imported state, since
+        // loadFromLocalStorage's Object.assign(AppState, parsedState) is
+        // shallow - an old/foreign `ui` object would otherwise silently
+        // replace defaults wholesale instead of filling gaps. Deliberately
+        // does NOT hand-fill wishlists/ouroperks/ouroshop/dynamicNotes -
+        // those already self-heal via their own currentXyz() accessors,
+        // which loadFromLocalStorage now always forces once on load.
+        function normalizeImportedState(state) {
+            const cloned = JSON.parse(JSON.stringify(state));
+            const defaults = defaultCollectionState();
+            const normalized = Object.assign({}, defaults, cloned);
+            normalized.ui = Object.assign({}, defaults.ui, cloned.ui || {});
+            return normalized;
+        }
+
+        function uniqueCollectionName(name, meta) {
+            const existing = new Set(Object.values(meta.collections).map(function (c) { return c.name; }));
+            if (!existing.has(name)) return name;
+            let i = 2;
+            while (existing.has(`${name} (${i})`)) i++;
+            return `${name} (${i})`;
+        }
+
+        // mode: 'new' imports every collection in the payload as a brand
+        // new entry; 'overwrite' (only valid for a single-collection
+        // payload) replaces targetId's data in place, keeping its existing
+        // name/position. Writes are guarded against QuotaExceededError by
+        // rolling back everything this import wrote (restoring the meta
+        // snapshot taken beforehand) rather than leaving a half-imported
+        // mess with no reload to recover from.
+        function importCollectionsFromPayload(payload, mode, targetId) {
+            const meta = ensureCollectionsMeta();
+            const metaSnapshot = JSON.parse(JSON.stringify(meta));
+            const writtenKeys = [];
+
+            try {
+                if (mode === 'overwrite') {
+                    if (payload.collections.length !== 1) {
+                        showMessage('Overwrite only works with a single-collection export.', 'error');
+                        return;
+                    }
+                    if (!targetId || !meta.collections[targetId]) {
+                        showMessage('Pick a collection to overwrite.', 'error');
+                        return;
+                    }
+                    const state = normalizeImportedState(payload.collections[0].state);
+                    localStorage.setItem(collectionStateKey(targetId), JSON.stringify(state));
+                    meta.activeId = targetId;
+                } else {
+                    let firstNewId = null;
+                    payload.collections.forEach(function (entry) {
+                        const id = generateCollectionId();
+                        const name = uniqueCollectionName(entry.name || 'Imported Collection', meta);
+                        const state = normalizeImportedState(entry.state);
+                        localStorage.setItem(collectionStateKey(id), JSON.stringify(state));
+                        writtenKeys.push(collectionStateKey(id));
+                        meta.collections[id] = { id: id, name: name };
+                        meta.order.push(id);
+                        if (!firstNewId) firstNewId = id;
+                    });
+                    meta.activeId = firstNewId;
+                }
+
+                if (payload.globals && payload.globals.embedLayouts) {
+                    try {
+                        const existingRaw = localStorage.getItem(EMBED_LAYOUTS_KEY);
+                        const existing = existingRaw ? JSON.parse(existingRaw) : {};
+                        const merged = Object.assign({}, existing, payload.globals.embedLayouts);
+                        localStorage.setItem(EMBED_LAYOUTS_KEY, JSON.stringify(merged));
+                    } catch (e) {
+                        console.error('Failed to merge imported embed layouts:', e);
+                    }
+                }
+
+                saveCollectionsMeta(meta);
+                location.reload();
+            } catch (e) {
+                console.error('Import failed, rolling back:', e);
+                writtenKeys.forEach(function (key) {
+                    try { localStorage.removeItem(key); } catch (e2) { /* best effort */ }
+                });
+                saveCollectionsMeta(metaSnapshot);
+                const isQuota = e && (e.name === 'QuotaExceededError' || /quota/i.test(e.message || ''));
+                showMessage(isQuota ? 'Not enough browser storage to complete this import.' : 'Import failed - nothing was changed.', 'error');
+            }
+        }
+
+        let pendingImportPayload = null;
+
+        function handleImportFileChosen(inputEl) {
+            const file = inputEl.files && inputEl.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                let parsed;
+                try {
+                    parsed = JSON.parse(reader.result);
+                } catch (e) {
+                    renderImportPreview(null, "That file isn't valid JSON.");
+                    inputEl.value = '';
+                    return;
+                }
+                const result = validateImportPayload(parsed);
+                if (!result.ok) {
+                    renderImportPreview(null, result.error);
+                    inputEl.value = '';
+                    return;
+                }
+                pendingImportPayload = result.payload;
+                renderImportPreview(result.payload, null);
+                inputEl.value = '';
+            };
+            reader.onerror = function () {
+                renderImportPreview(null, 'Failed to read that file.');
+                inputEl.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function renderImportPreview(payload, error) {
+            const el = document.getElementById('importPreview');
+            if (!el) return;
+
+            if (error) {
+                el.innerHTML = `<p class="error-message">${escapeHTML(error)}</p>`;
+                return;
+            }
+            if (!payload) {
+                el.innerHTML = '';
+                return;
+            }
+
+            const meta = ensureCollectionsMeta();
+            const rows = payload.collections.map(function (entry) {
+                const charCount = Object.values(entry.state.seriesData || {}).reduce(function (sum, s) { return sum + (s.characters ? s.characters.length : 0); }, 0);
+                return `<li>${escapeHTML(entry.name || 'Imported Collection')} - ${charCount.toLocaleString()} character${charCount === 1 ? '' : 's'}</li>`;
+            }).join('');
+            const singleCollection = payload.collections.length === 1;
+            const targetOptions = meta.order.map(function (id) {
+                const col = meta.collections[id];
+                return col ? `<option value="${id}">${escapeHTML(col.name)}</option>` : '';
+            }).join('');
+
+            el.innerHTML = `
+                <p class="sort-hint">Found ${payload.collections.length} collection${payload.collections.length === 1 ? '' : 's'}:</p>
+                <ul>${rows}</ul>
+                <div class="filter-control">
+                    <label><input type="radio" name="importMode" value="new" checked> Import as new collection${singleCollection ? '' : 's'}</label>
+                </div>
+                ${singleCollection ? `
+                <div class="filter-control">
+                    <label><input type="radio" name="importMode" value="overwrite"> Overwrite an existing collection:</label>
+                    <select id="importOverwriteTarget">${targetOptions}</select>
+                </div>` : ''}
+                <button type="button" class="btn btn-sm btn-primary" onclick="confirmImport()">Import</button>
+            `;
+        }
+
+        function confirmImport() {
+            if (!pendingImportPayload) return;
+            const modeInput = document.querySelector('input[name="importMode"]:checked');
+            const mode = modeInput ? modeInput.value : 'new';
+
+            if (mode === 'overwrite') {
+                const targetSelect = document.getElementById('importOverwriteTarget');
+                const targetId = targetSelect ? targetSelect.value : null;
+                const meta = ensureCollectionsMeta();
+                const targetName = targetId && meta.collections[targetId] ? meta.collections[targetId].name : 'this collection';
+                if (!confirm(`Overwrite "${targetName}" with the imported data? This cannot be undone.`)) return;
+                importCollectionsFromPayload(pendingImportPayload, 'overwrite', targetId);
+            } else {
+                importCollectionsFromPayload(pendingImportPayload, 'new', null);
+            }
+        }
+
+        // Mirrors toggleCompareCollectionsPanel - each hides the other so
+        // the two panels never stack.
+        function toggleDataPanel() {
+            const panel = document.getElementById('dataPanel');
+            const comparePanel = document.getElementById('compareCollectionsPanel');
+            if (!panel) return;
+            const isOpen = panel.style.display !== 'none';
+            if (comparePanel) comparePanel.style.display = 'none';
+            if (isOpen) {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
         // Compare, Transfer Notes, and Transfer Colors are three distinct
         // features that happen to all need a "pick Collection A and B" panel,
         // so they share one instead of duplicating that select/populate
@@ -9456,6 +9891,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     return;
                 }
                 populateCompareCollectionSelects();
+                const dataPanel = document.getElementById('dataPanel');
+                if (dataPanel) dataPanel.style.display = 'none';
             }
 
             panel.style.display = 'block';
@@ -9611,30 +10048,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             meta.order.push(id);
             saveCollectionsMeta(meta);
 
-            const state = {
-                seriesData: seriesData,
-                rawInput: '',
-                quickNotes: ['⭐', '✨', '💕', 'uft', '#fefefe', '#000000'],
-                preFilterCharacterStates: null,
-                sortData: [],
-                sortRawInput: '',
-                seriesOrder: [],
-                noteOrder: [],
-                ui: {
-                    grouping: 'series',
-                    sortMethod: 'count',
-                    rankingEnabled: false,
-                    showDeselected: true,
-                    showDisabledIcon: true,
-                    showOnlyDisabledSeries: false,
-                    preferredColumns: 3,
-                    fitToScreen: false,
-                    sortCompactView: false,
-                    sortViewMode: 'detailed',
-                    seriesViewMode: 'list',
-                    gameMode: 1
-                }
-            };
+            const state = Object.assign(defaultCollectionState(), { seriesData: seriesData });
 
             try {
                 localStorage.setItem(collectionStateKey(id), JSON.stringify(state));
@@ -12149,6 +12563,557 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             return count;
         }
 
+        // ==================== Dynamic Note Suffixes ====================
+        // A character's typed note (char.note) is never touched by any of
+        // this - it stays pure user text. A "suffix" is instead computed
+        // live from other tracked data (keys/kakera/color) via user-defined
+        // rules, and only appended where a FULL displayed/sent note is
+        // actually needed (the character card, and $n command text). This
+        // is deliberate: $smnote order, note-based grouping/counts, and
+        // notes search all stay keyed on the base note only - see the
+        // explicit "leave alone" comments at those call sites.
+
+        function normalizeHexColor(hex) {
+            return (hex || '').trim().toLowerCase();
+        }
+
+        function hexToRgb(hex) {
+            let h = (hex || '').trim().replace(/^#/, '');
+            if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+            if (h.length !== 6) return null;
+            const num = parseInt(h, 16);
+            if (isNaN(num)) return null;
+            return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+        }
+
+        function colorDistance(a, b) {
+            const dr = a.r - b.r, dg = a.g - b.g, db = a.b - b.b;
+            return Math.sqrt(dr * dr + dg * dg + db * db);
+        }
+
+        // Rule type registry - the whole extensibility point. A future
+        // rule type (rank, owner, mudaeTags, ...) is one new entry here
+        // plus one branch in renderDynamicRuleConfigEditor - nothing else
+        // (the compute path, card renderer, and command generator) needs
+        // to change.
+        const DYNAMIC_RULE_TYPES = {
+            keys: {
+                label: 'Keys',
+                defaultConfig: { symbol: '🔑', mode: 'repeat', template: '{symbol}x{n}', min: 1, max: 20 },
+                getValue: function (char) { return parseInt(char.keys) || 0; },
+                // `max` exists so a very high key count can't blow out a
+                // $n command with dozens of repeated emoji.
+                render: function (value, config) {
+                    const min = config.min != null ? config.min : 1;
+                    if (value < min) return '';
+                    const symbol = config.symbol || '';
+                    if (config.mode === 'count') {
+                        return (config.template || '{symbol}x{n}').replace(/\{symbol\}/g, symbol).replace(/\{n\}/g, String(value));
+                    }
+                    const max = config.max != null ? config.max : 20;
+                    return symbol.repeat(Math.max(0, Math.min(value, max)));
+                }
+            },
+            kakera: {
+                label: 'Kakera',
+                defaultConfig: { buckets: [], fallback: '' },
+                getValue: function (char) { return parseInt(char.kakera) || 0; },
+                render: function (value, config) {
+                    const buckets = (config.buckets || []).slice().sort(function (a, b) { return (b.min || 0) - (a.min || 0); });
+                    const match = buckets.find(function (b) { return value >= (b.min || 0); });
+                    return match ? (match.text || '') : (config.fallback || '');
+                }
+            },
+            color: {
+                label: 'Color',
+                defaultConfig: { entries: [], matchMode: 'nearest', tolerance: 40, fallback: '' },
+                getValue: function (char) { return char.color || ''; },
+                render: function (value, config) {
+                    if (!value) return config.fallback || '';
+                    const entries = config.entries || [];
+                    if (config.matchMode === 'exact') {
+                        const match = entries.find(function (e) { return normalizeHexColor(e.hex) === normalizeHexColor(value); });
+                        return match ? (match.text || '') : (config.fallback || '');
+                    }
+                    const valueRgb = hexToRgb(value);
+                    if (!valueRgb) return config.fallback || '';
+                    let best = null, bestDist = Infinity;
+                    entries.forEach(function (e) {
+                        const rgb = hexToRgb(e.hex);
+                        if (!rgb) return;
+                        const dist = colorDistance(valueRgb, rgb);
+                        if (dist < bestDist) { bestDist = dist; best = e; }
+                    });
+                    const tolerance = config.tolerance != null ? config.tolerance : 40;
+                    return (best && bestDist <= tolerance) ? (best.text || '') : (config.fallback || '');
+                }
+            }
+        };
+
+        function currentDynamicNotes() {
+            if (!AppState.dynamicNotes || typeof AppState.dynamicNotes !== 'object') AppState.dynamicNotes = {};
+            const dn = AppState.dynamicNotes;
+            if (typeof dn.enabled !== 'boolean') dn.enabled = true;
+            if (typeof dn.separator !== 'string') dn.separator = '  |  ';
+            if (typeof dn.joiner !== 'string') dn.joiner = ' ';
+            if (!dn.rules || typeof dn.rules !== 'object') dn.rules = {};
+            if (!Array.isArray(dn.order)) dn.order = [];
+
+            // Reconcile order against the actual rules - drop dangling
+            // ids, append any rule missing from order (defensive, same
+            // idea as getSyncedNoteOrder).
+            dn.order = dn.order.filter(function (id) { return !!dn.rules[id]; });
+            Object.keys(dn.rules).forEach(function (id) {
+                if (dn.order.indexOf(id) === -1) dn.order.push(id);
+            });
+
+            dn.order.forEach(function (id) {
+                const rule = dn.rules[id];
+                if (typeof rule.enabled !== 'boolean') rule.enabled = true;
+                if (!Array.isArray(rule.appliesTo)) rule.appliesTo = [];
+                if (!rule.config || typeof rule.config !== 'object') {
+                    const def = DYNAMIC_RULE_TYPES[rule.type];
+                    rule.config = def ? Object.assign({}, def.defaultConfig) : {};
+                }
+            });
+
+            return dn;
+        }
+
+        // Same composite key convention already used by
+        // syncSortDataForCharacter/buildNotesLookupFromSeriesData, so this
+        // inherits their existing normalization instead of inventing a
+        // new one. Stored on the RULE (not a flag on the character) since
+        // character objects round-trip through
+        // serializeSeriesDataToText/parseCollectionText on every keys edit
+        // and every bulk note/color apply - any field on char not in that
+        // text format would be silently destroyed on the next re-parse.
+        function dynamicNoteCharKey(seriesName, char) {
+            return normalizeMatchPart(seriesName) + '::' + normalizeMatchPart(char.name);
+        }
+
+        function computeDynamicNoteSuffix(char, seriesName) {
+            const dn = currentDynamicNotes();
+            if (!dn.enabled) return '';
+            const charKey = dynamicNoteCharKey(seriesName, char);
+            const pieces = [];
+            dn.order.forEach(function (ruleId) {
+                const rule = dn.rules[ruleId];
+                if (!rule || !rule.enabled) return;
+                if (rule.appliesTo.indexOf(charKey) === -1) return;
+                const def = DYNAMIC_RULE_TYPES[rule.type];
+                if (!def) return; // unknown rule type (e.g. from a newer app version) - no-op, never throws
+                const rendered = def.render(def.getValue(char), rule.config);
+                // $ is $n's own delimiter - a suffix containing one would
+                // split the generated command, so it's stripped here.
+                if (rendered) pieces.push(rendered.replace(/\$/g, ''));
+            });
+            return pieces.join(dn.joiner);
+        }
+
+        function dynamicNoteEnabledForChar(char, seriesName) {
+            const dn = currentDynamicNotes();
+            if (!dn.enabled) return false;
+            const charKey = dynamicNoteCharKey(seriesName, char);
+            return dn.order.some(function (ruleId) {
+                const rule = dn.rules[ruleId];
+                return !!rule && rule.enabled && rule.appliesTo.indexOf(charKey) !== -1;
+            });
+        }
+
+        // The only function that combines base note + suffix - everything
+        // that should show/send the "full" note calls this; everything
+        // that should stay base-only (note order, grouping, search,
+        // serializeSeriesDataToText) deliberately does not.
+        function getDisplayNote(char, seriesName) {
+            const base = (char.note || '').trim();
+            const suffix = computeDynamicNoteSuffix(char, seriesName);
+            if (!suffix) return base;
+            if (!base) return suffix;
+            return base + currentDynamicNotes().separator + suffix;
+        }
+
+        // Syncs one already-rendered card's .character-note element to the
+        // character's current display note, without a full card
+        // re-render. Shared by the note editor's fast path AND the Keys
+        // stepper - keys can feed a dynamic suffix, so bumping keys alone
+        // (which otherwise only touches the Keys stat badge) needs this
+        // too, or the note area would go stale until some unrelated full
+        // re-render happened to refresh it.
+        function refreshCardNoteDisplay(card, char, seriesName) {
+            const noteEl = card.querySelector('.character-note');
+            if (!noteEl) return;
+            const dynamicSuffix = computeDynamicNoteSuffix(char, seriesName);
+            const displayNote = getDisplayNote(char, seriesName);
+            const hasNote = char.note && char.note.trim() !== '';
+            const showsSomething = hasNote || !!dynamicSuffix;
+            noteEl.innerHTML = showsSomething ? escapeHTML(displayNote) : 'No note!';
+            if (dynamicSuffix) noteEl.innerHTML += '<span class="dynamic-note-indicator" title="This note includes a live dynamic suffix (shown just before this icon) - the suffix itself IS included when you generate $n commands, but this ✨ marker is NOT - it only flags that part of the text was not typed by you">✨</span>';
+            noteEl.title = showsSomething ? displayNote : 'Click to add note';
+            noteEl.style.color = showsSomething ? '#9ca3af' : '#dc2626';
+            noteEl.style.fontWeight = showsSomething ? 'normal' : 'bold';
+        }
+
+        function generateDynamicRuleId() {
+            return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        }
+
+        let dynamicRuleEditorOpenId = null;
+
+        function populateDynamicRuleTypeSelect() {
+            const select = document.getElementById('dynamicRuleTypeSelect');
+            if (!select || select.options.length > 0) return;
+            Object.keys(DYNAMIC_RULE_TYPES).forEach(function (type) {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.textContent = DYNAMIC_RULE_TYPES[type].label;
+                select.appendChild(opt);
+            });
+        }
+
+        // Called whenever the Notes tab (re)renders, so the whole section
+        // (toggle/fields/rules/preview) reflects current AppState -
+        // mirrors the same "always resync from source data" approach as
+        // syncUIFromAppState for the rest of the Notes tab.
+        function syncDynamicNotesControls() {
+            const dn = currentDynamicNotes();
+            const enabledToggle = document.getElementById('dynamicNotesEnabledToggle');
+            if (enabledToggle) enabledToggle.checked = dn.enabled;
+            const sepInput = document.getElementById('dynamicNoteSeparatorInput');
+            if (sepInput && document.activeElement !== sepInput) sepInput.value = dn.separator;
+            const joinInput = document.getElementById('dynamicNoteJoinerInput');
+            if (joinInput && document.activeElement !== joinInput) joinInput.value = dn.joiner;
+            populateDynamicRuleTypeSelect();
+            renderDynamicNotePreview();
+            renderDynamicRulesList();
+        }
+
+        function toggleDynamicNotesEnabled(checked) {
+            currentDynamicNotes().enabled = checked;
+            saveToLocalStorage();
+            displaySeries();
+            renderDynamicNotePreview();
+            renderDynamicRulesList();
+        }
+
+        function updateDynamicNoteSeparator(value) {
+            currentDynamicNotes().separator = value;
+            saveToLocalStorage();
+            renderDynamicNotePreview();
+            displaySeries();
+        }
+
+        function updateDynamicNoteJoiner(value) {
+            currentDynamicNotes().joiner = value;
+            saveToLocalStorage();
+            renderDynamicNotePreview();
+            displaySeries();
+        }
+
+        // Preview against a fixed sample character, ignoring appliesTo
+        // (i.e. "if every enabled rule applied here") - purely to show
+        // what the separator/joiner/format choices actually look like
+        // while editing them, not tied to any real character.
+        function renderDynamicNotePreview() {
+            const el = document.getElementById('dynamicNotePreview');
+            if (!el) return;
+            const dn = currentDynamicNotes();
+            const sample = { note: 'Sample Note', keys: '10', kakera: '1200', color: '#ff4d4d' };
+            const pieces = [];
+            dn.order.forEach(function (id) {
+                const rule = dn.rules[id];
+                if (!rule || !rule.enabled) return;
+                const def = DYNAMIC_RULE_TYPES[rule.type];
+                if (!def) return;
+                const rendered = def.render(def.getValue(sample), rule.config);
+                if (rendered) pieces.push(rendered);
+            });
+            const suffix = pieces.join(dn.joiner);
+            el.textContent = 'Preview: ' + (suffix ? (sample.note + dn.separator + suffix) : sample.note);
+        }
+
+        function renderDynamicRulesList() {
+            const container = document.getElementById('dynamicRulesList');
+            if (!container) return;
+            const dn = currentDynamicNotes();
+
+            if (dn.order.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No rules yet - add one below.</p>';
+                return;
+            }
+
+            const sample = { keys: '10', kakera: '1200', color: '#ff4d4d' };
+            container.innerHTML = dn.order.map(function (id) {
+                const rule = dn.rules[id];
+                const def = DYNAMIC_RULE_TYPES[rule.type];
+                const example = def ? def.render(def.getValue(sample), rule.config) : '';
+                const count = rule.appliesTo.length;
+                return `<div class="sort-series-item">
+                    <label style="display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer; min-width: 0;">
+                        <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleDynamicRuleEnabled('${id}', this.checked)">
+                        <span class="sort-series-name" style="flex: 0 1 auto;">${escapeHTML(rule.name)}</span>
+                        <span style="color: #9ca3af; font-size: 0.8em; white-space: nowrap;">${def ? escapeHTML(def.label) : escapeHTML(rule.type)}</span>
+                        ${example ? `<span style="color: #9ca3af; font-style: italic; white-space: nowrap;">e.g. "${escapeHTML(example)}"</span>` : ''}
+                        <span class="sort-series-count">${count} character${count === 1 ? '' : 's'}</span>
+                    </label>
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="btn btn-sm" onclick="openDynamicRuleEditor('${id}')">Edit</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteDynamicRule('${id}')">Delete</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleDynamicRuleEnabled(ruleId, checked) {
+            const dn = currentDynamicNotes();
+            const rule = dn.rules[ruleId];
+            if (!rule) return;
+            rule.enabled = checked;
+            saveToLocalStorage();
+            displaySeries();
+            renderDynamicRulesList();
+        }
+
+        function addDynamicRule() {
+            const select = document.getElementById('dynamicRuleTypeSelect');
+            const type = select ? select.value : Object.keys(DYNAMIC_RULE_TYPES)[0];
+            const def = DYNAMIC_RULE_TYPES[type];
+            if (!def) return;
+
+            const dn = currentDynamicNotes();
+            const id = generateDynamicRuleId();
+            dn.rules[id] = {
+                id: id,
+                name: def.label,
+                type: type,
+                enabled: true,
+                appliesTo: [],
+                config: Object.assign({}, def.defaultConfig)
+            };
+            dn.order.push(id);
+            saveToLocalStorage();
+            // A first rule (or the transition from 1 rule back to 0 on
+            // delete, below) changes whether each series group's bulk
+            // opt-in widget renders at all - a full re-render is needed,
+            // not just the rules list itself.
+            displaySeries();
+            openDynamicRuleEditor(id);
+        }
+
+        function deleteDynamicRule(ruleId) {
+            const dn = currentDynamicNotes();
+            if (!dn.rules[ruleId]) return;
+            if (!confirm(`Delete the "${dn.rules[ruleId].name}" rule? This removes it from every character it applied to.`)) return;
+            delete dn.rules[ruleId];
+            dn.order = dn.order.filter(function (id) { return id !== ruleId; });
+            if (dynamicRuleEditorOpenId === ruleId) closeDynamicRuleEditor();
+            saveToLocalStorage();
+            displaySeries();
+            renderDynamicRulesList();
+        }
+
+        // Type-specific config editor body - the other half (alongside
+        // DYNAMIC_RULE_TYPES itself) a new rule type needs to extend.
+        function renderDynamicRuleConfigEditor(rule) {
+            if (rule.type === 'keys') {
+                const c = rule.config;
+                return `
+                    <div class="sort-toolbar">
+                        <div class="filter-control">
+                            <label>Symbol/text</label>
+                            <input type="text" data-config="symbol" value="${escapeHTML(c.symbol)}">
+                        </div>
+                        <div class="filter-control">
+                            <label>Mode</label>
+                            <select data-config="mode">
+                                <option value="repeat" ${c.mode === 'repeat' ? 'selected' : ''}>Repeat symbol N times</option>
+                                <option value="count" ${c.mode === 'count' ? 'selected' : ''}>Symbol + count text</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sort-toolbar">
+                        <div class="filter-control" ${c.mode === 'count' ? '' : 'style="display:none"'} data-config-group="template">
+                            <label>Template ({symbol}, {n})</label>
+                            <input type="text" data-config="template" value="${escapeHTML(c.template)}">
+                        </div>
+                        <div class="filter-control">
+                            <label>Minimum keys to show anything</label>
+                            <input type="number" min="0" data-config="min" value="${c.min}">
+                        </div>
+                        <div class="filter-control">
+                            <label>Max repeats (repeat mode only)</label>
+                            <input type="number" min="0" data-config="max" value="${c.max}">
+                        </div>
+                    </div>
+                `;
+            }
+            if (rule.type === 'kakera') {
+                const c = rule.config;
+                const rows = (c.buckets || []).map(function (b, i) {
+                    return `<div class="sort-toolbar" data-bucket-row="${i}">
+                        <div class="filter-control"><label>Min kakera</label><input type="number" min="0" data-bucket-field="min" value="${b.min}"></div>
+                        <div class="filter-control"><label>Text</label><input type="text" data-bucket-field="text" value="${escapeHTML(b.text)}"></div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeDynamicRuleBucket(${i})">×</button>
+                    </div>`;
+                }).join('');
+                return `
+                    <div id="dynamicRuleBucketRows">${rows || '<p class="sort-empty-hint">No thresholds yet.</p>'}</div>
+                    <button type="button" class="btn btn-sm" onclick="addDynamicRuleBucket()">+ Add Threshold</button>
+                    <div class="filter-control" style="margin-top: 8px;">
+                        <label>Fallback text (below every threshold)</label>
+                        <input type="text" data-config="fallback" value="${escapeHTML(c.fallback)}">
+                    </div>
+                `;
+            }
+            if (rule.type === 'color') {
+                const c = rule.config;
+                const rows = (c.entries || []).map(function (entry, i) {
+                    return `<div class="sort-toolbar" data-entry-row="${i}">
+                        <div class="filter-control"><label>Hex color</label><input type="text" data-entry-field="hex" value="${escapeHTML(entry.hex)}" placeholder="#rrggbb"></div>
+                        <div class="filter-control"><label>Text</label><input type="text" data-entry-field="text" value="${escapeHTML(entry.text)}"></div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeDynamicRuleColorEntry(${i})">×</button>
+                    </div>`;
+                }).join('');
+                return `
+                    <div id="dynamicRuleColorRows">${rows || '<p class="sort-empty-hint">No colors mapped yet.</p>'}</div>
+                    <button type="button" class="btn btn-sm" onclick="addDynamicRuleColorEntry()">+ Add Color</button>
+                    <div class="sort-toolbar" style="margin-top: 8px;">
+                        <div class="filter-control">
+                            <label>Match mode</label>
+                            <select data-config="matchMode">
+                                <option value="nearest" ${c.matchMode === 'nearest' ? 'selected' : ''}>Nearest color (within tolerance)</option>
+                                <option value="exact" ${c.matchMode === 'exact' ? 'selected' : ''}>Exact hex match only</option>
+                            </select>
+                        </div>
+                        <div class="filter-control">
+                            <label>Tolerance (nearest mode only)</label>
+                            <input type="number" min="0" max="441" data-config="tolerance" value="${c.tolerance}">
+                        </div>
+                        <div class="filter-control">
+                            <label>Fallback text (no match)</label>
+                            <input type="text" data-config="fallback" value="${escapeHTML(c.fallback)}">
+                        </div>
+                    </div>
+                `;
+            }
+            return '<p class="sort-empty-hint">Unknown rule type.</p>';
+        }
+
+        function openDynamicRuleEditor(ruleId) {
+            dynamicRuleEditorOpenId = ruleId;
+            const dn = currentDynamicNotes();
+            const rule = dn.rules[ruleId];
+            const container = document.getElementById('dynamicRuleEditor');
+            if (!rule || !container) return;
+
+            container.innerHTML = `
+                <div class="control-group" style="margin-top: 10px;">
+                    <div class="filter-control">
+                        <label>Rule name</label>
+                        <input type="text" id="dynamicRuleNameInput" value="${escapeHTML(rule.name)}">
+                    </div>
+                    <div id="dynamicRuleConfigFields">${renderDynamicRuleConfigEditor(rule)}</div>
+                    <div class="add-chars-modal-actions" style="margin-top: 10px;">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="saveDynamicRuleEditorFields('${ruleId}')">Save</button>
+                        <button type="button" class="btn btn-sm" onclick="closeDynamicRuleEditor()">Close</button>
+                    </div>
+                </div>
+            `;
+
+            const modeSelect = container.querySelector('[data-config="mode"]');
+            if (modeSelect) {
+                modeSelect.addEventListener('change', function () {
+                    const group = container.querySelector('[data-config-group="template"]');
+                    if (group) group.style.display = modeSelect.value === 'count' ? '' : 'none';
+                });
+            }
+        }
+
+        function closeDynamicRuleEditor() {
+            dynamicRuleEditorOpenId = null;
+            const container = document.getElementById('dynamicRuleEditor');
+            if (container) container.innerHTML = '';
+        }
+
+        function addDynamicRuleBucket() {
+            const dn = currentDynamicNotes();
+            const rule = dn.rules[dynamicRuleEditorOpenId];
+            if (!rule) return;
+            if (!Array.isArray(rule.config.buckets)) rule.config.buckets = [];
+            rule.config.buckets.push({ min: 0, text: '' });
+            openDynamicRuleEditor(dynamicRuleEditorOpenId);
+        }
+
+        function removeDynamicRuleBucket(index) {
+            const dn = currentDynamicNotes();
+            const rule = dn.rules[dynamicRuleEditorOpenId];
+            if (!rule || !rule.config.buckets) return;
+            rule.config.buckets.splice(index, 1);
+            openDynamicRuleEditor(dynamicRuleEditorOpenId);
+        }
+
+        function addDynamicRuleColorEntry() {
+            const dn = currentDynamicNotes();
+            const rule = dn.rules[dynamicRuleEditorOpenId];
+            if (!rule) return;
+            if (!Array.isArray(rule.config.entries)) rule.config.entries = [];
+            rule.config.entries.push({ hex: '#ffffff', text: '' });
+            openDynamicRuleEditor(dynamicRuleEditorOpenId);
+        }
+
+        function removeDynamicRuleColorEntry(index) {
+            const dn = currentDynamicNotes();
+            const rule = dn.rules[dynamicRuleEditorOpenId];
+            if (!rule || !rule.config.entries) return;
+            rule.config.entries.splice(index, 1);
+            openDynamicRuleEditor(dynamicRuleEditorOpenId);
+        }
+
+        // Reads every field currently in the editor DOM back into the
+        // rule's config - one generic pass over data-config/data-bucket-*/
+        // data-entry-* attributes rather than a hand-written case per
+        // field, so a new rule type's fields work automatically as long
+        // as it follows the same data-* attribute convention.
+        function saveDynamicRuleEditorFields(ruleId) {
+            const dn = currentDynamicNotes();
+            const rule = dn.rules[ruleId];
+            const container = document.getElementById('dynamicRuleEditor');
+            if (!rule || !container) return;
+
+            const nameInput = document.getElementById('dynamicRuleNameInput');
+            if (nameInput) rule.name = nameInput.value.trim() || rule.name;
+
+            container.querySelectorAll('[data-config]').forEach(function (field) {
+                const key = field.dataset.config;
+                if (field.type === 'number') rule.config[key] = parseFloat(field.value) || 0;
+                else rule.config[key] = field.value;
+            });
+
+            container.querySelectorAll('[data-bucket-row]').forEach(function (row) {
+                const i = parseInt(row.dataset.bucketRow, 10);
+                if (!rule.config.buckets || !rule.config.buckets[i]) return;
+                row.querySelectorAll('[data-bucket-field]').forEach(function (field) {
+                    const key = field.dataset.bucketField;
+                    rule.config.buckets[i][key] = field.type === 'number' ? (parseFloat(field.value) || 0) : field.value;
+                });
+            });
+
+            container.querySelectorAll('[data-entry-row]').forEach(function (row) {
+                const i = parseInt(row.dataset.entryRow, 10);
+                if (!rule.config.entries || !rule.config.entries[i]) return;
+                row.querySelectorAll('[data-entry-field]').forEach(function (field) {
+                    const key = field.dataset.entryField;
+                    rule.config.entries[i][key] = field.value;
+                });
+            });
+
+            saveToLocalStorage();
+            displaySeries();
+            renderDynamicRulesList();
+            renderDynamicNotePreview();
+            closeDynamicRuleEditor();
+        }
+
         function getVisibleNoteOrderIndices() {
             const order = AppState.noteOrder || [];
             const query = noteOrderFilterState.query.trim().toLowerCase();
@@ -12745,7 +13710,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 if (!AppState.ui.seriesViewMode) AppState.ui.seriesViewMode = 'list';
                 if (typeof AppState.ui.showOnlyDisabledSeries !== 'boolean') AppState.ui.showOnlyDisabledSeries = false;
                 if (AppState.ui.gameMode !== 1 && AppState.ui.gameMode !== 2) AppState.ui.gameMode = 1;
+                // Forces every per-collection subsystem's lazy backfill to
+                // run once here, so anything reading AppState right after
+                // a load/import (not just whenever its own tab first
+                // renders) already sees a fully-shaped object.
                 currentWishlists();
+                currentOuroperks();
+                currentOuroshop();
+                currentDynamicNotes();
 
                 // Selection and search/filter are per-session, so a collection
                 // switch or reload always starts from a clean slate.
@@ -13578,7 +14550,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 version: '2026-08-19',
                 date: 'August 19, 2026',
                 items: [
-                    { type: 'fix', text: 'Bulk-noting more than 50 characters at once used to silently drop everything past the last 50 from the "Recently noted" panel, so "Generate $n Command" could never cover the full batch. It now keeps the whole queue and works through it 50 at a time - a "Next Batch" button clears the current batch and reveals the next chunk until the queue is empty.' }
+                    { type: 'feature', text: 'Added <b>Export / Import</b>: download a collection (or all of them) as a JSON file, and re-import it on another device/browser as a new collection or an overwrite.' },
+                    { type: 'feature', text: 'Added <b>Dynamic Note Suffixes</b> on the Notes tab: rules that append a live-updating suffix to a note based on keys, kakera, or color, using your own symbols and thresholds.' }
                 ]
             },
             {
