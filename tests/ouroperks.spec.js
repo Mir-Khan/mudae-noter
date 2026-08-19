@@ -91,6 +91,63 @@ module.exports = [
         }
     },
     {
+        // Regression test for a real report: "my sphere data isn't being
+        // saved." Root cause was that a character tracked BEFORE their
+        // name could match anyone in the loaded collection (no collection
+        // loaded yet, or the collection hadn't been (re)parsed) gets an
+        // entry key with no series in it. The moment a match later
+        // becomes available, the key changes (it's derived from the
+        // series name) - without a migration, the next import call would
+        // silently create a second, empty entry under the new key instead
+        // of reusing the one with the real data, orphaning it.
+        name: 'a character tracked before the collection could match them keeps their perk data once a match becomes available, instead of it being silently orphaned under a duplicate entry',
+        async run(page) {
+            await openOurosphereTab(page);
+            // Track perks + investment while nothing can match ("Saber" is
+            // not yet anywhere in AppState.seriesData).
+            await page.fill('#ouroInvestmentInput', 'Saber 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // LVL 6 -> 100%
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            const beforeMatch = await page.evaluate(() => {
+                const store = currentOuroperks();
+                return { count: store.order.length, entry: store.entries[store.order[0]] };
+            });
+            assert.strictEqual(beforeMatch.count, 1);
+            assert.strictEqual(beforeMatch.entry.series, null);
+            assert.strictEqual(beforeMatch.entry.perks[0].level, 6);
+
+            // A collection now resolves "Saber" to a real series - same
+            // effect as loading/parsing a collection that has her.
+            await page.evaluate(() => {
+                AppState.seriesData['Fate/stay night'] = { characters: [{ name: 'Saber', image: '', kakera: 0 }] };
+                saveToLocalStorage();
+            });
+
+            // Any later import call re-resolves the match and must not
+            // create a second entry.
+            await page.fill('#ouroInvestmentInput', 'Saber 6,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+
+            const afterMatch = await page.evaluate(() => {
+                const store = currentOuroperks();
+                return { count: store.order.length, entry: store.entries[store.order[0]] };
+            });
+            assert.strictEqual(afterMatch.count, 1, `expected still exactly one tracked entry for Saber, not a duplicate - got ${afterMatch.count}`);
+            assert.strictEqual(afterMatch.entry.series, 'Fate/stay night', 'expected the entry to pick up the resolved series');
+            assert.strictEqual(afterMatch.entry.perks[0].level, 6, 'expected the previously-pasted perk data to survive the match, not be orphaned under a stale key');
+            assert.strictEqual(afterMatch.entry.totalInvestedSp, 6000, 'expected the fresh investment total to land on the same (migrated) entry');
+
+            const cards = await page.locator('#ouroPerksCharacterList .ouro-character-card').count();
+            assert.strictEqual(cards, 1, `expected exactly one character card for Saber, not a duplicate - got ${cards}`);
+        }
+    },
+    {
         name: 'pasting a real $opp result for a tracked character fills in all 10 perk levels, correctly distinguishing [LVL 6] from [MAX]',
         async run(page) {
             await openOurosphereTab(page);
@@ -305,6 +362,367 @@ module.exports = [
             assert.strictEqual(saber.isBooster, true);
             assert.strictEqual(saber.boosterPercent, 45);
             assert.strictEqual(saber.boosterPercentEstimated, false);
+        }
+    },
+    {
+        // Regression test for a real report: a tracked Perk 1 level was
+        // being pre-seeded into every equation up front, so a stale/wrong
+        // tracked value for ONE character could silently override (and,
+        // since one contribution feeds into two shared equations, cascade
+        // corruption into) a completely different character whose own
+        // contribution pure neighbor-math could already solve cleanly
+        // from the paste alone. Pure math must always get first priority -
+        // the tracker only fills in a character neighbor-math genuinely
+        // couldn't resolve on its own.
+        name: 'pure neighbor-math wins over a tracked Perk 1 level when it can already solve a character cleanly, instead of a wrong/stale tracked value cascading into neighbors',
+        async run(page) {
+            await openOurosphereTab(page);
+            // Deliberately WRONG tracked value for Makima (45%) - her real
+            // contribution, fully solvable from the paste's own numbers
+            // alone, is 100%.
+            await page.fill('#ouroInvestmentInput', 'Makima 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT.replace('[LVL 6]  Spawn chance', '[LVL 3]  Spawn chance'));
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await page.click('#tab-wishlists-btn');
+            await page.click('button:has-text("+ Add Wishlist")');
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            await page.fill('#wishlistNameInput', 'PureMathWins');
+            // The same real, previously-verified chain: Saber and Makima
+            // both solve to 100% from the paste's own math alone - a
+            // wrong Makima=45 tracked value must not corrupt Saber's
+            // otherwise-clean solve.
+            await page.fill('#wishlistTextInput', `Saber ✅
+Yoru +200%
+Makima ✅ +100%`);
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const chars = await page.evaluate(() => wishlistModalCharacters.map(c => ({ name: c.name, boosterPercent: c.boosterPercent })));
+            const saber = chars.find(c => c.name === 'Saber');
+            const makima = chars.find(c => c.name === 'Makima');
+            assert.strictEqual(saber.boosterPercent, 100, `expected Saber's cleanly-solvable contribution to stay 100 despite Makima's wrong tracked value, got: ${JSON.stringify(chars)}`);
+            assert.strictEqual(makima.boosterPercent, 100, 'expected Makima\'s own contribution to be the correctly chain-solved 100, not the wrong tracked 45');
+        }
+    },
+    {
+        name: 'a tracked Perk 1 level fills in a character neighbor-math genuinely cannot solve on its own (no unclaimed anchor anywhere in the chain)',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Isolated 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // LVL 6 -> 100%
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await page.click('#tab-wishlists-btn');
+            await page.click('button:has-text("+ Add Wishlist")');
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            await page.fill('#wishlistNameInput', 'GenuineGap');
+            // All three claimed, all shown - no unclaimed anchor anywhere,
+            // so pure neighbor-math alone can never resolve any single
+            // one of these three contributions.
+            await page.fill('#wishlistTextInput', `NeighborA ✅ +100%
+Isolated ✅ +100%
+NeighborB ✅ +100%`);
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const isolated = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Isolated'));
+            assert.strictEqual(isolated.isBooster, true);
+            assert.strictEqual(isolated.boosterPercent, 100);
+        }
+    },
+    {
+        // Regression test for a real report: two boosters can end up
+        // sharing ONE equation with genuinely no way to split it (e.g. a
+        // neighbor's shown 200% = BoosterA + BoosterB, both completely
+        // unknown - any split is mathematically possible), so neither
+        // half is confirmed via pure math, and neither is tracked in the
+        // Ourosphere tab either. Rather than leave both silently
+        // unflagged, each one's own shown boost is assumed as a rough,
+        // clearly-unconfirmed stand-in for their own contribution too.
+        name: 'two boosters sharing one unsolvable equation each get their own shown boost assumed as an unconfirmed stand-in, flagged distinctly',
+        async run(page) {
+            await openOurosphereTab(page);
+            // Only "Nico Robin" is tracked - Saber and Makima are not.
+            await page.fill('#ouroInvestmentInput', 'Nico Robin 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // LVL 6 -> 100%
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await page.click('#tab-wishlists-btn');
+            await page.click('button:has-text("+ Add Wishlist")');
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            await page.fill('#wishlistNameInput', 'SharedEquation');
+            // Every character claimed, no unclaimed anchor anywhere - Nico
+            // Robin's own equation (200 = Saber + Makima) has 2 unknowns
+            // and can never be split by pure math alone. A handful of
+            // no-shown-value buffer characters (Power/2B/Aqua and Rin
+            // Tohsaka/Erza Scarlet) sit on either side so the circular
+            // wraparound can't be used to solve it indirectly either -
+            // those buffer characters have no shown boost, so their own
+            // equations never run and can't relay information around.
+            await page.fill('#wishlistTextInput', `Power ✅
+2B ✅
+Aqua ✅
+Esdeath ✅ +100%
+Saber ✅ +100%
+Nico Robin ✅ +200%
+Makima ✅ +100%
+Reze ✅ +100%
+Rin Tohsaka ✅
+Erza Scarlet ✅`);
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const chars = await page.evaluate(() => wishlistModalCharacters.map(c => ({
+                name: c.name, isBooster: c.isBooster, boosterPercent: c.boosterPercent, boosterWarning: c.boosterWarning
+            })));
+            const saber = chars.find(c => c.name === 'Saber');
+            const nicoRobin = chars.find(c => c.name === 'Nico Robin');
+            const makima = chars.find(c => c.name === 'Makima');
+
+            assert.deepStrictEqual(saber, { name: 'Saber', isBooster: true, boosterPercent: 100, boosterWarning: 'unconfirmed' });
+            assert.deepStrictEqual(makima, { name: 'Makima', isBooster: true, boosterPercent: 100, boosterWarning: 'unconfirmed' });
+            // Nico Robin is confirmed via the Ourosphere tracker, and her
+            // solved value agrees with it - no warning.
+            assert.deepStrictEqual(nicoRobin, { name: 'Nico Robin', isBooster: true, boosterPercent: 100, boosterWarning: null });
+
+            const saberRowText = await page.locator('.wishlist-row', { hasText: 'Saber' }).textContent();
+            assert.ok(/unconfirmed/i.test(saberRowText), `expected Saber's row to show the "unconfirmed" warning, got: "${saberRowText}"`);
+            const nicoRowText = await page.locator('.wishlist-row', { hasText: 'Nico Robin' }).textContent();
+            assert.ok(!/unconfirmed/i.test(nicoRowText), `expected Nico Robin's row (confirmed via the tracker) to show no "unconfirmed" warning, got: "${nicoRowText}"`);
+
+            // Manually editing an unconfirmed value doesn't clear the
+            // warning by itself - Saber still has no tracked Ourosphere
+            // Perk 1 level at all, so ANY value on her row is still just
+            // as unsubstantiated as the one it replaced.
+            const saberInput = page.locator('.wishlist-row', { hasText: 'Saber' }).locator('[data-action="boosterPercent"]');
+            await saberInput.fill('80');
+            await page.waitForTimeout(100);
+            const saberAfterEdit = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Saber'));
+            assert.strictEqual(saberAfterEdit.boosterWarning, 'unconfirmed', 'expected the warning to persist since Ourosphere still has nothing to check the value against');
+            const saberRowTextAfter = await page.locator('.wishlist-row', { hasText: 'Saber' }).textContent();
+            assert.ok(/unconfirmed/i.test(saberRowTextAfter), 'expected the "unconfirmed" warning to still show after a manual edit with no tracked data to confirm it');
+        }
+    },
+    {
+        // Regression test for a real report: typing 0 into an unconfirmed
+        // Booster % field, then typing a different number, silently
+        // dropped the "unconfirmed" warning - since 0 isn't a meaningful
+        // real booster value, it should reset the row (like unchecking
+        // Booster) rather than being treated as a real confirmation, so
+        // the next guess typed in is still flagged unconfirmed too.
+        name: 'typing 0 into an unconfirmed booster % resets it instead of confirming it, so retyping a new guess stays flagged unconfirmed',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Nico Robin 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // LVL 6 -> 100%
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await page.click('#tab-wishlists-btn');
+            await page.click('button:has-text("+ Add Wishlist")');
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            await page.fill('#wishlistNameInput', 'ZeroReset');
+            await page.fill('#wishlistTextInput', `Power ✅
+2B ✅
+Aqua ✅
+Esdeath ✅ +100%
+Saber ✅ +100%
+Nico Robin ✅ +200%
+Makima ✅ +100%
+Reze ✅ +100%
+Rin Tohsaka ✅
+Erza Scarlet ✅`);
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const saberRow = page.locator('.wishlist-row', { hasText: 'Saber' });
+            let saber = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Saber'));
+            assert.strictEqual(saber.boosterWarning, 'unconfirmed', 'expected Saber to start unconfirmed - no tracked Ourosphere Perk 1 level for her');
+
+            // Typing 0 resets the row like unchecking Booster, clearing the warning.
+            await saberRow.locator('[data-action="boosterPercent"]').fill('0');
+            await page.waitForTimeout(100);
+            saber = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Saber'));
+            assert.strictEqual(saber.isBooster, false, 'expected typing 0 to uncheck Booster, same as clicking it off');
+            assert.strictEqual(saber.boosterPercent, null);
+            assert.strictEqual(saber.boosterWarning, null, 'expected no warning once Booster is unset');
+            assert.strictEqual(await saberRow.locator('[data-action="booster"]').isChecked(), false);
+            const rowTextAfterReset = await saberRow.textContent();
+            assert.ok(!/unconfirmed/i.test(rowTextAfterReset), `expected the "unconfirmed" warning hidden while Booster is unchecked, got: "${rowTextAfterReset}"`);
+
+            // Re-checking Booster and typing a fresh guess is still checked
+            // against Ourosphere from scratch - still nothing tracked for
+            // Saber, so it's still flagged unconfirmed, not silently
+            // treated as a real value.
+            await saberRow.locator('[data-action="booster"]').check();
+            await page.waitForTimeout(100);
+            await saberRow.locator('[data-action="boosterPercent"]').type('75');
+            await page.waitForTimeout(100);
+            saber = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Saber'));
+            assert.strictEqual(saber.boosterPercent, 75);
+            assert.strictEqual(saber.boosterWarning, 'unconfirmed', 'expected the retyped guess to still show the "unconfirmed" warning');
+            const rowTextAfterRetype = await saberRow.textContent();
+            assert.ok(/unconfirmed/i.test(rowTextAfterRetype), `expected the "unconfirmed" warning to still show, got: "${rowTextAfterRetype}"`);
+        }
+    },
+    {
+        // Regression test for a real report/screenshot: unchecking Booster
+        // directly (not via typing 0) still left the "unconfirmed" badge
+        // showing next to the now-unchecked toggle.
+        name: 'unchecking Booster directly also hides the "unconfirmed" warning, and it reappears if a fresh guess is retyped',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Nico Robin 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // LVL 6 -> 100%
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await page.click('#tab-wishlists-btn');
+            await page.click('button:has-text("+ Add Wishlist")');
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            await page.fill('#wishlistNameInput', 'UncheckReset');
+            await page.fill('#wishlistTextInput', `Power ✅
+2B ✅
+Aqua ✅
+Esdeath ✅ +100%
+Saber ✅ +100%
+Nico Robin ✅ +200%
+Makima ✅ +100%
+Reze ✅ +100%
+Rin Tohsaka ✅
+Erza Scarlet ✅`);
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const saberRow = page.locator('.wishlist-row', { hasText: 'Saber' });
+            let rowText = await saberRow.textContent();
+            assert.ok(/unconfirmed/i.test(rowText), `expected the "unconfirmed" warning to show initially, got: "${rowText}"`);
+
+            await saberRow.locator('[data-action="booster"]').uncheck();
+            await page.waitForTimeout(100);
+            rowText = await saberRow.textContent();
+            assert.ok(!/unconfirmed/i.test(rowText), `expected the "unconfirmed" warning hidden once Booster is unchecked, got: "${rowText}"`);
+            let saber = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Saber'));
+            assert.strictEqual(saber.boosterWarning, null, 'expected no warning once Booster is unset');
+
+            await saberRow.locator('[data-action="booster"]').check();
+            await page.waitForTimeout(100);
+            await saberRow.locator('[data-action="boosterPercent"]').type('60');
+            await page.waitForTimeout(100);
+            rowText = await saberRow.textContent();
+            assert.ok(/unconfirmed/i.test(rowText), `expected the "unconfirmed" warning to pop back up after a fresh guess, got: "${rowText}"`);
+        }
+    },
+    {
+        // Regression test for the full spec: a Booster % checked against a
+        // character's ACTUALLY tracked Ourosphere Perk 1 level (not just
+        // "is anything tracked at all") - disagreeing gets a distinct
+        // "doesn't match" warning, agreeing gets no warning at all.
+        name: 'a Booster % that disagrees with a tracked Ourosphere Perk 1 level shows a distinct "doesn\'t match" warning, and clears once it agrees',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'TestBooster 1,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // LVL 6 -> 100%
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await page.click('#tab-wishlists-btn');
+            await page.click('button:has-text("+ Add Wishlist")');
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            await page.fill('#wishlistNameInput', 'MismatchTest');
+            await page.fill('#wishlistTextInput', 'TestBooster ✅');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const row = page.locator('.wishlist-row', { hasText: 'TestBooster' });
+            let tb = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'TestBooster'));
+            // Filled straight from the Ourosphere tracker - matches by construction.
+            assert.strictEqual(tb.isBooster, true);
+            assert.strictEqual(tb.boosterPercent, 100);
+            assert.strictEqual(tb.boosterWarning, null);
+            let rowText = await row.textContent();
+            assert.ok(!/unconfirmed/i.test(rowText) && !/doesn't match/i.test(rowText), `expected no warning while matching, got: "${rowText}"`);
+
+            // Manually override to a DIFFERENT number than the tracked 100%.
+            await row.locator('[data-action="boosterPercent"]').fill('80');
+            await page.waitForTimeout(100);
+            tb = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'TestBooster'));
+            assert.strictEqual(tb.boosterWarning, 'mismatch');
+            assert.strictEqual(tb.boosterConfirmedPercent, 100);
+            rowText = await row.textContent();
+            assert.ok(/doesn't match/i.test(rowText), `expected a "doesn't match" warning, got: "${rowText}"`);
+            assert.ok(!/unconfirmed/i.test(rowText), 'expected the mismatch warning, not the unconfirmed one - Ourosphere DOES have data for this character');
+
+            // Correcting it back to the tracked value clears the warning.
+            await row.locator('[data-action="boosterPercent"]').fill('100');
+            await page.waitForTimeout(100);
+            tb = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'TestBooster'));
+            assert.strictEqual(tb.boosterWarning, null);
+            rowText = await row.textContent();
+            assert.ok(!/doesn't match/i.test(rowText) && !/unconfirmed/i.test(rowText), `expected no warning once it matches again, got: "${rowText}"`);
+        }
+    },
+    {
+        // Regression test for a real gap: the wishlist editor is an inline
+        // panel, not a blocking modal, so a real workflow is opening it,
+        // noticing an "unconfirmed" row, switching to the Ourosphere tab
+        // to paste $opp for that character, then switching back - without
+        // a refresh hook, the warning stayed frozen at whatever it was
+        // computed as on import, since nothing else re-renders the row
+        // list on a tab switch alone.
+        name: 'switching to the Ourosphere tab to track a character, then back, clears a now-stale "unconfirmed" warning without needing to re-import',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.click('#tab-wishlists-btn');
+            await page.click('button:has-text("+ Add Wishlist")');
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            await page.fill('#wishlistNameInput', 'StaleWarningTest');
+            await page.fill('#wishlistTextInput', 'Makima ✅ +100%\nOther ✅');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const makimaRow = page.locator('.wishlist-row', { hasText: 'Makima' });
+            let rowText = await makimaRow.textContent();
+            assert.ok(/unconfirmed/i.test(rowText), `expected the "unconfirmed" warning before tracking Makima, got: "${rowText}"`);
+
+            // Track Makima's Perk 1 WITHOUT closing/re-importing the still-open editor.
+            await page.click('#tab-ourosphere-btn');
+            await page.fill('#ouroInvestmentInput', 'Makima 1,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // LVL 6 -> 100%
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await page.click('#tab-wishlists-btn');
+            await page.waitForTimeout(100);
+            rowText = await makimaRow.textContent();
+            assert.ok(!/unconfirmed/i.test(rowText), `expected the "unconfirmed" warning gone after tracking Makima and switching back, got: "${rowText}"`);
+            const makima = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Makima'));
+            assert.strictEqual(makima.boosterWarning, null);
         }
     },
     {

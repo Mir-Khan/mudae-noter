@@ -64,7 +64,7 @@ module.exports = [
         }
     },
     {
-        name: 'a ":kakera:" icon and "+N%" kakera boost after the markers are stripped, regardless of order, leaving just the name',
+        name: 'a ":kakera:" icon sets the Kakera-boost flag (not just stripped as decoration), and "+N%" kakera boost after the markers are stripped, regardless of order, leaving just the name',
         async run(page) {
             await dismissChangelogIfPresent(page);
             await page.click('#tab-wishlists-btn');
@@ -89,18 +89,20 @@ module.exports = [
                 const lugia = entry.characters.find(c => c.name === 'Lugia');
                 return { riza, n, kim, lugia };
             });
-            const base = { boostPercent: null, isLocked: false, isBooster: false, boosterPercent: null, wantsKakeraBoost: false, includeInCommand: false, hasUnexplainedBoost: false, hasSelfBoostPortion: false, selfResidualPercent: null, boosterPercentEstimated: false };
+            const base = { boostPercent: null, isLocked: false, isBooster: false, boosterPercent: null, wantsKakeraBoost: false, includeInCommand: true, hasUnexplainedBoost: false, hasSelfBoostPortion: false, selfResidualPercent: null, boosterPercentEstimated: false, boosterWarning: null, boosterConfirmedPercent: null };
             // A claimed character's own shown +N% is NOT their own
             // Ouroperk contribution - it's what they RECEIVE from
             // neighbors, so their own contribution can only be solved
             // indirectly via an adjacent unclaimed "anchor" elsewhere in
             // the chain. This list is almost entirely claimed characters
-            // with no such anchor near any of the boosted entries, so none
-            // of them can actually be solved - correctly left un-flagged
-            // rather than guessed, same as an unclaimed character's own
-            // (unrelated, never a booster) +N%.
-            assert.deepStrictEqual(flags.riza, { name: 'Riza Hawkeye', isStarWish: true, isClaimed: true, ...base, boostPercent: 200 });
-            assert.deepStrictEqual(flags.n, { name: 'N', isStarWish: true, isClaimed: true, ...base, boostPercent: 100 }, 'expected star+check to be recognized even when check comes before star and :kakera: follows');
+            // with no such anchor near any of the boosted entries, so pure
+            // math alone can't solve any of them - but each one's own
+            // shown boost is still assumed as a rough stand-in for their
+            // own contribution (rather than left silently unflagged), and
+            // since neither has any tracked Ourosphere Perk 1 data at all,
+            // both show as unconfirmed.
+            assert.deepStrictEqual(flags.riza, { name: 'Riza Hawkeye', isStarWish: true, isClaimed: true, ...base, boostPercent: 200, isBooster: true, boosterPercent: 200, boosterWarning: 'unconfirmed' });
+            assert.deepStrictEqual(flags.n, { name: 'N', isStarWish: true, isClaimed: true, ...base, boostPercent: 100, wantsKakeraBoost: true, isBooster: true, boosterPercent: 100, boosterWarning: 'unconfirmed' }, 'expected star+check to be recognized even when check comes before star and :kakera: follows, and :kakera: itself to set the Kakera-boost flag');
             assert.deepStrictEqual(flags.kim, { name: 'Kim Wexler', isStarWish: false, isClaimed: true, ...base });
             assert.deepStrictEqual(flags.lugia, { name: 'Lugia', isStarWish: false, isClaimed: false, ...base });
         }

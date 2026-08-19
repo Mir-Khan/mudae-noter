@@ -25,8 +25,16 @@ module.exports = [
             const rowNames = await page.locator('.wishlist-row-name').allTextContents();
             assert.deepStrictEqual(rowNames, ['Yoru', 'Saber']);
 
+            // The raw pasted value is still captured (used to chain-solve
+            // Booster status/%), even though the row itself now shows a
+            // live neighbor-computed marker instead of this frozen number
+            // directly - neither character here is claimed/a confirmed
+            // Booster, so nothing can attribute it, and it renders as
+            // "unexplained" rather than a stale "+200%".
+            const yoru = await page.evaluate(() => wishlistModalCharacters.find(c => c.name === 'Yoru'));
+            assert.strictEqual(yoru.boostPercent, 200);
             const boostText = await page.locator('.wishlist-row').first().textContent();
-            assert.ok(boostText.includes('+200%'), `expected the boost percent marker on the row, got: "${boostText}"`);
+            assert.ok(boostText.includes('unexplained boost'), `expected the unattributed boost to render as "unexplained", got: "${boostText}"`);
         }
     },
     {
@@ -80,9 +88,9 @@ module.exports = [
             await saberRow.locator('[data-action="boosterPercent"]').fill('100');
             await page.waitForTimeout(50);
 
-            // Adjacent rows (Yoru, Artoria) should show the neighbor boost.
+            // Adjacent rows (Yoru, Artoria) should show the live neighbor boost.
             const yoruText = await page.locator('.wishlist-row', { hasText: 'Yoru' }).textContent();
-            assert.ok(yoruText.includes('100% neighbor'), `expected Yoru to show the neighbor boost, got: "${yoruText}"`);
+            assert.ok(yoruText.includes('+100%'), `expected Yoru to show the live neighbor boost, got: "${yoruText}"`);
 
             // Re-import the same text (simulating a re-paste of an updated $wishlist).
             await page.fill('#wishlistTextInput', 'Yoru\nSaber\nArtoria\nNew Guy');
@@ -118,7 +126,7 @@ module.exports = [
         }
     },
     {
-        name: 'the command builder without Star splits Lock+Kakera into two separate commands with a caveat note',
+        name: 'the command builder without Star combines Lock+Kakera into one $wishkl command',
         async run(page) {
             await openAddWishlistModal(page);
             await page.fill('#wishlistCommandNames', 'Yoru');
@@ -128,10 +136,7 @@ module.exports = [
             await page.waitForTimeout(100);
 
             const commands = await page.locator('#wishlistCommandOutput .command-text').allTextContents();
-            assert.deepStrictEqual(commands.sort(), ['$wishk Yoru', '$wishl Yoru'].sort());
-
-            const noteText = await page.locator('#wishlistCommandOutput').textContent();
-            assert.ok(/confirmed single command/i.test(noteText), 'expected the unconfirmed-combination caveat note');
+            assert.deepStrictEqual(commands, ['$wishkl Yoru']);
         }
     },
     {
@@ -337,6 +342,46 @@ Bullseye +100%`;
         }
     },
     {
+        // Regression test for a real report: a ":kakera:" icon was treated
+        // as pure decoration and stripped with no signal kept - but a real
+        // paste shows it selectively (present for some characters, absent
+        // for others in the same list), proving it's Mudae's own marker
+        // for that wish's $wishk (kakera-boost) flag, same thing this
+        // app's own "Kakera boost" row checkbox represents.
+        name: 'a real $wishlist paste with :kakera: markers auto-checks the Kakera-boost flag only on the characters that actually show it',
+        async run(page) {
+            const REAL_WISHLIST_TEXT = `Power ✅ ⭐:kakera: 🔐 +100%
+2B ✅ ⭐:kakera: 🔐
+Aqua ✅ ⭐:kakera: 🔐
+Esdeath ✅ ⭐:kakera: 🔐 +100%
+Saber ✅ ⭐ 🔐 +100%
+Makima ✅ ⭐ 🔐 +200%
+Nico Robin ✅ ⭐ 🔐 +100%`;
+
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'KakeraFlag');
+            await page.fill('#wishlistTextInput', REAL_WISHLIST_TEXT);
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const flags = await page.evaluate(() => wishlistModalCharacters.map(c => ({ name: c.name, wantsKakeraBoost: c.wantsKakeraBoost })));
+            assert.deepStrictEqual(flags, [
+                { name: 'Power', wantsKakeraBoost: true },
+                { name: '2B', wantsKakeraBoost: true },
+                { name: 'Aqua', wantsKakeraBoost: true },
+                { name: 'Esdeath', wantsKakeraBoost: true },
+                { name: 'Saber', wantsKakeraBoost: false },
+                { name: 'Makima', wantsKakeraBoost: false },
+                { name: 'Nico Robin', wantsKakeraBoost: false }
+            ]);
+
+            const powerKakeraChecked = await page.locator('.wishlist-row', { hasText: 'Power' }).locator('[data-action="kakera"]').isChecked();
+            assert.strictEqual(powerKakeraChecked, true, 'expected the Kakera-boost checkbox to be auto-checked from the parsed :kakera: marker');
+            const saberKakeraChecked = await page.locator('.wishlist-row', { hasText: 'Saber' }).locator('[data-action="kakera"]').isChecked();
+            assert.strictEqual(saberKakeraChecked, false, 'expected a character with no :kakera: marker to leave the Kakera-boost checkbox unchecked');
+        }
+    },
+    {
         // Regression test for a real report: real $wishlist output can tack
         // on "· (roulette, ...)" and "· N ka" (the character's raw kakera
         // value) AFTER the emoji markers - e.g. "Saber ✅⭐🔐 · ($wa, $wg) ·
@@ -422,7 +467,9 @@ Orpheus (Hades) · ($ha) · 12 ka`;
             await yoruRow.locator('[data-action="star"]').check();
             await yoruRow.locator('[data-action="lock"]').check();
             await yoruRow.locator('[data-action="include"]').check();
-            // Saber stays un-included - shouldn't show up in the output at all.
+            // Saber is explicitly un-included (every row now defaults to
+            // Included on import) - shouldn't show up in the output at all.
+            await page.locator('.wishlist-row', { hasText: 'Saber' }).locator('[data-action="include"]').uncheck();
 
             // Also type a brand new name in the command builder, no flags.
             await page.fill('#wishlistCommandNames', 'Brand New Guy');
@@ -472,6 +519,54 @@ Orpheus (Hades) · ($ha) · 12 ka`;
             await page.click('button:has-text("Include None")');
             const noneChecked = await page.locator('.wishlist-row [data-action="include"]').evaluateAll(boxes => boxes.every(b => !b.checked));
             assert.ok(noneChecked, 'expected every row\'s Include checkbox unchecked after "Include None"');
+        }
+    },
+    {
+        name: '"Star All"/"Lock All"/"Kakera-Boost All" (and their "None" counterparts) toggle every row at once',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'BulkFlags');
+            await page.fill('#wishlistTextInput', 'Yoru\nSaber\nMakima');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            await page.click('button:has-text("Star All")');
+            assert.ok(await page.locator('.wishlist-row [data-action="star"]').evaluateAll(boxes => boxes.every(b => b.checked)), 'expected every row starred after "Star All"');
+            await page.click('button:has-text("Lock All")');
+            assert.ok(await page.locator('.wishlist-row [data-action="lock"]').evaluateAll(boxes => boxes.every(b => b.checked)), 'expected every row locked after "Lock All"');
+            await page.click('button:has-text("Kakera-Boost All")');
+            assert.ok(await page.locator('.wishlist-row [data-action="kakera"]').evaluateAll(boxes => boxes.every(b => b.checked)), 'expected every row kakera-boosted after "Kakera-Boost All"');
+
+            await page.click('button:has-text("Star None")');
+            assert.ok(await page.locator('.wishlist-row [data-action="star"]').evaluateAll(boxes => boxes.every(b => !b.checked)), 'expected every row unstarred after "Star None"');
+            await page.click('button:has-text("Lock None")');
+            assert.ok(await page.locator('.wishlist-row [data-action="lock"]').evaluateAll(boxes => boxes.every(b => !b.checked)), 'expected every row unlocked after "Lock None"');
+            await page.click('button:has-text("Kakera-Boost None")');
+            assert.ok(await page.locator('.wishlist-row [data-action="kakera"]').evaluateAll(boxes => boxes.every(b => !b.checked)), 'expected every row un-kakera-boosted after "Kakera-Boost None"');
+        }
+    },
+    {
+        // Regression check: bulk-unstarring must surface a $swr reminder
+        // for real, previously-confirmed starwishes, same as unstarring
+        // one row at a time - "Star All"/"Star None" bypasses the per-row
+        // checkbox change handler entirely, so this needs its own wiring.
+        name: '"Star None" surfaces a $swr reminder for real starwishes, same as unstarring a row individually',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'BulkStarSwr');
+            await page.fill('#wishlistTextInput', 'RealStar ⭐\nPlain');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            await page.click('button:has-text("Star None")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.locator('#wishlistStarRemovalsGroup').isVisible(), true, 'expected a $swr reminder after bulk-unstarring a real starwish');
+            const swrCommand = await page.locator('#wishlistStarRemovalsOutput .command-text').textContent();
+            assert.strictEqual(swrCommand, '$swr RealStar');
+
+            await page.click('button:has-text("Star All")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.locator('#wishlistStarRemovalsGroup').isVisible(), false, 'expected the $swr reminder to clear once Star is bulk re-checked');
         }
     },
     {
@@ -535,7 +630,7 @@ Orpheus (Hades) · ($ha) · 12 ka`;
 
             const yoruRow = page.locator('.wishlist-row', { hasText: 'Yoru' });
             const includeBox = yoruRow.locator('[data-action="include"]');
-            assert.strictEqual(await includeBox.isChecked(), false, 'expected Include unchecked before any edit');
+            assert.strictEqual(await includeBox.isChecked(), true, 'expected Include checked by default right after import');
 
             await yoruRow.locator('[data-action="star"]').check();
             assert.strictEqual(await includeBox.isChecked(), true, 'expected Star toggle to auto-check Include');
@@ -644,7 +739,7 @@ Bullseye +100% · ($ha)`;
             const yoruRow = page.locator('.wishlist-row', { hasText: 'Yoru' });
             assert.strictEqual(await yoruRow.locator('[data-action="booster"]').isChecked(), false);
             const yoruText = await yoruRow.textContent();
-            assert.ok(yoruText.includes('200% neighbor'), `expected Yoru to show the combined 100%+100% it receives from both neighbors, got: "${yoruText}"`);
+            assert.ok(yoruText.includes('+200%'), `expected Yoru to show the combined 100%+100% it receives from both neighbors, got: "${yoruText}"`);
         }
     },
     {
@@ -706,16 +801,17 @@ Tropius +30% · ($wa, $ha, $wg, $hg)`;
             // "Zuko" (not "Nezuko") specifically - .nth(4) since hasText
             // would match both, "Zuko" being a substring of "Nezuko".
             const zukoText = await page.locator('.wishlist-row').nth(4).textContent();
-            assert.ok(!zukoText.includes('unexplained') && !zukoText.includes('incl. self'), `expected a clean, consistent value to show neither marker, got: "${zukoText}"`);
+            assert.ok(!zukoText.includes('unexplained') && !zukoText.includes('self-reflection confirmed'), `expected a clean, consistent value to show neither marker, got: "${zukoText}"`);
 
             // A claimed character whose own line reflects part of her own
             // Ouroperk investment - even though her neighbor-facing amount
             // was still solvable via a different equation elsewhere in the
-            // chain - shows the "incl. self" marker AND a checked Booster
-            // box with the separately-solved value, never "unexplained".
+            // chain - shows the "self-reflection confirmed" marker AND a
+            // checked Booster box with the separately-solved value, never
+            // "unexplained".
             const azulaRow = page.locator('.wishlist-row', { hasText: 'Azula' });
             const azulaText = await azulaRow.textContent();
-            assert.ok(azulaText.includes('incl. self'), `expected Azula's own +3% attributed to her own Ouroperk self-reflection, got: "${azulaText}"`);
+            assert.ok(azulaText.includes('self-reflection confirmed'), `expected Azula's own +3% attributed to her own Ouroperk self-reflection, got: "${azulaText}"`);
             assert.ok(!azulaText.includes('unexplained'), `expected Azula to NOT be marked unexplained now that the self-reflection mechanic is understood, got: "${azulaText}"`);
             assert.strictEqual(await azulaRow.locator('[data-action="booster"]').isChecked(), true);
             assert.strictEqual(await azulaRow.locator('[data-action="boosterPercent"]').inputValue(), '25');
@@ -834,14 +930,14 @@ Tropius +30% · ($wa, $ha, $wg, $hg)`;
             await page.waitForTimeout(50);
 
             const yoruText = await page.locator('.wishlist-row', { hasText: 'Yoru' }).textContent();
-            assert.ok(yoruText.includes('100% neighbor'), `expected Yoru (Saber's real "next") to show the boost, got: "${yoruText}"`);
+            assert.ok(yoruText.includes('+100%'), `expected Yoru (Saber's real "next") to show the boost, got: "${yoruText}"`);
 
             const bullseyeText = await page.locator('.wishlist-row', { hasText: 'Bullseye' }).textContent();
-            assert.ok(bullseyeText.includes('100% neighbor'), `expected Bullseye (Saber's wrapped-around "previous", since Saber is first in the list) to also show the boost, got: "${bullseyeText}"`);
+            assert.ok(bullseyeText.includes('+100%'), `expected Bullseye (Saber's wrapped-around "previous", since Saber is first in the list) to also show the boost, got: "${bullseyeText}"`);
 
             // Makima, in the middle, is nobody's neighbor here at all.
             const makimaText = await page.locator('.wishlist-row', { hasText: 'Makima' }).textContent();
-            assert.ok(!makimaText.includes('neighbor'), `expected Makima (not adjacent to Saber even with wraparound) to show no neighbor boost, got: "${makimaText}"`);
+            assert.ok(!makimaText.includes('100%'), `expected Makima (not adjacent to Saber even with wraparound) to show no neighbor boost, got: "${makimaText}"`);
         }
     },
     {
@@ -1327,6 +1423,119 @@ Bullseye +100%`;
             await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
             const warningVisibleOnEdit = await page.locator('#wishlistNewListWarning').isVisible();
             assert.strictEqual(warningVisibleOnEdit, false, 'expected the $wra warning hidden when editing an already-saved wishlist');
+        }
+    },
+    {
+        name: 'every row defaults to Included when opening a wishlist, regardless of what was individually saved last time',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'IncludeDefault');
+            await page.fill('#wishlistTextInput', 'Alpha\nBeta\nGamma');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            // Fresh import: every row should already be Included.
+            let includeChecks = await page.locator('.wishlist-row [data-action="include"]').all();
+            for (const box of includeChecks) assert.strictEqual(await box.isChecked(), true);
+
+            // Explicitly uncheck one, then save with that state persisted.
+            await page.locator('.wishlist-row', { hasText: 'Beta' }).locator('[data-action="include"]').uncheck();
+            await page.click('button:has-text("Save Wishlist")');
+            await page.waitForTimeout(150);
+
+            // Reopening for edit should default every row back to
+            // Included, not remember Beta's unchecked state.
+            await page.locator('.wishlist-card', { hasText: 'IncludeDefault' }).locator('button:has-text("Edit")').click();
+            await page.waitForSelector('#wishlistModalOverlay', { state: 'visible' });
+            includeChecks = await page.locator('.wishlist-row [data-action="include"]').all();
+            for (const box of includeChecks) assert.strictEqual(await box.isChecked(), true, 'expected every row Included by default on reopening, including the one saved unchecked');
+        }
+    },
+    {
+        name: 'unchecking Star on a previously-confirmed-real starwish surfaces a $swr command; unchecking a purely-planned star does not',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'StarRemovals');
+            await page.fill('#wishlistTextInput', 'RealStar ⭐\nPlain');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            const starRemovalsHiddenBefore = await page.locator('#wishlistStarRemovalsGroup').isVisible();
+            assert.strictEqual(starRemovalsHiddenBefore, false, 'expected the Removed Starwishes section hidden with nothing unstarred yet');
+
+            // A star only ever set manually in this app (never confirmed
+            // real via a paste) needs no $swr - Discord never had it.
+            await page.locator('.wishlist-row', { hasText: 'Plain' }).locator('[data-action="star"]').check();
+            await page.waitForTimeout(100);
+            await page.locator('.wishlist-row', { hasText: 'Plain' }).locator('[data-action="star"]').uncheck();
+            await page.waitForTimeout(100);
+            const starRemovalsHiddenAfterPlanned = await page.locator('#wishlistStarRemovalsGroup').isVisible();
+            assert.strictEqual(starRemovalsHiddenAfterPlanned, false, 'expected no $swr prompt for a star that was only ever planned, never real');
+
+            // A real, previously-confirmed starwish - unchecking it SHOULD
+            // surface a $swr command.
+            await page.locator('.wishlist-row', { hasText: 'RealStar' }).locator('[data-action="star"]').uncheck();
+            await page.waitForTimeout(100);
+
+            const starRemovalsVisible = await page.locator('#wishlistStarRemovalsGroup').isVisible();
+            assert.strictEqual(starRemovalsVisible, true, 'expected the Removed Starwishes section to appear');
+            const swrCommand = await page.locator('#wishlistStarRemovalsOutput .command-text').textContent();
+            assert.strictEqual(swrCommand, '$swr RealStar', `expected a $swr command for the unstarred real character, got: "${swrCommand}"`);
+
+            // Re-checking Star cancels the pending $swr.
+            await page.locator('.wishlist-row', { hasText: 'RealStar' }).locator('[data-action="star"]').check();
+            await page.waitForTimeout(100);
+            const starRemovalsHiddenAfterRecheck = await page.locator('#wishlistStarRemovalsGroup').isVisible();
+            assert.strictEqual(starRemovalsHiddenAfterRecheck, false, 'expected the $swr prompt to clear once Star is re-checked');
+        }
+    },
+    {
+        name: 'removing a row entirely clears any pending $swr for it, since $wr already covers dropping the starwish too',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'StarThenFullRemove');
+            await page.fill('#wishlistTextInput', 'RealStar ⭐');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            await page.locator('.wishlist-row', { hasText: 'RealStar' }).locator('[data-action="star"]').uncheck();
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.locator('#wishlistStarRemovalsGroup').isVisible(), true);
+
+            await page.locator('.wishlist-row', { hasText: 'RealStar' }).locator('[data-action="remove"]').click();
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.locator('#wishlistStarRemovalsGroup').isVisible(), false, 'expected the $swr prompt to clear once the row is fully removed via $wr instead');
+        }
+    },
+    {
+        name: 'unstarring a real starwish suggests reclaiming the wishlist slots it cost, with an Apply button that fills the capacity fields',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await markAsOwnWishlist(page);
+            await page.fill('#wishlistCapacityWishlist', '54');
+            await page.fill('#wishlistCapacityStarwish', '4');
+            await page.click('button:has-text("Save Capacity")');
+            await page.waitForTimeout(100);
+
+            await page.fill('#wishlistNameInput', 'StarReclaim');
+            await page.fill('#wishlistTextInput', 'RealStar ⭐');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            await page.locator('.wishlist-row', { hasText: 'RealStar' }).locator('[data-action="star"]').uncheck();
+            await page.waitForTimeout(100);
+
+            // Capacity 4 -> 3 drops just the 3rd extra slot beyond the
+            // base 1 (extra slots ramp 2, 4, 6, 8, ... - the 3rd one
+            // alone costs 6, not the cumulative total for all of them).
+            const note = await page.locator('#wishlistStarRemovalsCapacityNote').textContent();
+            assert.ok(/from.*4.*to.*3/i.test(note.replace(/\s+/g, ' ')), `expected the note to suggest dropping capacity from 4 to 3, got: "${note}"`);
+            assert.ok(/6/.test(note), `expected the note to mention reclaiming 6 wishlist slots, got: "${note}"`);
+
+            await page.click('button:has-text("Apply to Capacity Fields")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#wishlistCapacityStarwish'), '3');
+            assert.strictEqual(await page.inputValue('#wishlistCapacityWishlist'), '60');
         }
     }
 ];

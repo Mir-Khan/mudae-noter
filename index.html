@@ -3143,6 +3143,26 @@
             font-style: italic;
         }
 
+        .wishlist-row-booster-input-unconfirmed {
+            border-color: #f59e0b;
+            font-style: italic;
+        }
+
+        .wishlist-booster-unconfirmed {
+            color: #f59e0b;
+            font-style: italic;
+        }
+
+        .wishlist-row-booster-input-mismatch {
+            border-color: #ef4444;
+            font-style: italic;
+        }
+
+        .wishlist-booster-mismatch {
+            color: #ef4444;
+            font-style: italic;
+        }
+
         .wishlist-row-remove {
             font-size: 1.2em;
             opacity: 0.6;
@@ -4445,7 +4465,7 @@
                 <p class="sort-hint" style="margin-top: 4px;">Run <code>$wishlist</code> in Discord and paste the
                     resulting list below - one character per line. A trailing <code>⭐</code> (starwish) or
                     <code>✅</code> (already claimed) is recognized automatically, as is a trailing <code>+N%</code>
-                    boost; any <code>:kakera:</code> icon is dropped since it's pure decoration.</p>
+                    boost; a trailing <code>:kakera:</code> icon auto-checks that row's Kakera-boost flag.</p>
                 <input type="text" id="wishlistNameInput" class="color-hex-text-input" style="text-transform: none; margin-bottom: 10px;"
                     placeholder="Whose wishlist is this? (e.g. a username)">
                 <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; color: #d1d5db; font-size: 0.9em;">
@@ -4497,13 +4517,24 @@
                     <h3>Characters <span style="font-weight: 400; color: #9ca3af;">(drag ⠿ to reorder)</span></h3>
                     <p class="sort-hint">Each row's own Star/Lock/Kakera-boost flags feed straight into the command
                         builder below - any row you edit (or "Include" manually) is picked up automatically, no
-                        retyping needed. A claimed character's Booster (Ouroperk) status/% is auto-detected where the
-                        pasted order makes it solvable - it's an inference from your <code>+N%</code> markers, not a
-                        guarantee, so double-check against <code>$ouroperks</code> if a value looks off. A <code>+N%</code>
-                        marked "unexplained" doesn't match neighbor-boost math at all and isn't attributed to anyone.</p>
-                    <div class="add-chars-modal-actions" style="justify-content: flex-start; margin: -4px 0 8px;">
+                        retyping needed. A claimed character's Booster (Ouroperk) status/% is auto-detected from your
+                        pasted <code>+N%</code> values where solvable. Any Booster % - solved, guessed, or typed by
+                        hand - is checked against that character's tracked Ourosphere Perk 1 level: no tracked level
+                        at all shows "⚠ unconfirmed", and a tracked level that disagrees with the current % shows
+                        "⚠ doesn't match Ourosphere" instead - paste real <code>$opp</code> data for them on the
+                        Ourosphere tab to clear either one. The <code>+N%</code> shown per row is computed live from
+                        its current neighbors' Booster %s, not frozen from the original paste - it updates as you drag
+                        rows around or edit a Booster % (a "Boost from the paste that never matched neighbor math"
+                        case shows as "unexplained" instead).</p>
+                    <div class="add-chars-modal-actions" style="justify-content: flex-start; margin: -4px 0 8px; flex-wrap: wrap;">
                         <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(true)">Include All Rows</button>
                         <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsIncluded(false)">Include None</button>
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsFlag('isStarWish', true)">Star All</button>
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsFlag('isStarWish', false)">Star None</button>
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsFlag('isLocked', true)">Lock All</button>
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsFlag('isLocked', false)">Lock None</button>
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsFlag('wantsKakeraBoost', true)">Kakera-Boost All</button>
+                        <button type="button" class="btn btn-sm" onclick="setAllWishlistRowsFlag('wantsKakeraBoost', false)">Kakera-Boost None</button>
                     </div>
                     <div id="wishlistRowsList" class="wishlist-rows-list"></div>
                 </div>
@@ -4514,6 +4545,15 @@
                         overwrite or remove anything, so these were also part of the real wishlist and won't actually be
                         gone until you run <code>$wr</code> (<code>$wishremove</code>) for them too.</p>
                     <div id="wishlistRemovalsOutput"></div>
+                </div>
+
+                <div class="control-group" id="wishlistStarRemovalsGroup" style="margin-top: 16px; display: none;">
+                    <h3>Removed Starwishes</h3>
+                    <p class="sort-hint">Unchecking Star here only updates this tracker - it doesn't demote the real
+                        starwish in Discord, which stays until you run <code>$swr</code> (<code>$starwishremove</code>)
+                        for it. That keeps the wish itself (unlike <code>$wr</code>, which drops it entirely).</p>
+                    <div id="wishlistStarRemovalsOutput"></div>
+                    <div id="wishlistStarRemovalsCapacityNote" class="sort-hint"></div>
                 </div>
 
                 <div class="control-group" id="wishlistReorderGroup" style="margin-top: 16px; display: none;">
@@ -10077,6 +10117,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (showWishlists) {
                 renderWishlistsList();
                 populateWishlistCompareSelects();
+                refreshWishlistModalBoosterWarnings();
             }
 
             if (showCustomImages) {
@@ -13510,8 +13551,24 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-17';
+        const CHANGELOG_VERSION = '2026-08-18';
         const CHANGELOG = [
+            {
+                version: '2026-08-18',
+                date: 'August 18, 2026',
+                items: [
+                    { type: 'fix', text: 'A <code>:kakera:</code> icon in a pasted <code>$wishlist</code> now auto-checks that row\'s Kakera-boost flag instead of being stripped as pure decoration - it only shows up on some characters and not others, so it\'s a real flag, not just a symbol.' },
+                    { type: 'fix', text: 'A tracked Ourosphere Perk 1 level could previously override (and cascade corruption into) a wishlist booster contribution that pure neighbor-math could already solve cleanly on its own. Pure math now always gets first priority - the Ourosphere tracker only fills in a character it genuinely can\'t solve otherwise.' },
+                    { type: 'feature', text: 'Unchecking Star on a real, previously-confirmed starwish now surfaces a <code>$swr</code> (<code>$starwishremove</code>) command, same idea as removing a row surfacing <code>$wr</code> - and since starwish slots cost sacrificed wishlist slots to unlock, it also suggests how many you could reclaim by lowering your saved starwish capacity, with a one-click button to apply that to the capacity fields.' },
+                    { type: 'feature', text: 'Every row now defaults to Included when you open a wishlist, instead of remembering whatever was individually left checked/unchecked last time.' },
+                    { type: 'fix', text: 'The claimed checkmark and the raw <code>+N%</code> from a wishlist paste used to be frozen into static badges that went stale the moment you reordered rows or edited a Booster %. The <code>+N%</code> shown per row is now computed live from its current neighbors\' Booster %s every time, instead of the number from whenever you originally pasted.' },
+                    { type: 'feature', text: 'Added "Star All"/"Star None", "Lock All"/"Lock None", and "Kakera-Boost All"/"Kakera-Boost None" buttons above the wishlist row list, for setting a flag across every row at once instead of one checkbox at a time.' },
+                    { type: 'fix', text: 'Combining Lock + Kakera-boost (without Star) on the wish command builder now generates a single <code>$wishkl</code> command, instead of two separate <code>$wishl</code>/<code>$wishk</code> commands.' },
+                    { type: 'feature', text: 'Any Booster % on the Wishlists tab - however it got there (solved from the paste, a rough guess when nothing else can pin it down, or typed by hand) - is now checked live against that character\'s tracked Ourosphere Perk 1 level: no tracked level at all shows "⚠ unconfirmed", a tracked level that disagrees shows "⚠ doesn\'t match Ourosphere (confirmed: N%)", and a tracked level that agrees shows nothing. Typing 0 (or unchecking Booster) clears whatever warning is showing, and it\'s recomputed fresh the moment you set a new %.' },
+                    { type: 'fix', text: 'Fixed a real "my sphere data isn\'t being saved" report: tracking a character on the Ourosphere tab before their name could match anyone in the loaded collection, then loading/re-parsing a collection that includes them, silently orphaned the already-pasted perk/investment data under a duplicate empty entry instead of attaching it to the newly-matched one.' },
+                    { type: 'fix', text: 'The Wishlists tab\'s row editor is an inline panel, not a popup - switching to the Ourosphere tab to track a character\'s Perk 1 while the editor stayed open, then switching back, used to leave that row\'s "unconfirmed"/"doesn\'t match" warning frozen at whatever it was on import. It\'s now rechecked the moment you return to the tab, no re-import needed.' }
+                ]
+            },
             {
                 version: '2026-08-17',
                 date: 'August 17, 2026',
@@ -15004,12 +15061,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // A trailing star (starwish - top priority) or check mark (already
         // claimed) is real signal from Mudae's own $wishlist output, not
         // decoration - both are recognized regardless of order and kept
-        // alongside the plain name rather than stripped. $wishlist can also
-        // tack on a ":kakera:" emoji code and/or a "+N%" kakera boost
-        // percentage (e.g. "Miku (Goku) ✅:kakera: +130%") - those are pure
-        // decoration with no signal worth keeping, so they're just dropped.
-        // All four can appear in any order/combination, so this strips
-        // whichever trailing one matches, repeatedly, until none do.
+        // alongside the plain name rather than stripped. A ":kakera:" icon
+        // is real signal too (confirmed via a real paste: it shows up on
+        // some characters but not others in the same list, so it can't be
+        // pure decoration) - it's Mudae's own marker for the $wishk
+        // (kakera-boost) flag being active on that wish, same thing this
+        // app's own "Kakera boost" row checkbox represents. All of these,
+        // plus a "+N%" kakera boost percentage (e.g. "Miku (Goku)
+        // ✅:kakera: +130%"), can appear in any order/combination, so this
+        // strips whichever trailing one matches, repeatedly, until none do.
         function parseWishlistText(text) {
             const characters = [];
             text.split('\n').forEach(function (rawLine) {
@@ -15019,6 +15079,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 let isStarWish = false;
                 let isClaimed = false;
                 let isLocked = false;
+                let wantsKakeraBoost = false;
                 let boostPercent = null;
                 let changed = true;
                 while (changed) {
@@ -15063,6 +15124,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     }
                     const kakeraMatch = line.match(/\s*:kakera:\s*$/i);
                     if (kakeraMatch) {
+                        wantsKakeraBoost = true;
                         line = line.slice(0, kakeraMatch.index).trim();
                         changed = true;
                         continue;
@@ -15097,8 +15159,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                         isLocked: isLocked,
                         isBooster: false,
                         boosterPercent: null,
-                        wantsKakeraBoost: false,
-                        includeInCommand: false
+                        wantsKakeraBoost: wantsKakeraBoost,
+                        // Every freshly-parsed row starts Included by
+                        // default, so the row list and the command
+                        // builder below start in sync with no extra
+                        // "Include All Rows" click needed.
+                        includeInCommand: true
                     });
                 }
             });
@@ -15177,6 +15243,84 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // already-known value, exactly like an unclaimed character's
         // fixed 0). Matched by name only, same as every other Ourosphere
         // paste (wishlist/$opp text never includes a series).
+        // Whether a booster row's currently-set % is backed by real
+        // Ourosphere Perk 1 data for that character - regardless of HOW
+        // the number got there (pure neighbor-math, the Ourosphere-tracker
+        // fallback, a manual edit, or the last-resort own-shown guess).
+        // No tracked Perk 1 level at all -> 'unconfirmed' (nothing to
+        // check it against). A tracked level that disagrees with the
+        // current % -> 'mismatch' (something is actually wrong, not just
+        // unverified). A tracked level that agrees, or no % set at all ->
+        // no warning.
+        function computeWishlistBoosterWarning(c, perk1Lookup) {
+            const lookup = perk1Lookup || buildOuroperksPerk1Lookup();
+            if (!c.isClaimed || !c.isBooster || c.boosterPercent == null) {
+                return { warning: null, confirmedPercent: null };
+            }
+            const confirmed = lookup.get(normalizeWishName(c.name));
+            if (confirmed == null) return { warning: 'unconfirmed', confirmedPercent: null };
+            if (c.boosterPercent !== confirmed) return { warning: 'mismatch', confirmedPercent: confirmed };
+            return { warning: null, confirmedPercent: confirmed };
+        }
+
+        function wishlistBoosterWarningTitle(c) {
+            if (c.boosterWarning === 'unconfirmed') return 'This character has no tracked Ourosphere Perk 1 level, so this Booster % is unsubstantiated - paste $opp for them on the Ourosphere tab to confirm it.';
+            if (c.boosterWarning === 'mismatch') return `This doesn't match this character's tracked Ourosphere Perk 1 value (${c.boosterConfirmedPercent}%) - double-check which one is right.`;
+            return '';
+        }
+
+        function wishlistBoosterWarningBadgeHTML(c) {
+            if (c.boosterWarning === 'unconfirmed') {
+                return '<span class="wishlist-marker wishlist-booster-unconfirmed" title="' + escapeHTML(wishlistBoosterWarningTitle(c)) + '">⚠ unconfirmed - not in Ourosphere tab</span>';
+            }
+            if (c.boosterWarning === 'mismatch') {
+                return '<span class="wishlist-marker wishlist-booster-mismatch" title="' + escapeHTML(wishlistBoosterWarningTitle(c)) + `">⚠ doesn't match Ourosphere (${c.boosterConfirmedPercent}%)</span>`;
+            }
+            return '';
+        }
+
+        // Syncs an already-rendered booster % input + its warning badge to
+        // match the character's current state, without a full row
+        // re-render (which would drop focus/cursor position mid-typing).
+        function applyWishlistBoosterWarningToDOM(inputEl, rowEl, c) {
+            inputEl.classList.remove('wishlist-row-booster-input-estimated', 'wishlist-row-booster-input-unconfirmed', 'wishlist-row-booster-input-mismatch');
+            if (c.boosterPercentEstimated) {
+                inputEl.classList.add('wishlist-row-booster-input-estimated');
+                inputEl.title = 'Estimated from your saved Ouroperk self-boost rate, not solved directly - edit if you know the real value.';
+            } else if (c.boosterWarning) {
+                inputEl.classList.add('wishlist-row-booster-input-' + c.boosterWarning);
+                inputEl.title = wishlistBoosterWarningTitle(c);
+            } else {
+                inputEl.title = '';
+            }
+            const existingBadge = rowEl.querySelector('.wishlist-booster-unconfirmed, .wishlist-booster-mismatch');
+            if (existingBadge) existingBadge.remove();
+            if (c.boosterWarning) {
+                inputEl.insertAdjacentHTML('afterend', wishlistBoosterWarningBadgeHTML(c));
+            }
+        }
+
+        // The wishlist editor is an inline panel, not a blocking modal, so
+        // a real workflow is: open it, notice an "unconfirmed" row,
+        // switch to the Ourosphere tab to paste $opp for that character,
+        // then switch back - without this, the warning would stay frozen
+        // at whatever it was computed as on open/import, since nothing
+        // else re-renders the row list on a tab switch alone.
+        function refreshWishlistModalBoosterWarnings() {
+            const overlay = document.getElementById('wishlistModalOverlay');
+            if (!overlay || overlay.style.display === 'none') return;
+            if (!wishlistModalCharacters || wishlistModalCharacters.length === 0) return;
+            const perk1Lookup = buildOuroperksPerk1Lookup();
+            let anyChanged = false;
+            wishlistModalCharacters.forEach(function (c) {
+                const info = computeWishlistBoosterWarning(c, perk1Lookup);
+                if (c.boosterWarning !== info.warning || c.boosterConfirmedPercent !== info.confirmedPercent) anyChanged = true;
+                c.boosterWarning = info.warning;
+                c.boosterConfirmedPercent = info.confirmedPercent;
+            });
+            if (anyChanged) renderWishlistModalRows();
+        }
+
         function buildOuroperksPerk1Lookup() {
             const store = currentOuroperks();
             const byName = new Map();
@@ -15194,11 +15338,18 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         function inferWishlistBoosterPercentages(characters, selfBoostRatePercent) {
             const n = characters.length;
             const perk1Lookup = buildOuroperksPerk1Lookup();
-            const contribution = characters.map(function (c) {
-                if (!c.isClaimed) return 0;
-                const confirmed = perk1Lookup.get(normalizeWishName(c.name));
-                return confirmed != null ? confirmed : null;
-            });
+            // Pure neighbor-math always gets first priority - a claimed
+            // character's contribution starts unknown here exactly like
+            // before Ouroperks tracking existed, NOT pre-seeded from the
+            // tracker. A real report found that pre-seeding it let a
+            // stale/inaccurate tracked level silently override (and
+            // cascade corruption into) a value the equations could
+            // already solve cleanly from the paste alone, since one
+            // contribution feeds into two shared equations (as each of
+            // its two neighbors' left AND right term). Ouroperks data is
+            // instead folded in below, once per sweep, only for whatever
+            // the equations still haven't resolved.
+            const contribution = characters.map(function (c) { return c.isClaimed ? null : 0; });
             const selfResidual = new Array(n).fill(null);
             const unexplained = new Array(n).fill(false);
 
@@ -15264,7 +15415,57 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                         if (solved >= 0) { contribution[leftIdx] = solved; changed = true; }
                     }
                 }
+
+                // Fill genuine gaps only - once equation-solving has
+                // GENUINELY exhausted every possible sweep (changed is
+                // still false here), a claimed character still unresolved
+                // with a confirmed Ouroperks Perk 1 level tracked under
+                // the same name gets filled from it. Gated on the sweep
+                // having made zero equation-based progress - not run
+                // after every sweep - so pure neighbor-math always gets
+                // every chance to solve a value first; a real report found
+                // filling too eagerly let a tracked value "jump the
+                // queue" ahead of an equation that would have solved the
+                // same character correctly a sweep or two later, baking
+                // in a stale/wrong tracked number instead. Filling one in
+                // can itself unlock further neighbor-math progress next
+                // sweep (it's just as "known" as anything solved above),
+                // so this still keeps the loop going via `changed` rather
+                // than being a one-off pass at the very end.
+                if (!changed) {
+                    for (let i = 0; i < n; i++) {
+                        if (contribution[i] == null && characters[i].isClaimed) {
+                            const confirmed = perk1Lookup.get(normalizeWishName(characters[i].name));
+                            if (confirmed != null) {
+                                contribution[i] = confirmed;
+                                changed = true;
+                            }
+                        }
+                    }
+                }
             }
+
+            // Last-resort fallback, run once the whole solve above has
+            // genuinely stalled (no equation, no Ouroperks match) - a
+            // real report: two boosters can end up sharing one equation
+            // with no way to split it (e.g. a neighbor's shown 200% =
+            // BoosterA + BoosterB, both totally unknown - mathematically
+            // any split is possible, not just an even one), so neither
+            // ever gets solved even though the paste clearly shows each
+            // of them contributing SOMETHING. Rather than leave a claimed
+            // character with their own shown boost silently unflagged,
+            // assume their own shown value is roughly their own
+            // contribution too (real accounts often invest similarly
+            // across their booster characters) - a much weaker claim than
+            // either a clean solve or a confirmed Ouroperks match, so it's
+            // flagged distinctly (see computeWishlistBoosterWarning below)
+            // and never fed back into the loop above to help solve anyone
+            // else (compounding one guess into another).
+            characters.forEach(function (c, i) {
+                if (c.isClaimed && contribution[i] == null && selfResidual[i] == null && c.boostPercent != null && c.boostPercent > 0) {
+                    contribution[i] = c.boostPercent;
+                }
+            });
 
             const rate = (selfBoostRatePercent != null && selfBoostRatePercent > 0) ? selfBoostRatePercent : null;
 
@@ -15294,6 +15495,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 c.hasSelfBoostPortion = selfResidual[i] != null;
                 c.selfResidualPercent = selfResidual[i];
                 c.hasUnexplainedBoost = unexplained[i];
+                const warningInfo = computeWishlistBoosterWarning(c, perk1Lookup);
+                c.boosterWarning = warningInfo.warning;
+                c.boosterConfirmedPercent = warningInfo.confirmedPercent;
             });
         }
 
@@ -15310,6 +15514,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 if (c.isClaimed && c.hasSelfBoostPortion && c.boosterPercent == null && c.selfResidualPercent != null) {
                     c.boosterPercent = Math.round(c.selfResidualPercent / (selfBoostRatePercent / 100));
                     c.boosterPercentEstimated = true;
+                    const warningInfo = computeWishlistBoosterWarning(c);
+                    c.boosterWarning = warningInfo.warning;
+                    c.boosterConfirmedPercent = warningInfo.confirmedPercent;
                 }
             });
         }
@@ -15335,27 +15542,27 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // silently dropped - that's what the explicit Remove (x) button
         // (and its $wr reminder) is for, not a side effect of re-pasting.
         //
-        // isStarWish, isLocked, and isBooster all trust a freshly-detected
-        // "true" from the paste (⭐/🔐/a claimed character's own +N%
-        // respectively), but a manually-set true survives even when the
-        // fresh paste shows none of these - that's the normal state for
-        // something only *planned* in this app and not actually run/
-        // visible in Discord yet. isClaimed always reflects the freshest
-        // parse (it's pure status, nothing to plan). boostPercent/
-        // boosterPercent fall back to the old value when the fresh text
-        // has none of its own (e.g. a reconstructed round-trip of an
-        // existing entry, which carries no +N%). wantsKakeraBoost/
-        // includeInCommand are manual-only (kakera-boost intent/command-
-        // selection aren't paste-able at all), always kept from the old
-        // entry.
+        // isStarWish, isLocked, wantsKakeraBoost, and isBooster all trust a
+        // freshly-detected "true" from the paste (⭐/🔐/:kakera:/a claimed
+        // character's own +N% respectively), but a manually-set true
+        // survives even when the fresh paste shows none of these - that's
+        // the normal state for something only *planned* in this app and
+        // not actually run/visible in Discord yet. isClaimed always
+        // reflects the freshest parse (it's pure status, nothing to
+        // plan). boostPercent/boosterPercent fall back to the old value
+        // when the fresh text has none of its own (e.g. a reconstructed
+        // round-trip of an existing entry, which carries no +N%).
+        // includeInCommand is manual-only (command-selection isn't
+        // paste-able at all), always kept from the old entry.
         function mergeWishlistCharacters(oldChars, newChars) {
             const newMap = new Map();
             newChars.forEach(function (c) { newMap.set(normalizeWishName(c.name), c); });
 
+            const perk1Lookup = buildOuroperksPerk1Lookup();
             const merged = (oldChars || []).map(function (old) {
                 const c = newMap.get(normalizeWishName(old.name));
                 if (!c) return old;
-                return {
+                const mergedChar = {
                     name: c.name,
                     isStarWish: !!c.isStarWish || !!old.isStarWish,
                     isClaimed: c.isClaimed,
@@ -15363,13 +15570,17 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     isLocked: !!c.isLocked || !!old.isLocked,
                     isBooster: !!c.isBooster || !!old.isBooster,
                     boosterPercent: c.boosterPercent != null ? c.boosterPercent : (old.boosterPercent != null ? old.boosterPercent : null),
-                    wantsKakeraBoost: !!old.wantsKakeraBoost,
+                    wantsKakeraBoost: !!c.wantsKakeraBoost || !!old.wantsKakeraBoost,
                     includeInCommand: !!old.includeInCommand,
                     hasUnexplainedBoost: !!c.hasUnexplainedBoost,
                     hasSelfBoostPortion: !!c.hasSelfBoostPortion,
                     selfResidualPercent: c.selfResidualPercent != null ? c.selfResidualPercent : (old.selfResidualPercent != null ? old.selfResidualPercent : null),
                     boosterPercentEstimated: c.boosterPercent != null ? !!c.boosterPercentEstimated : !!old.boosterPercentEstimated
                 };
+                const warningInfo = computeWishlistBoosterWarning(mergedChar, perk1Lookup);
+                mergedChar.boosterWarning = warningInfo.warning;
+                mergedChar.boosterConfirmedPercent = warningInfo.confirmedPercent;
+                return mergedChar;
             });
 
             const oldMap = new Map();
@@ -15439,6 +15650,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // separate command that actually does, hence tracking these to
         // surface a ready-made command for it.
         let wishlistPendingRemovals = [];
+        // Names unstarred this editing session that were confirmed
+        // starred at baseline (an actual real starwish, not just a
+        // locally-planned one) - $swr (starwishremove) is the separate
+        // command that actually demotes it in Discord, same idea as
+        // wishlistPendingRemovals/$wr but for the Star flag specifically.
+        // Unlike $wr, $swr keeps the wish itself - it only drops the
+        // starwish status.
+        let wishlistPendingStarRemovals = [];
 
         function isWishlistRowChanged(c) {
             const baseline = wishlistRowBaselines.get(normalizeWishName(c.name)) || { isStarWish: false, isLocked: false, wantsKakeraBoost: false };
@@ -15448,7 +15667,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         }
 
         function backfillWishlistCharacterFields(c) {
-            return {
+            const backfilled = {
                 name: c.name,
                 isStarWish: !!c.isStarWish,
                 isClaimed: !!c.isClaimed,
@@ -15463,6 +15682,13 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 selfResidualPercent: c.selfResidualPercent != null ? c.selfResidualPercent : null,
                 boosterPercentEstimated: !!c.boosterPercentEstimated
             };
+            // Recomputed fresh (not carried over from storage) since the
+            // Ourosphere tab's tracked data can change independently of
+            // this wishlist's own last save.
+            const warningInfo = computeWishlistBoosterWarning(backfilled);
+            backfilled.boosterWarning = warningInfo.warning;
+            backfilled.boosterConfirmedPercent = warningInfo.confirmedPercent;
+            return backfilled;
         }
 
         function openWishlistModal(editId) {
@@ -15477,6 +15703,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const existing = editId ? currentWishlists().entries[editId] : null;
 
             wishlistModalCharacters = existing ? existing.characters.map(backfillWishlistCharacterFields) : [];
+            // Every row starts Included by default on opening a wishlist -
+            // whatever was individually left checked/unchecked last time
+            // isn't remembered here, so the row list and the command
+            // builder below start in sync without an extra "Include All
+            // Rows" click.
+            wishlistModalCharacters.forEach(function (c) { c.includeInCommand = true; });
 
             // Baseline = whatever's already saved (or nothing, for a brand
             // new wishlist) - nothing has "changed" yet just from opening.
@@ -15524,6 +15756,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
             wishlistPendingRemovals = [];
             renderWishlistRemovalsSection();
+            wishlistPendingStarRemovals = [];
+            renderWishlistStarRemovalsSection();
 
             // $wish/$sw/etc. only ever ADD - they never overwrite an
             // existing wishlist, so building a brand new list here and
@@ -15544,6 +15778,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             wishlistModalIsOwn = checkbox ? checkbox.checked : false;
             const section = document.getElementById('wishlistCapacitySection');
             if (section) section.style.display = wishlistModalIsOwn ? 'block' : 'none';
+            // The star-removal capacity-reclaim suggestion only makes
+            // sense for your own wishlist.
+            renderWishlistStarRemovalsSection();
         }
 
         function closeWishlistModal() {
@@ -15558,6 +15795,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             wishlistConfirmedRealNames = new Set();
             wishlistRowOrderBaseline = [];
             wishlistPendingRemovals = [];
+            wishlistPendingStarRemovals = [];
         }
 
         // A fresh $wishlist paste is Discord's own CURRENT, complete list -
@@ -15627,6 +15865,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // in the paste, or weren't real to begin with).
             wishlistRowOrderBaseline = parsed.map(function (c) { return c.name; });
             clearWishlistPendingRemovalsFor(parsed.map(function (c) { return c.name; }));
+            // A fresh paste showing a name as no-longer-starred confirms
+            // $swr already happened for real - nothing left pending. One
+            // still shown starred means it hasn't run yet, so that
+            // reminder stays (only cleared by actually re-checking Star,
+            // or by the paste itself confirming it's gone).
+            clearWishlistPendingStarRemovalsFor(parsed.filter(function (c) { return !c.isStarWish; }).map(function (c) { return c.name; }));
 
             renderWishlistModalRows();
             const droppedNote = droppedCount > 0
@@ -15708,31 +15952,41 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             return total > 0 ? total : null;
         }
 
+        // The claimed checkmark and the raw "+N%" from the original paste
+        // both used to be frozen into their own static badges here, but
+        // neither stays accurate: what a character actually receives is a
+        // function of ITS CURRENT NEIGHBORS' Booster %s, which changes the
+        // moment you drag-reorder rows or edit a neighbor's Booster input -
+        // a frozen number from the moment you pasted goes stale
+        // immediately. The single boost marker shown here is instead
+        // computed live, every render, from findWishlistBoosterBoost
+        // (current adjacent Booster-flagged characters only) - claimed
+        // status itself is still visible via the Booster toggle's own
+        // enabled/disabled state, so it doesn't need a redundant badge.
         function wishlistRowMarkersHTML(c, idx) {
             const boosterNeighbor = findWishlistBoosterBoost(wishlistModalCharacters, idx);
             const bits = [];
-            if (c.isClaimed) bits.push('<span class="wishlist-marker" title="Already claimed">✅</span>');
-            if (c.boostPercent != null) {
-                if (c.hasSelfBoostPortion) {
-                    // Confirmed via Mudae's own $ouroshop docs: "a part of
-                    // the spawn chance bonus applied by perk 1 is also
-                    // applied to the character upgraded" - this character
-                    // is reflecting a bit of their own Ouroperk investment
-                    // back onto themselves, on top of what neighbors show.
-                    bits.push(`<span class="wishlist-marker wishlist-self-boost" title="Includes a self-reflected part of this character's own Ouroperk investment (confirmed Mudae mechanic: a part of perk 1's bonus also applies to the character upgraded), on top of whatever it receives from neighbors.">+${c.boostPercent}% (incl. self)</span>`);
-                } else if (c.hasUnexplainedBoost) {
-                    // Both neighbors are accounted for and still don't add
-                    // up to this, and it's not claimed (so it can't be the
-                    // self-boost case above, which requires an Ouroperk
-                    // investment) - real signal, just not attributable to
-                    // anyone's Ouroperk (most likely a different, flat
-                    // account-wide bonus that happens to only show here).
-                    bits.push(`<span class="wishlist-marker wishlist-unexplained-boost" title="This +${c.boostPercent}% doesn't match neighbor-boost math - both neighbors are already accounted for and don't add up to it, so it's likely from a different bonus source, not an Ouroperk. Not attributed to anyone as a booster.">+${c.boostPercent}% (unexplained)</span>`);
-                } else {
-                    bits.push(`<span class="wishlist-marker" title="Boost % from the $wishlist paste">+${c.boostPercent}%</span>`);
-                }
+            // What THIS row currently RECEIVES from its own live neighbors -
+            // independent of whatever's below, which is about THIS row's
+            // OWN originally-pasted value/status, not what it receives.
+            if (boosterNeighbor != null) {
+                bits.push(`<span class="wishlist-marker wishlist-booster-neighbor" title="Computed live from adjacent Booster %s - updates as you reorder rows or edit a neighbor's Booster %">+${boosterNeighbor}%</span>`);
             }
-            if (boosterNeighbor != null) bits.push(`<span class="wishlist-marker wishlist-booster-neighbor" title="Ouroperk boost from an adjacent booster character">+${boosterNeighbor}% neighbor</span>`);
+            if (c.hasSelfBoostPortion) {
+                // Confirmed via Mudae's own $ouroshop docs: "a part of the
+                // spawn chance bonus applied by perk 1 is also applied to
+                // the character upgraded" - the original paste showed
+                // this character (a confirmed booster) reflecting a bit
+                // of its own Ouroperk investment back onto itself.
+                bits.push('<span class="wishlist-marker wishlist-self-boost" title="The original paste showed this character reflecting a bit of its own Ouroperk investment back onto itself (confirmed Mudae mechanic: a part of perk 1\'s bonus also applies to the character upgraded).">self-reflection confirmed</span>');
+            } else if (c.hasUnexplainedBoost) {
+                // Both neighbors were already accounted for in the
+                // original paste and still didn't add up to what was
+                // shown - real signal, just not attributable to anyone's
+                // Ouroperk (most likely a different, flat account-wide
+                // bonus that happens to only show here).
+                bits.push('<span class="wishlist-marker wishlist-unexplained-boost" title="The original paste showed a boost here that didn\'t match neighbor-boost math - both neighbors were already accounted for and didn\'t add up to it, so it\'s likely from a different bonus source, not an Ouroperk. Not attributed to anyone as a booster.">unexplained boost</span>');
+            }
             if (isWishlistRowChanged(c)) bits.push('<span class="wishlist-marker wishlist-row-changed" title="Star/Lock/Kakera differs from the last known/imported state - included below for command generation">✏️ changed</span>');
             return bits.join('');
         }
@@ -15802,7 +16056,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                         <label class="wishlist-row-toggle${c.isClaimed ? '' : ' wishlist-row-toggle-disabled'}" title="${c.isClaimed ? 'This character has an Ouroperk that boosts spawn chance for adjacent wishlist entries - not the same as the $bonus totals. Auto-detected from your wishlist order where possible; double-check against $ouroperks if a value looks off.' : 'Ouroperks only exist on characters you\'ve already claimed - mark this as claimed (✅ from the $wishlist paste) first'}">
                             <input type="checkbox" data-action="booster" ${c.isBooster && c.isClaimed ? 'checked' : ''} ${c.isClaimed ? '' : 'disabled'}> Booster
                         </label>
-                        ${(c.isBooster && c.isClaimed) ? `<input type="number" class="wishlist-row-booster-input${c.boosterPercentEstimated ? ' wishlist-row-booster-input-estimated' : ''}" data-action="boosterPercent" min="0" max="500" value="${c.boosterPercent != null ? c.boosterPercent : ''}" placeholder="%" title="${c.boosterPercentEstimated ? 'Estimated from your saved Ouroperk self-boost rate, not solved directly - edit if you know the real value.' : ''}">` : ''}
+                        ${(c.isBooster && c.isClaimed) ? `<input type="number" class="wishlist-row-booster-input${c.boosterPercentEstimated ? ' wishlist-row-booster-input-estimated' : ''}${c.boosterWarning ? ' wishlist-row-booster-input-' + c.boosterWarning : ''}" data-action="boosterPercent" min="0" max="500" value="${c.boosterPercent != null ? c.boosterPercent : ''}" placeholder="%" title="${c.boosterPercentEstimated ? 'Estimated from your saved Ouroperk self-boost rate, not solved directly - edit if you know the real value.' : escapeHTML(wishlistBoosterWarningTitle(c))}">` : ''}
+                        ${(c.boosterWarning && c.isBooster) ? wishlistBoosterWarningBadgeHTML(c) : ''}
                     </div>
                 `;
 
@@ -15816,8 +16071,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     wishlistModalCharacters[idx].includeInCommand = e.target.checked;
                 });
                 row.querySelector('[data-action="star"]').addEventListener('change', function (e) {
-                    wishlistModalCharacters[idx].isStarWish = e.target.checked;
+                    const char = wishlistModalCharacters[idx];
+                    char.isStarWish = e.target.checked;
                     syncWishlistRowIncludeFromChange(idx);
+                    trackWishlistStarRemovalForRow(char, e.target.checked);
                 });
                 row.querySelector('[data-action="lock"]').addEventListener('change', function (e) {
                     wishlistModalCharacters[idx].isLocked = e.target.checked;
@@ -15828,19 +16085,45 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     syncWishlistRowIncludeFromChange(idx);
                 });
                 row.querySelector('[data-action="booster"]').addEventListener('change', function (e) {
-                    wishlistModalCharacters[idx].isBooster = e.target.checked;
-                    if (!e.target.checked) wishlistModalCharacters[idx].boosterPercent = null;
+                    const char = wishlistModalCharacters[idx];
+                    char.isBooster = e.target.checked;
+                    if (!e.target.checked) {
+                        char.boosterPercent = null;
+                        char.boosterWarning = null;
+                        char.boosterConfirmedPercent = null;
+                    } else {
+                        const info = computeWishlistBoosterWarning(char);
+                        char.boosterWarning = info.warning;
+                        char.boosterConfirmedPercent = info.confirmedPercent;
+                    }
                     renderWishlistModalRows();
                 });
                 const boosterInput = row.querySelector('[data-action="boosterPercent"]');
                 if (boosterInput) {
                     boosterInput.addEventListener('input', function (e) {
+                        const char = wishlistModalCharacters[idx];
                         const val = parseInt(e.target.value, 10);
-                        wishlistModalCharacters[idx].boosterPercent = isNaN(val) ? null : val;
-                        // A manual edit is no longer just an estimate.
-                        wishlistModalCharacters[idx].boosterPercentEstimated = false;
-                        boosterInput.classList.remove('wishlist-row-booster-input-estimated');
-                        boosterInput.title = '';
+                        if (val === 0) {
+                            // A 0% booster isn't a meaningful real value -
+                            // resets the row like unchecking Booster,
+                            // rather than "confirming" a 0%, so a fresh
+                            // guess typed afterward is checked against
+                            // Ourosphere from scratch like any other edit.
+                            char.isBooster = false;
+                            char.boosterPercent = null;
+                            char.boosterWarning = null;
+                            char.boosterConfirmedPercent = null;
+                            renderWishlistModalRows();
+                            return;
+                        }
+                        char.boosterPercent = isNaN(val) ? null : val;
+                        // A direct manual edit is no longer just an
+                        // estimate from the self-boost rate.
+                        char.boosterPercentEstimated = false;
+                        const info = computeWishlistBoosterWarning(char);
+                        char.boosterWarning = info.warning;
+                        char.boosterConfirmedPercent = info.confirmedPercent;
+                        applyWishlistBoosterWarningToDOM(boosterInput, row, char);
                         refreshWishlistRowMarkers();
                     });
                 }
@@ -15853,6 +16136,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     const wasReal = wishlistConfirmedRealNames.has(normalizeWishName(removedChar.name));
                     wishlistModalCharacters.splice(idx, 1);
                     if (wasReal) addWishlistPendingRemoval(removedChar.name);
+                    // $wr drops the wish (and any starwish status) entirely -
+                    // a separate $swr reminder for the same name would be
+                    // redundant.
+                    clearWishlistPendingStarRemovalsFor([removedChar.name]);
                     renderWishlistModalRows();
                 });
 
@@ -15968,6 +16255,22 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             renderWishlistModalRows();
         }
 
+        // Bulk Star/Lock/Kakera-boost toggle for every row at once - a
+        // real, freshly-pasted $wishlist can have dozens of rows that all
+        // need the same flag, and doing it one checkbox at a time isn't
+        // realistic. Bulk-setting a flag is the same signal a per-row edit
+        // already gives (see syncWishlistRowIncludeFromChange) - Include
+        // follows automatically per row, based on whether it now differs
+        // from that row's own last known/imported baseline.
+        function setAllWishlistRowsFlag(flagName, value) {
+            wishlistModalCharacters.forEach(function (c) {
+                c[flagName] = value;
+                c.includeInCommand = isWishlistRowChanged(c);
+                if (flagName === 'isStarWish') trackWishlistStarRemovalForRow(c, value);
+            });
+            renderWishlistModalRows();
+        }
+
         function addWishlistPendingRemoval(name) {
             const key = normalizeWishName(name);
             if (!wishlistPendingRemovals.some(function (n) { return normalizeWishName(n) === key; })) {
@@ -16004,6 +16307,97 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 </div>`;
             const btn = document.getElementById('wishlistRemovalsCopyBtn');
             if (btn) btn.onclick = function () { copyCommand(btn, command); };
+        }
+
+        // Shared by the per-row Star checkbox and the "Star All"/"Star
+        // None" bulk buttons - only a REAL, previously-confirmed starwish
+        // needs a $swr reminder when unstarred; one only ever planned in
+        // this app (never actually starred in Discord) has nothing to
+        // undo there. Re-starring cancels any pending reminder.
+        function trackWishlistStarRemovalForRow(char, checked) {
+            const key = normalizeWishName(char.name);
+            const baseline = wishlistRowBaselines.get(key);
+            const wasReallyStarred = !!(baseline && baseline.isStarWish) && wishlistConfirmedRealNames.has(key);
+            if (!checked && wasReallyStarred) {
+                addWishlistPendingStarRemoval(char.name);
+            } else if (checked) {
+                clearWishlistPendingStarRemovalsFor([char.name]);
+            }
+        }
+
+        function addWishlistPendingStarRemoval(name) {
+            const key = normalizeWishName(name);
+            if (!wishlistPendingStarRemovals.some(function (n) { return normalizeWishName(n) === key; })) {
+                wishlistPendingStarRemovals.push(name);
+            }
+            renderWishlistStarRemovalsSection();
+        }
+
+        // Re-starring (or a fresh paste reconfirming it's still starred)
+        // cancels out any pending $swr for it - same idea as
+        // clearWishlistPendingRemovalsFor for $wr.
+        function clearWishlistPendingStarRemovalsFor(names) {
+            const keys = new Set(names.map(normalizeWishName));
+            wishlistPendingStarRemovals = wishlistPendingStarRemovals.filter(function (n) { return !keys.has(normalizeWishName(n)); });
+            renderWishlistStarRemovalsSection();
+        }
+
+        function renderWishlistStarRemovalsSection() {
+            const group = document.getElementById('wishlistStarRemovalsGroup');
+            const output = document.getElementById('wishlistStarRemovalsOutput');
+            const capacityNote = document.getElementById('wishlistStarRemovalsCapacityNote');
+            if (!group || !output) return;
+
+            if (wishlistPendingStarRemovals.length === 0) {
+                group.style.display = 'none';
+                output.innerHTML = '';
+                if (capacityNote) capacityNote.innerHTML = '';
+                return;
+            }
+
+            group.style.display = 'block';
+            const command = `$swr ${wishlistPendingStarRemovals.join('$')}`;
+            output.innerHTML = `<div class="command-item">
+    <div class="command-text">${escapeHTML(command)}</div>
+    <button type="button" class="btn btn-sm btn-primary" id="wishlistStarRemovalsCopyBtn">Copy Command</button>
+</div>`;
+            const copyBtn = document.getElementById('wishlistStarRemovalsCopyBtn');
+            if (copyBtn) copyBtn.onclick = function () { copyCommand(copyBtn, command); };
+
+            // Un-starring frees up a starwish slot, but Mudae doesn't
+            // automatically hand back the wishlist slots that slot cost
+            // to ramp up to in the first place (no confirmed command for
+            // that either) - this is only a suggestion for the capacity
+            // fields above, never applied automatically, same as every
+            // other capacity number in this app.
+            if (capacityNote) {
+                capacityNote.innerHTML = '';
+                const capacity = wishlistModalBonusSnapshot.starwishSlots;
+                const count = wishlistPendingStarRemovals.length;
+                if (wishlistModalIsOwn && capacity != null) {
+                    const newCapacity = Math.max(STARWISH_BASE_SLOTS, capacity - count);
+                    const actuallyDropped = capacity - newCapacity;
+                    if (actuallyDropped > 0) {
+                        const reclaimed = estimateStarwishUpgradeCost(newCapacity, actuallyDropped);
+                        capacityNote.innerHTML = `Discord doesn't hand back the wishlist slots these cost automatically -
+                            if you also lower your saved starwish capacity from <b>${capacity}</b> to <b>${newCapacity}</b>
+                            (double-check against a fresh <code>$bonus</code> first), you'd reclaim roughly
+                            <b>${reclaimed} wishlist slot${reclaimed === 1 ? '' : 's'}</b>.
+                            <button type="button" class="btn btn-sm" id="wishlistStarRemovalsApplyCapacityBtn">Apply to Capacity Fields</button>`;
+                        const applyBtn = document.getElementById('wishlistStarRemovalsApplyCapacityBtn');
+                        if (applyBtn) {
+                            applyBtn.onclick = function () {
+                                const starwishField = document.getElementById('wishlistCapacityStarwish');
+                                const wishlistField = document.getElementById('wishlistCapacityWishlist');
+                                if (starwishField) starwishField.value = newCapacity;
+                                if (wishlistField && wishlistModalBonusSnapshot.wishlistSlots != null) {
+                                    wishlistField.value = wishlistModalBonusSnapshot.wishlistSlots + reclaimed;
+                                }
+                            };
+                        }
+                    }
+                }
+            }
         }
 
         let wishlistRowDragFromIndex = null;
@@ -16049,10 +16443,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
         // Confirmed syntax: $sw (starwish) combines the same lock/kakera
         // flag letters $wish itself documents ($swlk = starwish+lock+kakera
-        // in one command). Combining lock+kakera on a plain (non-star) $wish
-        // isn't confirmed anywhere as a single command, so that combination
-        // deliberately falls back to two separate commands rather than
-        // guessing at unverified syntax.
+        // in one command), and combining lock+kakera on a plain (non-star)
+        // $wish is its own single command too ($wishkl), confirmed by the
+        // user directly - no need to fall back to two separate commands.
         function buildWishCommands(chars) {
             const groups = new Map();
             chars.forEach(function (c) {
@@ -16066,24 +16459,21 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
             const commands = [];
             groups.forEach(function (g) {
-                let bases;
+                let base;
                 if (g.star) {
-                    let base = '$sw';
+                    base = '$sw';
                     if (g.lock) base += 'l';
                     if (g.kakera) base += 'k';
-                    bases = [base];
                 } else if (g.lock && g.kakera) {
-                    bases = ['$wishl', '$wishk'];
+                    base = '$wishkl';
                 } else if (g.lock) {
-                    bases = ['$wishl'];
+                    base = '$wishl';
                 } else if (g.kakera) {
-                    bases = ['$wishk'];
+                    base = '$wishk';
                 } else {
-                    bases = ['$wish'];
+                    base = '$wish';
                 }
-                bases.forEach(function (base) {
-                    commands.push({ command: `${base} ${g.names.join('$')}`, names: g.names.slice() });
-                });
+                commands.push({ command: `${base} ${g.names.join('$')}`, names: g.names.slice() });
             });
             return commands;
         }
@@ -16188,17 +16578,13 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             }
 
             const commands = buildWishCommands(chars);
-            const anyUnstarredLockAndKakera = chars.some(function (c) { return !c.isStarWish && c.isLocked && c.wantsKakeraBoost; });
-            const unconfirmedNote = anyUnstarredLockAndKakera
-                ? '<p class="sort-hint" style="margin-top: 6px;">Combining Lock + Kakera boost without Star isn\'t a confirmed single command in Mudae, so two separate commands are generated instead.</p>'
-                : '';
 
             output.innerHTML = commands.map(function (c, i) {
                 return `<div class="command-item">
     <div class="command-text">${escapeHTML(c.command)}</div>
     <button type="button" class="btn btn-sm btn-primary" data-command-index="${i}">Copy Command</button>
 </div>`;
-            }).join('') + unconfirmedNote;
+            }).join('');
 
             commands.forEach(function (c, i) {
                 const btn = output.querySelector(`[data-command-index="${i}"]`);
@@ -16215,7 +16601,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     name: n, isStarWish: input.star, isClaimed: false, boostPercent: null,
                     isLocked: input.lock, isBooster: false, boosterPercent: null,
                     wantsKakeraBoost: input.kakera, includeInCommand: true, hasUnexplainedBoost: false, hasSelfBoostPortion: false,
-                    selfResidualPercent: null, boosterPercentEstimated: false
+                    selfResidualPercent: null, boosterPercentEstimated: false, boosterWarning: null, boosterConfirmedPercent: null
                 });
                 // Brand new to this wishlist - baseline is "nothing set"
                 // so it shows as changed/included right away.
@@ -16354,6 +16740,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // last import).
             applyWishlistSelfBoostRateEstimate(wishlistModalCharacters, myCapacity.selfBoostRatePercent);
             renderWishlistModalRows();
+            renderWishlistStarRemovalsSection();
             if (message) message.innerHTML = '<p class="success-message">Capacity saved - it\'ll be here for any wishlist you flag as "mine".</p>';
         }
 
@@ -16716,6 +17103,30 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const key = ouroperksEntryKey(seriesName || '', name);
 
             let entry = store.entries[key];
+            if (!entry && seriesName) {
+                // This name may already be tracked under the older,
+                // unmatched key (pasted before the collection had this
+                // character, or before any collection was loaded at all -
+                // a real report of "my sphere data isn't being saved"
+                // traced back to exactly this). Since the key itself is
+                // derived from the series match, resolving one later
+                // computes a DIFFERENT key - migrate the existing entry in
+                // place instead of silently starting a fresh, empty one
+                // and orphaning the real data under the stale key.
+                const unmatchedKey = ouroperksEntryKey('', name);
+                const unmatchedEntry = store.entries[unmatchedKey];
+                if (unmatchedEntry && !unmatchedEntry.series) {
+                    delete store.entries[unmatchedKey];
+                    const orderIdx = store.order.indexOf(unmatchedKey);
+                    if (orderIdx !== -1) store.order.splice(orderIdx, 1);
+                    if (ouroperksSelectedEntryKey === unmatchedKey) ouroperksSelectedEntryKey = key;
+                    unmatchedEntry.key = key;
+                    unmatchedEntry.series = seriesName;
+                    entry = unmatchedEntry;
+                    store.entries[key] = entry;
+                    store.order.push(key);
+                }
+            }
             if (!entry) {
                 entry = {
                     key: key, name: name, series: seriesName,
