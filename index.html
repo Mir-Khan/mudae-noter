@@ -674,6 +674,15 @@
             flex-wrap: wrap;
             gap: 8px;
             justify-content: center;
+            /* A very large series group used to push the whole page to an
+               unwieldy scroll length - capping the list's own height and
+               scrolling internally keeps the page navigable regardless of
+               how many characters one series holds. Small groups are
+               unaffected (max-height only kicks in once content actually
+               exceeds it). */
+            max-height: 65vh;
+            overflow-y: auto;
+            padding-right: 4px;
         }
 
         .character-card {
@@ -14551,7 +14560,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 date: 'August 19, 2026',
                 items: [
                     { type: 'feature', text: 'Added <b>Export / Import</b>: download a collection (or all of them) as a JSON file, and re-import it on another device/browser as a new collection or an overwrite.' },
-                    { type: 'feature', text: 'Added <b>Dynamic Note Suffixes</b> on the Notes tab: rules that append a live-updating suffix to a note based on keys, kakera, or color, using your own symbols and thresholds.' }
+                    { type: 'feature', text: 'Added <b>Dynamic Note Suffixes</b> on the Notes tab: rules that append a live-updating suffix to a note based on keys, kakera, or color, using your own symbols and thresholds.' },
+                    { type: 'fix', text: 'A very large series group on the Notes tab used to stretch the whole page to an unwieldy scroll length - its character list now caps its own height and scrolls internally instead.' }
                 ]
             },
             {

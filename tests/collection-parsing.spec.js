@@ -55,5 +55,30 @@ module.exports = [
             assert.strictEqual(chars[0].note, '');
             assert.strictEqual(chars[0].isDisabled, true);
         }
+    },
+    {
+        // Regression test for a real report: a very large series group used
+        // to push the whole page to an unwieldy scroll length. The group's
+        // own character list now caps its height and scrolls internally
+        // instead, so the page itself stays a normal length regardless of
+        // how many characters one series holds.
+        name: 'a very large series group scrolls internally instead of stretching the whole page',
+        async run(page) {
+            const lines = ['BigSeries - 60/60'];
+            for (let i = 1; i <= 60; i++) lines.push(`Character${i} 100 ka - https://example.com/${i}.png`);
+            await parseText(page, lines.join('\n'));
+            await page.waitForSelector('.series-card');
+
+            const metrics = await page.locator('.characters-list').evaluate(el => ({
+                scrollHeight: el.scrollHeight,
+                clientHeight: el.clientHeight
+            }));
+            assert.ok(metrics.scrollHeight > metrics.clientHeight,
+                `expected the character list to be internally scrollable for a large group, got scrollHeight ${metrics.scrollHeight} vs clientHeight ${metrics.clientHeight}`);
+
+            const pageScrollHeight = await page.evaluate(() => document.body.scrollHeight);
+            assert.ok(pageScrollHeight < metrics.scrollHeight,
+                `expected the page itself to stay shorter than the group's full (unscrolled) content height, got page ${pageScrollHeight} vs group content ${metrics.scrollHeight}`);
+        }
     }
 ];
