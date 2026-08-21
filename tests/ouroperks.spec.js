@@ -861,5 +861,185 @@ Erza Scarlet ✅`);
             const statuses = await page.locator('#ouroShopList .ouro-perk-status').allTextContents();
             assert.strictEqual(statuses[0], 'LVL 3');
         }
+    },
+    {
+        // Regression test for a real report: a since-fixed bug could leave
+        // the same character tracked under two entries (one an orphaned
+        // copy with no collection match/thumbnail) after a collection
+        // re-import - "Clean Up Duplicates" merges them back into one,
+        // keeping whichever side's data is actually more recent per field
+        // rather than always trusting the collection-matched copy.
+        name: '"Clean Up Duplicates" merges a character tracked twice, keeping the newer data per field and the collection-matched thumbnail link',
+        async run(page) {
+            await loadDemoCollection(page);
+            const realSeriesName = await page.evaluate(() => Object.keys(AppState.seriesData)[0]);
+            const realCharName = await page.evaluate((s) => AppState.seriesData[s].characters[0].name, realSeriesName);
+            await openOurosphereTab(page);
+
+            await page.evaluate(({ series, name }) => {
+                const store = currentOuroperks();
+                const oldKey = ouroperksEntryKey('', name);
+                store.entries[oldKey] = {
+                    key: oldKey, name: name, series: null,
+                    perks: OUROPERK_DEFS.map(() => null), plannedLevels: OUROPERK_DEFS.map(() => null),
+                    totalInvestedSp: 8400, perksUpdatedAt: 1000, investmentUpdatedAt: 1000
+                };
+                store.order.push(oldKey);
+
+                const newKey = ouroperksEntryKey(series, name);
+                const perks = OUROPERK_DEFS.map(() => null);
+                perks[0] = { level: 6, maxed: false };
+                store.entries[newKey] = {
+                    key: newKey, name: name, series: series,
+                    perks: perks, plannedLevels: OUROPERK_DEFS.map(() => null),
+                    totalInvestedSp: 8400, perksUpdatedAt: 2000, investmentUpdatedAt: 500
+                };
+                store.order.push(newKey);
+                saveToLocalStorage();
+                renderOuroperksCharacterList();
+            }, { series: realSeriesName, name: realCharName });
+
+            const cardsBefore = await page.locator('.ouro-character-card').count();
+            assert.strictEqual(cardsBefore, 2, 'expected the duplicate pair to show as two separate cards before cleanup');
+
+            await page.click('button:has-text("Clean Up Duplicates")');
+            await page.waitForTimeout(150);
+
+            const cardsAfter = await page.locator('.ouro-character-card').count();
+            assert.strictEqual(cardsAfter, 1, 'expected the duplicate pair to merge into a single card');
+
+            const merged = await page.evaluate(() => {
+                const store = currentOuroperks();
+                const e = store.entries[store.order[0]];
+                return { series: e.series, perksUpdatedAt: e.perksUpdatedAt, investmentUpdatedAt: e.investmentUpdatedAt, perk1Level: e.perks[0].level };
+            });
+            assert.strictEqual(merged.series, realSeriesName, 'expected the collection-matched entry (with the thumbnail link) to be the one kept');
+            assert.strictEqual(merged.perksUpdatedAt, 2000, 'expected the newer perks data (2000) to win over the older copy (1000)');
+            assert.strictEqual(merged.perk1Level, 6, 'expected the newer side\'s actual perk levels to be what won');
+            assert.strictEqual(merged.investmentUpdatedAt, 1000, 'expected the newer investment data (1000) to win over the older copy (500), regardless of which entry it came from');
+
+            // Running it again with nothing left to merge should be a no-op, not an error.
+            await page.click('button:has-text("Clean Up Duplicates")');
+            await page.waitForTimeout(150);
+            const cardsStillOne = await page.locator('.ouro-character-card').count();
+            assert.strictEqual(cardsStillOne, 1);
+        }
+    },
+    {
+        name: 'a tracked character can be removed from the Ourosphere tab via its delete badge (arm/confirm), without touching the collection itself',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'SoloTracked 1,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+
+            assert.strictEqual(await page.locator('.ouro-character-card').count(), 1);
+            const badge = page.locator('#ouroPerksCharacterList .character-delete-badge');
+
+            await badge.click();
+            await page.waitForTimeout(100);
+            const stillPresentAfterFirstClick = await page.evaluate(() => currentOuroperks().order.length);
+            assert.strictEqual(stillPresentAfterFirstClick, 1, 'expected the first click to only arm the badge, not delete yet');
+
+            await badge.click();
+            await page.waitForTimeout(100);
+            const orderAfterDelete = await page.evaluate(() => currentOuroperks().order.length);
+            assert.strictEqual(orderAfterDelete, 0, 'expected the second click to actually delete the tracked entry');
+            assert.strictEqual(await page.locator('.ouro-character-card').count(), 0);
+        }
+    },
+    {
+        name: 'the "Any level" filter shows both maxed and in-progress characters together for a chosen perk, unlike "Maxed" alone',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.evaluate(() => {
+                const store = currentOuroperks();
+                const inProgressKey = ouroperksEntryKey('S1', 'InProgressChar');
+                const p1 = OUROPERK_DEFS.map(() => null); p1[0] = { level: 3, maxed: false };
+                store.entries[inProgressKey] = { key: inProgressKey, name: 'InProgressChar', series: null, perks: p1, plannedLevels: OUROPERK_DEFS.map(() => null), totalInvestedSp: null, perksUpdatedAt: 1, investmentUpdatedAt: null };
+                store.order.push(inProgressKey);
+
+                const maxedKey = ouroperksEntryKey('S2', 'MaxedChar');
+                const p2 = OUROPERK_DEFS.map(() => null); p2[0] = { level: 6, maxed: true };
+                store.entries[maxedKey] = { key: maxedKey, name: 'MaxedChar', series: null, perks: p2, plannedLevels: OUROPERK_DEFS.map(() => null), totalInvestedSp: null, perksUpdatedAt: 1, investmentUpdatedAt: null };
+                store.order.push(maxedKey);
+
+                const untouchedKey = ouroperksEntryKey('S3', 'UntouchedChar');
+                store.entries[untouchedKey] = { key: untouchedKey, name: 'UntouchedChar', series: null, perks: OUROPERK_DEFS.map(() => null), plannedLevels: OUROPERK_DEFS.map(() => null), totalInvestedSp: null, perksUpdatedAt: 1, investmentUpdatedAt: null };
+                store.order.push(untouchedKey);
+
+                saveToLocalStorage();
+                renderOuroperksCharacterList();
+            });
+
+            await page.selectOption('#ouroPerksFilterPerk', '0');
+            await page.selectOption('#ouroPerksFilterState', 'anylevel');
+            await page.waitForTimeout(100);
+            const anyLevelNames = await page.locator('.ouro-card-name').allTextContents();
+            assert.deepStrictEqual(anyLevelNames.sort(), ['InProgressChar', 'MaxedChar'], `expected both maxed and in-progress, excluding untouched, got: ${JSON.stringify(anyLevelNames)}`);
+
+            await page.selectOption('#ouroPerksFilterState', 'maxed');
+            await page.waitForTimeout(100);
+            const maxedNames = await page.locator('.ouro-card-name').allTextContents();
+            assert.deepStrictEqual(maxedNames, ['MaxedChar']);
+
+            await page.selectOption('#ouroPerksFilterState', 'inprogress');
+            await page.waitForTimeout(100);
+            const inProgressNames = await page.locator('.ouro-card-name').allTextContents();
+            assert.deepStrictEqual(inProgressNames, ['InProgressChar']);
+        }
+    },
+    {
+        // Regression test for a real request: Perk 9's discount only
+        // applies once per day, per character - a checklist tracks who's
+        // already been rolled today, with both a manual reset and an
+        // automatic one once the calendar actually turns over.
+        name: 'the Perk 9 Daily Tracker lists only characters who have Perk 9, supports checking off/resetting, and auto-resets once the date changes',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.evaluate(() => {
+                const store = currentOuroperks();
+                const withPerk9 = ouroperksEntryKey('S1', 'HasPerk9');
+                const p1 = OUROPERK_DEFS.map(() => null); p1[8] = { level: 1, maxed: true };
+                store.entries[withPerk9] = { key: withPerk9, name: 'HasPerk9', series: null, perks: p1, plannedLevels: OUROPERK_DEFS.map(() => null), totalInvestedSp: null, perksUpdatedAt: 1, investmentUpdatedAt: null };
+                store.order.push(withPerk9);
+
+                const withoutPerk9 = ouroperksEntryKey('S2', 'NoPerk9');
+                store.entries[withoutPerk9] = { key: withoutPerk9, name: 'NoPerk9', series: null, perks: OUROPERK_DEFS.map(() => null), plannedLevels: OUROPERK_DEFS.map(() => null), totalInvestedSp: null, perksUpdatedAt: 1, investmentUpdatedAt: null };
+                store.order.push(withoutPerk9);
+
+                saveToLocalStorage();
+                renderOuroperksCharacterList();
+            });
+
+            const trackerText = await page.locator('#ouroPerk9Tracker').textContent();
+            assert.ok(trackerText.includes('HasPerk9'), `expected the tracker to list a character with Perk 9, got: "${trackerText}"`);
+            assert.ok(!trackerText.includes('NoPerk9'), `expected a character without Perk 9 to be excluded, got: "${trackerText}"`);
+
+            const checkbox = page.locator('#ouroPerk9Tracker input[type="checkbox"]');
+            await checkbox.check();
+            await page.waitForTimeout(100);
+            let activated = await page.evaluate(() => currentOuroperks().perk9Daily.activated.length);
+            assert.strictEqual(activated, 1);
+
+            await page.click('button:has-text("Reset All")');
+            await page.waitForTimeout(100);
+            activated = await page.evaluate(() => currentOuroperks().perk9Daily.activated.length);
+            assert.strictEqual(activated, 0, 'expected Reset All to clear the checklist');
+            assert.strictEqual(await checkbox.isChecked(), false);
+
+            // Simulate the day having turned over since the tracker was
+            // last touched - the very next read should auto-clear it.
+            await page.evaluate(() => {
+                const store = currentOuroperks();
+                store.perk9Daily.date = '2000-01-01';
+                store.perk9Daily.activated = ['some-stale-key'];
+                saveToLocalStorage();
+            });
+            const afterAutoReset = await page.evaluate(() => currentOuroperks().perk9Daily);
+            const todayStr = new Date().toISOString().slice(0, 10);
+            assert.strictEqual(afterAutoReset.date, todayStr, 'expected the stored date to auto-advance to today');
+            assert.deepStrictEqual(afterAutoReset.activated, [], 'expected the stale checklist to be cleared automatically once the date no longer matches');
+        }
     }
 ];

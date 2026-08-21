@@ -22,6 +22,40 @@
             display: flex;
             justify-content: center;
             gap: 20px;
+            /* This app is always dark-themed (no light mode) - without
+               this, native form controls (a file input's own "No file
+               chosen" text, checkboxes, date pickers, scrollbars, etc.)
+               render using the browser's LIGHT defaults regardless of the
+               page's own dark styling, which is how "No file chosen"
+               ended up as barely-readable black-on-black. */
+            color-scheme: dark;
+        }
+
+        /* color-scheme alone isn't reliably enough for a file input's own
+           "No file chosen" text/button across browsers (still rendered in
+           barely-readable near-black in some) - explicit color + styling
+           the standard ::file-selector-button pseudo-element is the
+           spec-guaranteed fix, not dependent on the browser's own dark-mode
+           heuristics. Applies globally since every file input in the app
+           should look the same. */
+        input[type="file"] {
+            color: #e5e7eb;
+        }
+
+        input[type="file"]::file-selector-button {
+            background: #2a2a3a;
+            color: #e5e7eb;
+            border: 1px solid #3f3f52;
+            border-radius: 5px;
+            padding: 6px 10px;
+            margin-right: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: #3f3f52;
         }
 
         .container {
@@ -2496,7 +2530,24 @@
             padding-right: 4px;
         }
 
+        .ouro-perk9-tracker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 16px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .ouro-perk9-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+
         .ouro-character-card {
+            position: relative;
             display: flex;
             flex-direction: column;
             background: #1a1a24;
@@ -2539,6 +2590,19 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        /* .character-delete-badge's default bottom-right position sits
+           right over this card's own sp/level badge text below the image -
+           this card's thumbnail is short enough that top-right (over the
+           image itself, same corner the image-edit badge uses elsewhere)
+           is the only spot with room to not cover anything. */
+        .ouro-character-card .character-delete-badge {
+            top: 5px;
+            right: 5px;
+            bottom: auto;
+            font-size: 0.75em;
+            padding: 2px 4px;
         }
 
         .ouro-card-series {
@@ -4823,6 +4887,17 @@
                     <div id="ouroPerksPlanBreakdown" class="ouro-plan-breakdown"></div>
                 </div>
 
+                <div class="control-group" id="ouroPerk9TrackerSection">
+                    <div class="sort-toolbar">
+                        <h3 style="margin: 0;">Perk 9 Daily Tracker</h3>
+                        <button type="button" class="btn btn-sm" onclick="resetPerk9DailyTracker()">Reset All</button>
+                    </div>
+                    <p class="sort-hint" style="margin: 4px 0 8px;">Perk 9's discounted first roll only applies once
+                        per day, per character - check off who you've already rolled today. Resets on its own once
+                        the day turns over; the button above is for an early manual reset.</p>
+                    <div id="ouroPerk9Tracker" class="ouro-perk9-tracker"></div>
+                </div>
+
                 <div class="embed-builder-layout">
                     <div class="embed-builder-column">
                         <div class="control-group">
@@ -4836,10 +4911,13 @@
                                 </select>
                                 <select id="ouroPerksFilterState" class="color-hex-text-input" style="text-transform: none; max-width: 160px;"
                                     onchange="renderOuroperksCharacterList()">
+                                    <option value="anylevel">Any level (1+)</option>
                                     <option value="maxed">Maxed</option>
                                     <option value="inprogress">In progress</option>
                                     <option value="notstarted">Not started</option>
                                 </select>
+                                <button type="button" class="btn btn-sm" onclick="cleanUpDuplicateOuroperksEntries()"
+                                    title="Merges any character tracked more than once (e.g. one copy with no thumbnail from before a collection match was found) back into a single entry">Clean Up Duplicates</button>
                             </div>
                             <div id="ouroPerksCharacterList" class="ouro-character-grid"></div>
                         </div>
@@ -14579,8 +14657,18 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-19';
+        const CHANGELOG_VERSION = '2026-08-21';
         const CHANGELOG = [
+            {
+                version: '2026-08-21',
+                date: 'August 21, 2026',
+                items: [
+                    { type: 'feature', text: 'Added a <b>Perk 9 Daily Tracker</b> on the Ourosphere tab: a checklist of every character with Perk 9 so you can track who\'s already had their once-per-day discounted roll - resets on its own each day, with a manual reset too.' },
+                    { type: 'fix', text: 'Added a way to stop tracking a character on the Ourosphere tab (delete badge on its card), plus a "Clean Up Duplicates" button to merge any character that ended up tracked twice (a since-fixed bug could leave an orphaned copy after a collection re-import) - keeps whichever side\'s data is actually more recent.' },
+                    { type: 'fix', text: 'The Ourosphere perk filter\'s state dropdown was missing an "Any level" option, so maxed and in-progress characters for a given perk could never be seen together - only one or the other. It\'s back.' },
+                    { type: 'fix', text: 'The new Ourosphere delete badge was overlapping a card\'s own sp/level text - moved to the corner of the thumbnail instead. Also fixed "No file chosen" (next to every "Choose File" button in the app) rendering in barely-readable black text.' }
+                ]
+            },
             {
                 version: '2026-08-19',
                 date: 'August 19, 2026',
@@ -18098,6 +18186,22 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     entry.plannedLevels = OUROPERK_DEFS.map(function () { return null; });
                 }
             });
+
+            // Perk 9's discount is once-per-day, per character - a simple
+            // checklist tracks who's already been rolled today. Auto-reset
+            // lives right here (not a separate scheduled job): every read
+            // of currentOuroperks() compares the stored date against
+            // today's, so the moment the calendar actually turns over, the
+            // very next render/interaction clears it - no reset button
+            // strictly needed, though one's offered too for an early
+            // manual reset.
+            if (!o.perk9Daily || typeof o.perk9Daily !== 'object') o.perk9Daily = { date: null, activated: [] };
+            if (!Array.isArray(o.perk9Daily.activated)) o.perk9Daily.activated = [];
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (o.perk9Daily.date !== todayStr) {
+                o.perk9Daily.date = todayStr;
+                o.perk9Daily.activated = [];
+            }
             return o;
         }
 
@@ -18437,7 +18541,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (state === 'maxed') return maxed;
             if (state === 'notstarted') return level <= 0;
             if (state === 'inprogress') return level > 0 && !maxed;
-            return true;
+            // 'anylevel' (and the default/fallback) - maxed or in
+            // progress, just not untouched. Maxed always implies level > 0
+            // for both leveled and single-purchase perks (the latter's
+            // level is set to 1 the moment it's purchased), so this one
+            // check covers both.
+            return level > 0;
         }
 
         // The perk filter dropdown mirrors OUROPERK_DEFS - populated once
@@ -18453,6 +18562,57 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 opt.textContent = `Perk ${i + 1}: ${def.label}`;
                 select.appendChild(opt);
             });
+        }
+
+        // "Spawn with 4 kakera buttons... costing half the power when you
+        // roll them for the first time THAT DAY" - Perk 9 (1-indexed),
+        // OUROPERK_DEFS index 8. The one perk with a once-per-day-per-
+        // character limit, hence the dedicated tracker below.
+        const OUROPERK_PERK9_INDEX = 8;
+
+        function getOuroperksPerk9TrackedEntries() {
+            const store = currentOuroperks();
+            const def = OUROPERK_DEFS[OUROPERK_PERK9_INDEX];
+            return store.order
+                .map(function (key) { return store.entries[key]; })
+                .filter(Boolean)
+                .filter(function (entry) { return ouroperkMatchesFilterState(entry.perks[OUROPERK_PERK9_INDEX], def, 'anylevel'); })
+                .sort(function (a, b) { return a.name.localeCompare(b.name); });
+        }
+
+        function togglePerk9Activated(key, checked) {
+            const store = currentOuroperks();
+            const idx = store.perk9Daily.activated.indexOf(key);
+            if (checked && idx === -1) store.perk9Daily.activated.push(key);
+            else if (!checked && idx !== -1) store.perk9Daily.activated.splice(idx, 1);
+            saveToLocalStorage();
+        }
+
+        function resetPerk9DailyTracker() {
+            const store = currentOuroperks();
+            store.perk9Daily.activated = [];
+            saveToLocalStorage();
+            renderOuroperksPerk9Tracker();
+        }
+
+        function renderOuroperksPerk9Tracker() {
+            const container = document.getElementById('ouroPerk9Tracker');
+            if (!container) return;
+            const store = currentOuroperks();
+            const entries = getOuroperksPerk9TrackedEntries();
+
+            if (entries.length === 0) {
+                container.innerHTML = '<p class="sort-empty-hint">No tracked characters have Perk 9 yet - paste a $opp result showing it above.</p>';
+                return;
+            }
+
+            container.innerHTML = entries.map(function (entry) {
+                const checked = store.perk9Daily.activated.indexOf(entry.key) !== -1;
+                return `<label class="ouro-perk9-item">
+                    <input type="checkbox" ${checked ? 'checked' : ''} onchange="togglePerk9Activated('${entry.key}', this.checked)">
+                    ${escapeHTML(entry.name)}
+                </label>`;
+            }).join('');
         }
 
         function getVisibleOuroperksEntries() {
@@ -18486,6 +18646,88 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             return entries;
         }
 
+        // Stops tracking one character's Ourosphere data entirely - only
+        // removes the tracker entry (perks/investment/plan), never touches
+        // the actual collection character.
+        function deleteOuroperksEntry(key) {
+            const store = currentOuroperks();
+            const entry = store.entries[key];
+            if (!entry) return;
+            delete store.entries[key];
+            const idx = store.order.indexOf(key);
+            if (idx !== -1) store.order.splice(idx, 1);
+            if (ouroperksSelectedEntryKey === key) ouroperksSelectedEntryKey = null;
+            saveToLocalStorage();
+            renderOuroperksCharacterList();
+            renderOuroperksDetail();
+        }
+
+        // Regression cleanup for a real report: a since-fixed bug in the
+        // entry-matching logic could leave the SAME character tracked
+        // twice - once under an old unmatched key (no series, no
+        // thumbnail) and once under the newly-matched key - after a
+        // collection re-import made the app look like it had "lost" the
+        // original data. Scans every tracked entry by normalized name and
+        // merges any group sharing one, keeping whichever side has the
+        // more recently updated perks/investment data (rather than always
+        // preferring the collection-matched one, since the orphaned entry
+        // may well be the one with the real, newer data).
+        function cleanUpDuplicateOuroperksEntries() {
+            const store = currentOuroperks();
+            const groups = new Map();
+            store.order.forEach(function (key) {
+                const entry = store.entries[key];
+                if (!entry) return;
+                const norm = normalizeMatchPart(entry.name);
+                if (!groups.has(norm)) groups.set(norm, []);
+                groups.get(norm).push(entry);
+            });
+
+            let mergedCount = 0;
+            groups.forEach(function (entries) {
+                if (entries.length < 2) return;
+                // Prefer a collection-matched entry as the one that stays
+                // (keeps the thumbnail/series link), but its DATA can
+                // still come from a duplicate below if that one is newer.
+                const canonical = entries.find(function (e) { return !!e.series; }) || entries[0];
+
+                entries.forEach(function (e) {
+                    if (e === canonical) return;
+                    if ((e.perksUpdatedAt || 0) > (canonical.perksUpdatedAt || 0)) {
+                        canonical.perks = e.perks;
+                        canonical.perksUpdatedAt = e.perksUpdatedAt;
+                    }
+                    if ((e.investmentUpdatedAt || 0) > (canonical.investmentUpdatedAt || 0)) {
+                        canonical.totalInvestedSp = e.totalInvestedSp;
+                        canonical.investmentUpdatedAt = e.investmentUpdatedAt;
+                    }
+                    // A plan is a local forward-looking decision, not real
+                    // game data pasted from Discord - no clear "more
+                    // correct" side, so the canonical entry's own plan (if
+                    // it has one) always wins; the duplicate's is only
+                    // taken when the canonical has no plan set at all.
+                    const canonicalHasPlan = canonical.plannedLevels.some(function (t) { return t != null; });
+                    const dupHasPlan = e.plannedLevels.some(function (t) { return t != null; });
+                    if (!canonicalHasPlan && dupHasPlan) canonical.plannedLevels = e.plannedLevels;
+
+                    delete store.entries[e.key];
+                    const idx = store.order.indexOf(e.key);
+                    if (idx !== -1) store.order.splice(idx, 1);
+                    if (ouroperksSelectedEntryKey === e.key) ouroperksSelectedEntryKey = canonical.key;
+                    mergedCount++;
+                });
+            });
+
+            if (mergedCount > 0) {
+                saveToLocalStorage();
+                renderOuroperksCharacterList();
+                renderOuroperksDetail();
+                showMessage(`Merged ${mergedCount} duplicate character${mergedCount === 1 ? '' : 's'}.`, 'success');
+            } else {
+                showMessage('No duplicate tracked characters found.', 'success');
+            }
+        }
+
         // Compact grid of small cards (rather than a full-width scrollable
         // list) so the character picker and the selected character's perk
         // breakdown can sit side by side without either one dominating.
@@ -18494,11 +18736,11 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (!container) return;
 
             populateOuroperksFilterOptions();
-            // The plan total is global (every tracked character, not just
-            // whatever's currently filtered/visible), so it's refreshed
-            // here unconditionally rather than after the early-returns
-            // below.
+            // Both are global (every tracked character, not just whatever's
+            // currently filtered/visible), so they're refreshed here
+            // unconditionally rather than after the early-returns below.
             renderOuroperksPlanBar();
+            renderOuroperksPerk9Tracker();
 
             const store = currentOuroperks();
             if (store.order.length === 0) {
@@ -18530,10 +18772,16 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
                 el.innerHTML = `
                     ${thumb}
+                    <div class="character-delete-badge" title="Stop tracking this character (does not affect your collection)">🗑️</div>
                     <div class="ouro-card-name" title="${escapeHTML(entry.name)}">${escapeHTML(entry.name)}</div>
                     <div class="ouro-card-series">${entry.series ? escapeHTML(entry.series) : '<i>not in collection</i>'}</div>
                     <div class="ouro-card-badge">${badgeParts.join(' · ')}</div>
                 `;
+
+                el.querySelector('.character-delete-badge').addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    handleDeleteBadgeClick(this, function () { deleteOuroperksEntry(entry.key); });
+                });
 
                 el.addEventListener('click', function () {
                     ouroperksSelectedEntryKey = entry.key;
