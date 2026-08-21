@@ -2605,6 +2605,36 @@
             padding: 2px 4px;
         }
 
+        /* Bulk-selection checkbox for leveling one perk across several
+           characters at once - opposite corner from the delete badge, same
+           small checkmark-box convention as the Notes tab's bulk-delete
+           select box. Distinct from .ouro-character-card.selected, which
+           means "currently open in the detail panel" (one at a time), not
+           "picked for a bulk action" (any number at once). */
+        .ouro-card-select-box {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(10, 10, 15, 0.85);
+            border: 1px solid #6b7280;
+            border-radius: 4px;
+            z-index: 10;
+            cursor: pointer;
+            color: transparent;
+            font-size: 0.7em;
+        }
+
+        .ouro-card-select-box.selected {
+            background-color: #7c3aed;
+            border-color: #7c3aed;
+            color: #fff;
+        }
+
         .ouro-card-series {
             font-size: 0.68em;
             color: #9ca3af;
@@ -2618,6 +2648,21 @@
             font-size: 0.7em;
             color: #34d399;
             padding: 2px 6px 6px;
+        }
+
+        /* Rows used to wrap onto 2-3 lines each (a full description as the
+           label, plus a current-level select, a target select, and a cost
+           figure all fighting for one row) - with 10 perks that pushed
+           the whole panel well past the character list's own height,
+           forcing a page-length scroll just to reach Perk 10. Capping
+           this list's own height (rows are compact enough now to mostly
+           avoid needing it) keeps the two side-by-side panels roughly
+           matched, and Perk 10 reachable with a small scroll here at
+           worst, not a page-length one. */
+        .ouro-perk-list {
+            max-height: 55vh;
+            overflow-y: auto;
+            padding-right: 4px;
         }
 
         .ouro-perk-row {
@@ -2634,14 +2679,19 @@
         }
 
         .ouro-perk-status {
-            flex: 0 0 60px;
+            flex: 0 0 95px;
             font-weight: 600;
             color: #a78bfa;
+            white-space: nowrap;
         }
 
+        /* Full descriptions moved to a title tooltip - showing just
+           "Perk N" is most of why rows fit on one line now instead of
+           wrapping across two or three. */
         .ouro-perk-label {
-            flex: 1 1 260px;
+            flex: 0 0 55px;
             color: #d1d5db;
+            cursor: help;
         }
 
         .ouro-perk-value {
@@ -4538,7 +4588,17 @@
             </div>
 
             <div class="control-group" style="margin-top: 20px;">
-                <h3>Pick Characters</h3>
+                <div class="sort-column-header" style="margin-bottom: 8px;">
+                    <h3 style="margin: 0;">Pick Characters</h3>
+                    <div class="sort-view-toggle">
+                        <button type="button" id="colors-view-detailed-btn" class="btn btn-sm active"
+                            onclick="setColorsViewMode('detailed')">Detailed</button>
+                        <button type="button" id="colors-view-compact-btn" class="btn btn-sm"
+                            onclick="setColorsViewMode('compact')">Compact</button>
+                        <button type="button" id="colors-view-grid-btn" class="btn btn-sm"
+                            onclick="setColorsViewMode('grid')">Grid</button>
+                    </div>
+                </div>
                 <p class="sort-hint" style="margin: 0 0 10px;">Its own list, scoped to characters holding at least
                     one key (the only ones worth spending a color change on) - separate from whatever's
                     selected/deselected on the Notes tab.</p>
@@ -4919,6 +4979,7 @@
                                 <button type="button" class="btn btn-sm" onclick="cleanUpDuplicateOuroperksEntries()"
                                     title="Merges any character tracked more than once (e.g. one copy with no thumbnail from before a collection match was found) back into a single entry">Clean Up Duplicates</button>
                             </div>
+                            <div id="ouroPerksBulkBar" class="sort-toolbar" style="display: none;"></div>
                             <div id="ouroPerksCharacterList" class="ouro-character-grid"></div>
                         </div>
                     </div>
@@ -4946,6 +5007,7 @@
                                     current level, meaning "no plan") - the cost shown updates live, and counts toward
                                     the running total above across every tracked character.</p>
                                 <div id="ouroPerksDetailList" class="ouro-perk-list"></div>
+                                <div id="ouroPerksDetailCostWarning"></div>
                                 <div id="ouroPerksDetailSummary" class="sort-filter-note"></div>
                                 <div id="ouroPerksDetailPlanSummary" class="sort-filter-note"></div>
                             </div>
@@ -5512,6 +5574,7 @@
                     sortCompactView: false,
                     sortViewMode: 'detailed',
                     seriesViewMode: 'list',
+                    colorsViewMode: 'detailed',
                     gameMode: 1
                 }
             };
@@ -12006,6 +12069,22 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             saveToLocalStorage();
         }
 
+        // Same detailed/compact/grid system as the Sort tab, reusing its
+        // .sort-character-item/.sort-character-list markup and CSS
+        // wholesale (the container's own compact/grid class is what
+        // actually changes the layout) - a separate mode/key from
+        // sortViewMode since which view you want here isn't necessarily
+        // the same one you want on the Sort tab.
+        function getColorsViewMode() {
+            return AppState.ui.colorsViewMode || 'detailed';
+        }
+
+        function setColorsViewMode(mode) {
+            AppState.ui.colorsViewMode = mode;
+            renderColorCharacterGrid();
+            saveToLocalStorage();
+        }
+
         // Lets a character jump straight to an exact position by typing a
         // number, instead of having to drag it across a long, scrolling list.
         function handleSortRankBadgeClick(e, index) {
@@ -13821,6 +13900,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 if (typeof AppState.ui.sortCompactView !== 'boolean') AppState.ui.sortCompactView = false;
                 if (!AppState.ui.sortViewMode) AppState.ui.sortViewMode = AppState.ui.sortCompactView ? 'compact' : 'detailed';
                 if (!AppState.ui.seriesViewMode) AppState.ui.seriesViewMode = 'list';
+                if (!AppState.ui.colorsViewMode) AppState.ui.colorsViewMode = 'detailed';
                 if (typeof AppState.ui.showOnlyDisabledSeries !== 'boolean') AppState.ui.showOnlyDisabledSeries = false;
                 if (AppState.ui.gameMode !== 1 && AppState.ui.gameMode !== 2) AppState.ui.gameMode = 1;
                 // Forces every per-collection subsystem's lazy backfill to
@@ -14375,6 +14455,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const container = document.getElementById('colorCharacterGrid');
             if (!container) return;
 
+            const mode = getColorsViewMode();
+            container.classList.toggle('compact', mode === 'compact');
+            container.classList.toggle('grid', mode === 'grid');
+            ['detailed', 'compact', 'grid'].forEach(function (m) {
+                const btn = document.getElementById(`colors-view-${m}-btn`);
+                if (btn) btn.classList.toggle('active', mode === m);
+            });
+
             const searchField = document.getElementById('colorGridSearchInput');
             if (searchField && searchField.value !== colorGridFilterState.query) searchField.value = colorGridFilterState.query;
 
@@ -14427,6 +14515,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
                 const colorDot = char.color ? `<span class="sort-color-dot" style="background: ${escapeHTML(char.color)};"></span>` : '';
                 const keysCount = parseInt(char.keys) || 0;
+                const kakeraDisplay = char.kakera ? Number(char.kakera).toLocaleString('en-US') : '?';
 
                 el.innerHTML = `
                     <div class="sort-select-box" title="Click the card to select">✔</div>
@@ -14435,7 +14524,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                         <div class="sort-item-name">${colorDot}${escapeHTML(char.name)}</div>
                         <div class="sort-item-series">${escapeHTML(item.seriesName)}</div>
                     </div>
-                    <div class="sort-item-kakera">${keysCount} key${keysCount === 1 ? '' : 's'}</div>
+                    <div class="sort-item-kakera" title="${keysCount} key${keysCount === 1 ? '' : 's'} · last reported kakera value">${kakeraDisplay} ka · ${keysCount} key${keysCount === 1 ? '' : 's'}</div>
                 `;
 
                 el.addEventListener('click', function (e) {
@@ -14666,7 +14755,11 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     { type: 'feature', text: 'Added a <b>Perk 9 Daily Tracker</b> on the Ourosphere tab: a checklist of every character with Perk 9 so you can track who\'s already had their once-per-day discounted roll - resets on its own each day, with a manual reset too.' },
                     { type: 'fix', text: 'Added a way to stop tracking a character on the Ourosphere tab (delete badge on its card), plus a "Clean Up Duplicates" button to merge any character that ended up tracked twice (a since-fixed bug could leave an orphaned copy after a collection re-import) - keeps whichever side\'s data is actually more recent.' },
                     { type: 'fix', text: 'The Ourosphere perk filter\'s state dropdown was missing an "Any level" option, so maxed and in-progress characters for a given perk could never be seen together - only one or the other. It\'s back.' },
-                    { type: 'fix', text: 'The new Ourosphere delete badge was overlapping a card\'s own sp/level text - moved to the corner of the thumbnail instead. Also fixed "No file chosen" (next to every "Choose File" button in the app) rendering in barely-readable black text.' }
+                    { type: 'fix', text: 'The new Ourosphere delete badge was overlapping a card\'s own sp/level text - moved to the corner of the thumbnail instead. Also fixed "No file chosen" (next to every "Choose File" button in the app) rendering in barely-readable black text.' },
+                    { type: 'feature', text: 'The Ourosphere character perk list is now much more compact ("Perk N" with the full description as a tooltip, instead of the whole sentence), so it stays closer to the character list\'s own height instead of pushing Perk 10 off past a long scroll.' },
+                    { type: 'feature', text: 'Added bulk perk leveling on the Ourosphere tab: select any number of characters (a checkbox on each card) and set one perk to one level for all of them at once, instead of opening and editing each one individually.' },
+                    { type: 'feature', text: 'A character\'s Ourosphere perk levels are now checked against their tracked $mmz= investment total - if the current levels would cost more spheres than what you told us was invested, a warning shows on both the character card and its detail panel.' },
+                    { type: 'feature', text: 'The Colors tab\'s character picker now has Detailed/Compact/Grid view modes (same as the Sort tab) and shows each character\'s last reported kakera value alongside their keys.' }
                 ]
             },
             {
@@ -18413,6 +18506,26 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             return count;
         }
 
+        // What the character's CURRENT levels (not any planned target)
+        // would actually cost to reach from scratch - used to sanity-check
+        // against entry.totalInvestedSp (the account's own reported spend
+        // from $mmz=). The two should never disagree; if this is higher,
+        // either the tracked levels or the tracked investment total is
+        // wrong somewhere.
+        function ouroperksCharacterSpentAtCurrentLevels(entry) {
+            let total = 0;
+            OUROPERK_DEFS.forEach(function (def, i) {
+                const p = entry.perks[i];
+                const level = p ? p.level : 0;
+                if (def.leveled) {
+                    for (let lvl = 1; lvl <= Math.min(level, OUROPERK_MAX_LEVEL); lvl++) total += OUROPERK_LEVEL_COSTS[lvl - 1];
+                } else if (level > 0) {
+                    total += OUROPERK_SINGLE_LEVEL_COST;
+                }
+            });
+            return total;
+        }
+
         // ===== Planner: hypothetical future investment, separate from
         // what's actually been paste-confirmed as already owned. A target
         // level is only ever >= the current level (you can't "un-invest"),
@@ -18471,6 +18584,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         }
 
         let ouroperksSelectedEntryKey = null;
+        // Separate from ouroperksSelectedEntryKey (which is "currently
+        // open in the detail panel," one at a time) - this is a bulk
+        // multi-select for setting one perk to one level across several
+        // characters at once, so leveling up e.g. Perk 1 for a whole
+        // batch doesn't mean opening and editing each one individually.
+        let ouroperksBulkSelectedKeys = new Set();
 
         function switchOuroSubTab(sub) {
             const perksBtn = document.getElementById('ouro-tab-perks-btn');
@@ -18657,6 +18776,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const idx = store.order.indexOf(key);
             if (idx !== -1) store.order.splice(idx, 1);
             if (ouroperksSelectedEntryKey === key) ouroperksSelectedEntryKey = null;
+            ouroperksBulkSelectedKeys.delete(key);
             saveToLocalStorage();
             renderOuroperksCharacterList();
             renderOuroperksDetail();
@@ -18714,6 +18834,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     const idx = store.order.indexOf(e.key);
                     if (idx !== -1) store.order.splice(idx, 1);
                     if (ouroperksSelectedEntryKey === e.key) ouroperksSelectedEntryKey = canonical.key;
+                    if (ouroperksBulkSelectedKeys.has(e.key)) {
+                        ouroperksBulkSelectedKeys.delete(e.key);
+                        ouroperksBulkSelectedKeys.add(canonical.key);
+                    }
                     mergedCount++;
                 });
             });
@@ -18741,6 +18865,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // unconditionally rather than after the early-returns below.
             renderOuroperksPlanBar();
             renderOuroperksPerk9Tracker();
+            renderOuroperksBulkBar();
 
             const store = currentOuroperks();
             if (store.order.length === 0) {
@@ -18769,11 +18894,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 const badgeParts = [];
                 if (entry.totalInvestedSp != null) badgeParts.push(`${entry.totalInvestedSp.toLocaleString()} sp`);
                 badgeParts.push(`${maxedCount}/10`);
+                const overInvested = entry.totalInvestedSp != null && ouroperksCharacterSpentAtCurrentLevels(entry) > entry.totalInvestedSp;
 
+                const bulkSelected = ouroperksBulkSelectedKeys.has(entry.key);
                 el.innerHTML = `
                     ${thumb}
+                    <div class="ouro-card-select-box${bulkSelected ? ' selected' : ''}" title="Select for bulk perk leveling">✔</div>
                     <div class="character-delete-badge" title="Stop tracking this character (does not affect your collection)">🗑️</div>
-                    <div class="ouro-card-name" title="${escapeHTML(entry.name)}">${escapeHTML(entry.name)}</div>
+                    <div class="ouro-card-name" title="${escapeHTML(entry.name)}">${escapeHTML(entry.name)}${overInvested ? ' <span title="These perk levels would cost more than the tracked sp invested">⚠</span>' : ''}</div>
                     <div class="ouro-card-series">${entry.series ? escapeHTML(entry.series) : '<i>not in collection</i>'}</div>
                     <div class="ouro-card-badge">${badgeParts.join(' · ')}</div>
                 `;
@@ -18781,6 +18909,14 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 el.querySelector('.character-delete-badge').addEventListener('click', function (e) {
                     e.stopPropagation();
                     handleDeleteBadgeClick(this, function () { deleteOuroperksEntry(entry.key); });
+                });
+
+                el.querySelector('.ouro-card-select-box').addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (ouroperksBulkSelectedKeys.has(entry.key)) ouroperksBulkSelectedKeys.delete(entry.key);
+                    else ouroperksBulkSelectedKeys.add(entry.key);
+                    this.classList.toggle('selected');
+                    renderOuroperksBulkBar();
                 });
 
                 el.addEventListener('click', function () {
@@ -18864,7 +19000,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
                     return `<div class="ouro-perk-row">
                         <span class="ouro-perk-status">${escapeHTML(statusText)}</span>
-                        <span class="ouro-perk-label">${escapeHTML(def.label)}</span>
+                        <span class="ouro-perk-label" title="${escapeHTML(def.label)}">Perk ${i + 1}</span>
                         <span class="ouro-perk-value">${escapeHTML(valueText)}</span>
                         <span class="ouro-perk-cost">${costText}</span>
                         ${currentControl}
@@ -18879,6 +19015,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     ? `${total.toLocaleString()} spheres left to fully max every perk on ${entry.name}.`
                     : `${entry.name} has every perk fully purchased.`;
             }
+            const costWarningEl = document.getElementById('ouroPerksDetailCostWarning');
+            if (costWarningEl) {
+                const spentAtCurrent = ouroperksCharacterSpentAtCurrentLevels(entry);
+                if (entry.totalInvestedSp != null && spentAtCurrent > entry.totalInvestedSp) {
+                    costWarningEl.innerHTML = `<p class="error-message">⚠ These perk levels would cost ${spentAtCurrent.toLocaleString()} sp to reach from scratch - more than the ${entry.totalInvestedSp.toLocaleString()} sp you told us ${escapeHTML(entry.name)} has invested. Double-check the levels above, or re-import investment totals if that number's stale.</p>`;
+                } else {
+                    costWarningEl.innerHTML = '';
+                }
+            }
             const plannedCost = ouroperksCharacterPlannedCost(entry);
             if (planSummaryEl) {
                 planSummaryEl.textContent = plannedCost > 0
@@ -18890,6 +19035,25 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             renderOuroperksPlanBar();
         }
 
+        // Shared by both the single-character Current dropdown and the
+        // bulk multi-character apply below - sets one perk's current
+        // level on one entry, clearing a planned target the new level has
+        // already met or passed (rather than leaving a zero-cost target
+        // sitting around).
+        function applyOuroperkLevelToEntry(entry, perkIdx, newPerk) {
+            entry.perks[perkIdx] = newPerk;
+            const target = entry.plannedLevels[perkIdx];
+            if (target != null && target <= newPerk.level) entry.plannedLevels[perkIdx] = null;
+            entry.perksUpdatedAt = Date.now();
+        }
+
+        function ouroperkLevelFromRawValue(def, rawValue) {
+            if (def.leveled) {
+                return rawValue === 'max' ? { level: OUROPERK_MAX_LEVEL, maxed: true } : { level: parseInt(rawValue, 10), maxed: false };
+            }
+            return { level: rawValue ? 1 : 0, maxed: !!rawValue };
+        }
+
         // Lets the current level be set/corrected by hand, as an
         // alternative (or supplement) to pasting a fresh $opp result - not
         // everyone wants to re-paste just to fix or fill in one perk.
@@ -18899,24 +19063,92 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (!entry) return;
 
             const def = OUROPERK_DEFS[perkIdx];
-            let newPerk;
-            if (def.leveled) {
-                newPerk = rawValue === 'max' ? { level: OUROPERK_MAX_LEVEL, maxed: true } : { level: parseInt(rawValue, 10), maxed: false };
-            } else {
-                newPerk = { level: rawValue ? 1 : 0, maxed: !!rawValue };
-            }
-            entry.perks[perkIdx] = newPerk;
-
-            // A planned target that the new current level has already met
-            // or passed is stale - clear it rather than leaving a
-            // zero-cost target sitting around.
-            const target = entry.plannedLevels[perkIdx];
-            if (target != null && target <= newPerk.level) entry.plannedLevels[perkIdx] = null;
-
-            entry.perksUpdatedAt = Date.now();
+            applyOuroperkLevelToEntry(entry, perkIdx, ouroperkLevelFromRawValue(def, rawValue));
             saveToLocalStorage();
             renderOuroperksDetail();
             renderOuroperksCharacterList();
+        }
+
+        // Renders the "set Perk N to LVL X for N selected characters" bar
+        // above the character grid - only shown once at least one
+        // character is bulk-selected, so it doesn't take up space
+        // otherwise. The level dropdown's own options depend on which
+        // perk is picked (0-6+MAX for a leveled perk, Owned/Not owned for
+        // a single-purchase one), so it's rebuilt whenever the perk
+        // choice changes.
+        function renderOuroperksBulkBar() {
+            const bar = document.getElementById('ouroPerksBulkBar');
+            if (!bar) return;
+
+            if (ouroperksBulkSelectedKeys.size === 0) {
+                bar.style.display = 'none';
+                bar.innerHTML = '';
+                return;
+            }
+
+            bar.style.display = '';
+            const count = ouroperksBulkSelectedKeys.size;
+            bar.innerHTML = `
+                <span class="sort-selection-count">${count} selected</span>
+                <select id="ouroBulkPerkSelect" class="color-hex-text-input" style="text-transform: none; max-width: 160px;" onchange="renderOuroperksBulkLevelOptions()">
+                    ${OUROPERK_DEFS.map(function (def, i) { return `<option value="${i}">Perk ${i + 1}</option>`; }).join('')}
+                </select>
+                <select id="ouroBulkLevelSelect" class="color-hex-text-input" style="text-transform: none; max-width: 180px;"></select>
+                <button type="button" class="btn btn-sm btn-primary" onclick="applyOuroperkBulkLevel()">Apply to ${count} Selected</button>
+                <button type="button" class="btn btn-sm" onclick="clearOuroperksBulkSelection()">Clear Selection</button>
+            `;
+            renderOuroperksBulkLevelOptions();
+        }
+
+        function renderOuroperksBulkLevelOptions() {
+            const perkSelect = document.getElementById('ouroBulkPerkSelect');
+            const levelSelect = document.getElementById('ouroBulkLevelSelect');
+            if (!perkSelect || !levelSelect) return;
+
+            const def = OUROPERK_DEFS[parseInt(perkSelect.value, 10)];
+            if (def.leveled) {
+                const opts = [];
+                for (let lvl = 0; lvl <= OUROPERK_MAX_LEVEL; lvl++) opts.push(`<option value="${lvl}">LVL ${lvl}</option>`);
+                opts.push('<option value="max">MAX (bonus confirmed)</option>');
+                levelSelect.innerHTML = opts.join('');
+            } else {
+                levelSelect.innerHTML = '<option value="1">Owned</option><option value="">Not owned</option>';
+            }
+        }
+
+        function clearOuroperksBulkSelection() {
+            ouroperksBulkSelectedKeys.clear();
+            renderOuroperksCharacterList();
+        }
+
+        // Applies one perk/level combo to every bulk-selected character at
+        // once - the same underlying write as the single-character Current
+        // dropdown, just looped. A character no longer visible under the
+        // current search/filter (but still selected from before) is still
+        // included, since the selection itself is the source of truth,
+        // not whatever happens to be on screen right now.
+        function applyOuroperkBulkLevel() {
+            const perkSelect = document.getElementById('ouroBulkPerkSelect');
+            const levelSelect = document.getElementById('ouroBulkLevelSelect');
+            if (!perkSelect || !levelSelect || ouroperksBulkSelectedKeys.size === 0) return;
+
+            const perkIdx = parseInt(perkSelect.value, 10);
+            const def = OUROPERK_DEFS[perkIdx];
+            const newPerk = ouroperkLevelFromRawValue(def, levelSelect.value);
+
+            const store = currentOuroperks();
+            let appliedCount = 0;
+            ouroperksBulkSelectedKeys.forEach(function (key) {
+                const entry = store.entries[key];
+                if (!entry) return;
+                applyOuroperkLevelToEntry(entry, perkIdx, newPerk);
+                appliedCount++;
+            });
+
+            saveToLocalStorage();
+            renderOuroperksCharacterList();
+            renderOuroperksDetail();
+            showMessage(`Set Perk ${perkIdx + 1} to ${def.leveled ? (newPerk.maxed ? 'MAX' : `LVL ${newPerk.level}`) : (newPerk.maxed ? 'Owned' : 'Not owned')} for ${appliedCount} character${appliedCount === 1 ? '' : 's'}.`, 'success');
         }
 
         function handleOuroperkPlanTargetChange(perkIdx, rawValue) {

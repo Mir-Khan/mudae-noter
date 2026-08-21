@@ -1041,5 +1041,111 @@ Erza Scarlet ✅`);
             assert.strictEqual(afterAutoReset.date, todayStr, 'expected the stored date to auto-advance to today');
             assert.deepStrictEqual(afterAutoReset.activated, [], 'expected the stale checklist to be cleared automatically once the date no longer matches');
         }
+    },
+    {
+        // Regression test for a real request: leveling up one perk across
+        // several characters used to mean opening and editing each one
+        // individually. A bulk-select checkbox on each card plus a "set
+        // Perk N to LVL X for N selected" bar applies the same level to
+        // every selected character at once.
+        name: 'bulk-selecting multiple characters and applying a perk level sets it on exactly those, leaving others untouched',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Alice 5,000 sp\nBob 5,000 sp\nCarol 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+
+            const cards = page.locator('.ouro-character-card');
+            assert.strictEqual(await cards.count(), 3);
+
+            const barHiddenInitially = await page.locator('#ouroPerksBulkBar').isVisible();
+            assert.ok(!barHiddenInitially, 'expected the bulk bar to be hidden with nothing selected');
+
+            await cards.nth(0).locator('.ouro-card-select-box').click();
+            await cards.nth(1).locator('.ouro-card-select-box').click();
+            await page.waitForTimeout(100);
+            assert.ok(await page.locator('#ouroPerksBulkBar').isVisible(), 'expected the bulk bar to appear once characters are selected');
+            assert.ok((await page.locator('#ouroPerksBulkBar').textContent()).includes('2 selected'));
+
+            await page.selectOption('#ouroBulkPerkSelect', '2'); // Perk 3
+            await page.selectOption('#ouroBulkLevelSelect', '4');
+            await page.click('button:has-text("Apply to 2 Selected")');
+            await page.waitForTimeout(100);
+
+            const levels = await page.evaluate(() => {
+                const store = currentOuroperks();
+                const byName = {};
+                store.order.forEach(k => { byName[store.entries[k].name] = store.entries[k].perks[2]; });
+                return byName;
+            });
+            assert.deepStrictEqual(levels.Alice, { level: 4, maxed: false });
+            assert.deepStrictEqual(levels.Bob, { level: 4, maxed: false });
+            assert.strictEqual(levels.Carol, null, 'expected the unselected character to be untouched');
+        }
+    },
+    {
+        // Regression test for a real request: perk levels should be
+        // sanity-checked against the account's own reported investment
+        // total ($mmz=) - if the current levels would cost more than that,
+        // something's wrong (a mis-entered level, or a stale investment
+        // number), and the user should be told rather than left to notice
+        // on their own.
+        name: 'a character whose current perk levels cost more than their tracked investment total shows a warning, on both the detail panel and the card',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Alice 500 sp'); // far under a LVL 6 perk's real cost (5,000 sp)
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT); // Perk 1 -> LVL 6
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            const warningText = await page.locator('#ouroPerksDetailCostWarning').textContent();
+            assert.ok(/cost/i.test(warningText) && /500/.test(warningText), `expected a cost-mismatch warning naming the tracked 500 sp, got: "${warningText}"`);
+
+            const cardHTML = await page.locator('.ouro-character-card').first().innerHTML();
+            assert.ok(cardHTML.includes('⚠'), 'expected a warning indicator on the character card too');
+        }
+    },
+    {
+        name: 'a character whose current levels stay within their tracked investment shows no cost warning',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Alice 50,000 sp'); // comfortably covers everything
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT);
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            const warningText = await page.locator('#ouroPerksDetailCostWarning').textContent();
+            assert.strictEqual(warningText.trim(), '');
+            const cardHTML = await page.locator('.ouro-character-card').first().innerHTML();
+            assert.ok(!cardHTML.includes('⚠'));
+        }
+    },
+    {
+        // Regression test for a real request: full perk descriptions made
+        // each row wrap across 2-3 lines, pushing the panel well past the
+        // character list's own height. Rows now show "Perk N" with the
+        // full description as a tooltip instead.
+        name: 'the character perk list shows compact "Perk N" labels with the full description as a tooltip',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Alice 5,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', REAL_OPP_TEXT);
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            const firstLabel = page.locator('#ouroPerksDetailList .ouro-perk-label').first();
+            assert.strictEqual((await firstLabel.textContent()).trim(), 'Perk 1');
+            const title = await firstLabel.getAttribute('title');
+            assert.ok(title && title.length > 6, `expected the full description in the title tooltip, got: "${title}"`);
+        }
     }
 ];

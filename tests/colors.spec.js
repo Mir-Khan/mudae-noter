@@ -245,5 +245,41 @@ module.exports = [
             const mainInputValue = (await page.inputValue('#input')).toLowerCase();
             assert.ok(mainInputValue.includes('#123abc'), 'expected the main input textarea to reflect the newly-applied color too');
         }
+    },
+    {
+        // Regression test for a real request: the Colors tab's character
+        // picker only ever showed a keys count, with no view options -
+        // it now offers the same Detailed/Compact/Grid modes as the Sort
+        // tab (reusing the same underlying markup/CSS), and shows each
+        // character's last reported kakera value alongside their keys.
+        name: 'the Colors tab character picker shows kakera value alongside keys, and supports Detailed/Compact/Grid view modes',
+        async run(page) {
+            await loadDemoCollection(page);
+            await page.click('#tab-colors-btn');
+            await page.waitForSelector('#colorCharacterGrid .sort-character-item');
+
+            const firstStat = (await page.locator('#colorCharacterGrid .sort-item-kakera').first().textContent()).trim();
+            assert.ok(/\d[\d,]*\s*ka/i.test(firstStat), `expected a kakera value shown, got: "${firstStat}"`);
+            assert.ok(/key/i.test(firstStat), `expected the keys count still shown alongside it, got: "${firstStat}"`);
+
+            const grid = page.locator('#colorCharacterGrid');
+            assert.strictEqual(await grid.evaluate(el => el.classList.contains('grid')), false, 'expected Detailed to be the default (no grid class)');
+
+            await page.click('#colors-view-grid-btn');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await grid.evaluate(el => el.classList.contains('grid')), true);
+            assert.ok(await page.locator('#colors-view-grid-btn').evaluate(el => el.classList.contains('active')));
+
+            await page.click('#colors-view-compact-btn');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await grid.evaluate(el => el.classList.contains('compact')), true);
+            assert.strictEqual(await grid.evaluate(el => el.classList.contains('grid')), false, 'expected switching to Compact to drop the grid class');
+
+            // Persists across a reload, same as the Sort tab's own view mode.
+            await page.reload();
+            await page.click('#tab-colors-btn');
+            await page.waitForSelector('#colorCharacterGrid .sort-character-item');
+            assert.strictEqual(await grid.evaluate(el => el.classList.contains('compact')), true, 'expected the chosen view mode to persist across a reload');
+        }
     }
 ];
