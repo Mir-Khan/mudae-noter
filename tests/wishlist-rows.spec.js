@@ -1537,5 +1537,33 @@ Bullseye +100%`;
             assert.strictEqual(await page.inputValue('#wishlistCapacityStarwish'), '3');
             assert.strictEqual(await page.inputValue('#wishlistCapacityWishlist'), '60');
         }
+    },
+    {
+        // Regression test for real feedback: "Also Add to This Wishlist"
+        // deliberately leaves the typed names in the textarea (so a
+        // follow-up Generate doesn't require retyping them), but that
+        // meant a plain "Generate Command(s)" right afterward counted
+        // each name twice - once from the still-populated textarea, once
+        // from the row it had just been added as.
+        name: 'generating a command right after "Also Add" does not double up characters that are now both typed and a row',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'NoDoubleUp');
+            await page.fill('#wishlistCommandNames', 'Alpha\nBeta');
+            await page.click('button:has-text("Also Add to This Wishlist")');
+            await page.waitForTimeout(100);
+            assert.deepStrictEqual(await page.locator('.wishlist-row-name').allTextContents(), ['Alpha', 'Beta']);
+
+            // Textarea deliberately still holds "Alpha\nBeta" here.
+            await page.click('button:has-text("Generate Command(s)")');
+            await page.waitForTimeout(100);
+
+            const output = await page.locator('#wishlistCommandOutput').textContent();
+            assert.ok(output.includes('$wish'), `expected a $wish command, got: "${output}"`);
+            const alphaCount = (output.match(/Alpha/g) || []).length;
+            const betaCount = (output.match(/Beta/g) || []).length;
+            assert.strictEqual(alphaCount, 1, `expected Alpha to appear exactly once, got ${alphaCount} in: "${output}"`);
+            assert.strictEqual(betaCount, 1, `expected Beta to appear exactly once, got ${betaCount} in: "${output}"`);
+        }
     }
 ];

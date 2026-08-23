@@ -14759,7 +14759,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     { type: 'feature', text: 'The Ourosphere character perk list is now much more compact ("Perk N" with the full description as a tooltip, instead of the whole sentence), so it stays closer to the character list\'s own height instead of pushing Perk 10 off past a long scroll.' },
                     { type: 'feature', text: 'Added bulk perk leveling on the Ourosphere tab: select any number of characters (a checkbox on each card) and set one perk to one level for all of them at once, instead of opening and editing each one individually.' },
                     { type: 'feature', text: 'A character\'s Ourosphere perk levels are now checked against their tracked $mmz= investment total - if the current levels would cost more spheres than what you told us was invested, a warning shows on both the character card and its detail panel.' },
-                    { type: 'feature', text: 'The Colors tab\'s character picker now has Detailed/Compact/Grid view modes (same as the Sort tab) and shows each character\'s last reported kakera value alongside their keys.' }
+                    { type: 'feature', text: 'The Colors tab\'s character picker now has Detailed/Compact/Grid view modes (same as the Sort tab) and shows each character\'s last reported kakera value alongside their keys.' },
+                    { type: 'fix', text: 'The wish command builder could double up characters in a generated command - "Also Add to This Wishlist" deliberately leaves the typed names in its textarea, so a "Generate Command(s)" click right after counted those names once from the textarea and again from the row they\'d just become. Now deduped.' }
                 ]
             },
             {
@@ -17739,7 +17740,16 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const includedChars = wishlistModalCharacters
                 .filter(function (c) { return c.includeInCommand; })
                 .map(function (c) { return { name: c.name, isStarWish: c.isStarWish, isLocked: c.isLocked, wantsKakeraBoost: c.wantsKakeraBoost }; });
-            const chars = typedChars.concat(includedChars);
+            // A name typed above and then "Also Add"-ed still sits in both
+            // sources (the textarea isn't cleared, since re-generating after
+            // tweaking a row's flags is a normal flow) - dedupe by name so it
+            // isn't counted twice, keeping the row's own flags since those
+            // reflect anything edited after adding.
+            const seen = new Map();
+            typedChars.concat(includedChars).forEach(function (c) {
+                seen.set(normalizeWishName(c.name), c);
+            });
+            const chars = Array.from(seen.values());
 
             if (chars.length === 0) {
                 output.innerHTML = '<p class="error-message">Type at least one character name, or check "Include" on a row below, first.</p>';
@@ -17753,8 +17763,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const capacity = wishlistModalBonusSnapshot.starwishSlots;
             const involvesStar = chars.some(function (c) { return c.isStarWish; });
             if (!wishlistGenerateSkipCapacityCheck && wishlistModalIsOwn && involvesStar && capacity != null) {
+                // A typed name that's also already a row (e.g. "Also Add"-ed
+                // earlier without clearing the textarea) must not count
+                // toward the total twice.
+                const existingRowNames = new Set(wishlistModalCharacters.map(function (c) { return normalizeWishName(c.name); }));
                 const totalStarwishAfter = wishlistModalCharacters.filter(function (c) { return c.isStarWish; }).length
-                    + typedChars.filter(function (c) { return c.isStarWish; }).length;
+                    + typedChars.filter(function (c) { return c.isStarWish && !existingRowNames.has(normalizeWishName(c.name)); }).length;
                 if (totalStarwishAfter > capacity) {
                     const slotsNeeded = totalStarwishAfter - capacity;
                     const estCost = estimateStarwishUpgradeCost(capacity, slotsNeeded);
