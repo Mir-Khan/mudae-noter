@@ -1565,5 +1565,52 @@ Bullseye +100%`;
             assert.strictEqual(alphaCount, 1, `expected Alpha to appear exactly once, got ${alphaCount} in: "${output}"`);
             assert.strictEqual(betaCount, 1, `expected Beta to appear exactly once, got ${betaCount} in: "${output}"`);
         }
+    },
+    {
+        // Regression test for real feedback: clicking "Also Add" again with
+        // names that are already rows (very easy, since the textarea is
+        // never auto-cleared) used to push a second, duplicate row per
+        // name instead of updating the one already there. That corrupted
+        // command generation - whichever duplicate landed later in the
+        // array won the flag dedupe, silently dropping a Star a user had
+        // already set individually on the original row.
+        name: 'clicking "Also Add" again for names that are already rows updates those rows in place instead of duplicating them',
+        async run(page) {
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'NoDuplicateRows');
+            await page.fill('#wishlistTextInput', 'Alpha ⭐\nBeta ⭐\nGamma');
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+
+            // Re-add the same names via the command builder (Star left OFF,
+            // Lock+Kakera ON this time) - simulates re-running "Also Add"
+            // with the textarea's leftover content, or adding a mixed batch
+            // that overlaps existing rows.
+            await page.fill('#wishlistCommandNames', 'Alpha\nBeta\nGamma\nDelta');
+            await page.check('#wishlistFlagLock');
+            await page.check('#wishlistFlagKakera');
+            await page.click('button:has-text("Also Add to This Wishlist")');
+            await page.waitForTimeout(100);
+
+            // No duplicate rows - Alpha/Beta/Gamma updated in place, only
+            // Delta is genuinely new.
+            assert.deepStrictEqual(await page.locator('.wishlist-row-name').allTextContents(), ['Alpha', 'Beta', 'Gamma', 'Delta']);
+
+            const state = await page.evaluate(() => wishlistModalCharacters.map(c => ({ name: c.name, star: c.isStarWish, lock: c.isLocked, kakera: c.wantsKakeraBoost })));
+            assert.deepStrictEqual(state, [
+                { name: 'Alpha', star: true, lock: true, kakera: true },
+                { name: 'Beta', star: true, lock: true, kakera: true },
+                { name: 'Gamma', star: false, lock: true, kakera: true },
+                { name: 'Delta', star: false, lock: true, kakera: true }
+            ], 'expected existing rows to keep their star while gaining lock+kakera, not get overwritten/duplicated');
+
+            // Generating still splits correctly by group instead of one
+            // command that silently drops everyone's star.
+            await page.click('button:has-text("Generate Command(s)")');
+            await page.waitForTimeout(100);
+            const output = await page.locator('#wishlistCommandOutput').textContent();
+            assert.ok(/\$swlk Alpha\$Beta/.test(output), `expected a $swlk command for the starred pair, got: "${output}"`);
+            assert.ok(/\$wishkl Gamma\$Delta/.test(output), `expected a $wishkl command for the unstarred pair, got: "${output}"`);
+        }
     }
 ];

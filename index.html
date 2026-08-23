@@ -14760,7 +14760,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     { type: 'feature', text: 'Added bulk perk leveling on the Ourosphere tab: select any number of characters (a checkbox on each card) and set one perk to one level for all of them at once, instead of opening and editing each one individually.' },
                     { type: 'feature', text: 'A character\'s Ourosphere perk levels are now checked against their tracked $mmz= investment total - if the current levels would cost more spheres than what you told us was invested, a warning shows on both the character card and its detail panel.' },
                     { type: 'feature', text: 'The Colors tab\'s character picker now has Detailed/Compact/Grid view modes (same as the Sort tab) and shows each character\'s last reported kakera value alongside their keys.' },
-                    { type: 'fix', text: 'The wish command builder could double up characters in a generated command - "Also Add to This Wishlist" deliberately leaves the typed names in its textarea, so a "Generate Command(s)" click right after counted those names once from the textarea and again from the row they\'d just become. Now deduped.' }
+                    { type: 'fix', text: 'The wish command builder could double up characters in a generated command - "Also Add to This Wishlist" deliberately leaves the typed names in its textarea, so a "Generate Command(s)" click right after counted those names once from the textarea and again from the row they\'d just become. Now deduped.' },
+                    { type: 'fix', text: 'Clicking "Also Add to This Wishlist" for names already in the row list (easy to do, since the textarea is never auto-cleared) created a duplicate row per name instead of updating the existing one - which could silently drop a Star someone had already set on the original row when generating a command. Re-adding an existing name now updates that row in place.' }
                 ]
             },
             {
@@ -17829,7 +17830,30 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const input = readWishlistCommandBuilderInput();
             if (input.names.length === 0) return;
 
+            // The textarea is deliberately left filled after "Also Add" (so
+            // re-generating afterward doesn't require retyping), which means
+            // clicking "Also Add" again with the same names still in it -
+            // very easy to do by accident - used to push a second, duplicate
+            // row per name instead of updating the one already there. That
+            // silently corrupted command generation: whichever duplicate
+            // happened to sit later in the array won the flag dedupe, which
+            // could drop a Star/Lock/Kakera flag someone had already set on
+            // the original row. Existing rows are now updated in place
+            // (flags OR'd in, never cleared) instead of duplicated.
+            const existingByName = new Map();
+            wishlistModalCharacters.forEach(function (c) { existingByName.set(normalizeWishName(c.name), c); });
+
+            let addedCount = 0;
             input.names.forEach(function (n) {
+                const existing = existingByName.get(normalizeWishName(n));
+                if (existing) {
+                    existing.isStarWish = existing.isStarWish || input.star;
+                    existing.isLocked = existing.isLocked || input.lock;
+                    existing.wantsKakeraBoost = existing.wantsKakeraBoost || input.kakera;
+                    existing.includeInCommand = true;
+                    return;
+                }
+                addedCount++;
                 wishlistModalCharacters.push({
                     name: n, isStarWish: input.star, isClaimed: false, boostPercent: null,
                     isLocked: input.lock, isBooster: false, boosterPercent: null,
@@ -17843,8 +17867,13 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             clearWishlistPendingRemovalsFor(input.names);
             renderWishlistModalRows();
 
+            const updatedCount = input.names.length - addedCount;
+            const parts = [];
+            if (addedCount > 0) parts.push(`added ${addedCount} new character${addedCount === 1 ? '' : 's'}`);
+            if (updatedCount > 0) parts.push(`updated the flags on ${updatedCount} already-listed character${updatedCount === 1 ? '' : 's'}`);
             const message = document.getElementById('wishlistModalMessage');
-            if (message) message.innerHTML = `<p class="success-message">Added ${input.names.length} character${input.names.length === 1 ? '' : 's'} to this wishlist's rows below - Save Wishlist to keep them.</p>`;
+            const summary = parts.join(', ');
+            if (message) message.innerHTML = `<p class="success-message">${summary.charAt(0).toUpperCase() + summary.slice(1)} - Save Wishlist to keep them.</p>`;
         }
 
         function parseWishlistBonusText(text) {
