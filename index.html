@@ -5454,7 +5454,7 @@
                     claim: 'Time left until your next claim is available.',
                     rolls: 'How many rolls you have left, and when they reset.',
                     daily: 'Time left until your next $daily reset.',
-                    bku: 'Number of bonus keys available to use.',
+                    bku: 'Kakera earned from rolling your Key LVL 6+ characters (see $bku), waiting to be collected before the next reset, plus your $sw completion/reset odds for it.',
                     kakerareact: 'Whether you can currently react to kakera, and your current reaction power.',
                     kakerapower: 'How much reaction power each kakera button costs.',
                     kakerainfo: 'Extra info about reaction power costs (e.g. 10+ key characters cost half).',
@@ -5477,7 +5477,7 @@
                     claim: "You can't claim for another 20 min.",
                     rolls: 'You have 0 rolls (+7 $mk) left. Next rolls reset in 20 min.',
                     daily: 'Next $daily reset in 14h 28min.',
-                    bku: '1 bonus key available.',
+                    bku: '(Keys LVL 6+) 6,050 to collect before the next reset (2h 54min.) Probability to complete + reset on your next $sw: 10%',
                     kakerareact: 'You can react to kakera right now! Power: 61%',
                     kakerapower: 'Each kakera button consumes 34% of your reaction power.',
                     kakerainfo: 'Characters with 10+ keys consume half the power.',
@@ -14747,7 +14747,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-21';
+        const CHANGELOG_VERSION = '2026-08-23';
         const CHANGELOG = [
             {
                 version: '2026-08-21',
@@ -14760,11 +14760,18 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     { type: 'feature', text: 'The Ourosphere character perk list is now much more compact ("Perk N" with the full description as a tooltip, instead of the whole sentence), so it stays closer to the character list\'s own height instead of pushing Perk 10 off past a long scroll.' },
                     { type: 'feature', text: 'Added bulk perk leveling on the Ourosphere tab: select any number of characters (a checkbox on each card) and set one perk to one level for all of them at once, instead of opening and editing each one individually.' },
                     { type: 'feature', text: 'A character\'s Ourosphere perk levels are now checked against their tracked $mmz= investment total - if the current levels would cost more spheres than what you told us was invested, a warning shows on both the character card and its detail panel.' },
-                    { type: 'feature', text: 'The Colors tab\'s character picker now has Detailed/Compact/Grid view modes (same as the Sort tab) and shows each character\'s last reported kakera value alongside their keys.' },
+                    { type: 'feature', text: 'The Colors tab\'s character picker now has Detailed/Compact/Grid view modes (same as the Sort tab) and shows each character\'s last reported kakera value alongside their keys.' }
+                ]
+            },
+            {
+                version: '2026-08-23',
+                date: 'August 23, 2026',
+                items: [
                     { type: 'fix', text: 'The wish command builder could double up characters in a generated command - "Also Add to This Wishlist" deliberately leaves the typed names in its textarea, so a "Generate Command(s)" click right after counted those names once from the textarea and again from the row they\'d just become. Now deduped.' },
                     { type: 'fix', text: 'Clicking "Also Add to This Wishlist" for names already in the row list (easy to do, since the textarea is never auto-cleared) created a duplicate row per name instead of updating the existing one - which could silently drop a Star someone had already set on the original row when generating a command. Re-adding an existing name now updates that row in place.' },
                     { type: 'fix', text: 'A character already tracked on the Ourosphere tab (with Perk 1 leveled up) is now recognized as Claimed with the matching Booster % as soon as they\'re added to a wishlist by hand - previously this only ever got picked up from a real $wishlist paste\'s own ✅/+N% markers.' },
-                    { type: 'feature', text: 'Added a "Select Shown" button to the Ourosphere tab, matching the Sort/Series tabs - bulk-selects every character currently matching your search/filter for perk leveling instead of clicking each one by hand.' }
+                    { type: 'feature', text: 'Added a "Select Shown" button to the Ourosphere tab, matching the Sort/Series tabs - bulk-selects every character currently matching your search/filter for perk leveling instead of clicking each one by hand.' },
+                    { type: 'fix', text: 'The Embeds tab\'s $tu timers tooltip/preview for "bku" wrongly described it as "bonus keys available to use" - it\'s actually the kakera earned from rolling your Key LVL 6+ characters, waiting to be collected before the next reset. Corrected to match a real $bku paste.' }
                 ]
             },
             {
