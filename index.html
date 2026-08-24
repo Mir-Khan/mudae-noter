@@ -4976,6 +4976,7 @@
                                     <option value="inprogress">In progress</option>
                                     <option value="notstarted">Not started</option>
                                 </select>
+                                <button type="button" class="btn btn-sm" onclick="selectAllShownOuroperksEntries()">Select Shown</button>
                                 <button type="button" class="btn btn-sm" onclick="cleanUpDuplicateOuroperksEntries()"
                                     title="Merges any character tracked more than once (e.g. one copy with no thumbnail from before a collection match was found) back into a single entry">Clean Up Duplicates</button>
                             </div>
@@ -14761,7 +14762,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     { type: 'feature', text: 'A character\'s Ourosphere perk levels are now checked against their tracked $mmz= investment total - if the current levels would cost more spheres than what you told us was invested, a warning shows on both the character card and its detail panel.' },
                     { type: 'feature', text: 'The Colors tab\'s character picker now has Detailed/Compact/Grid view modes (same as the Sort tab) and shows each character\'s last reported kakera value alongside their keys.' },
                     { type: 'fix', text: 'The wish command builder could double up characters in a generated command - "Also Add to This Wishlist" deliberately leaves the typed names in its textarea, so a "Generate Command(s)" click right after counted those names once from the textarea and again from the row they\'d just become. Now deduped.' },
-                    { type: 'fix', text: 'Clicking "Also Add to This Wishlist" for names already in the row list (easy to do, since the textarea is never auto-cleared) created a duplicate row per name instead of updating the existing one - which could silently drop a Star someone had already set on the original row when generating a command. Re-adding an existing name now updates that row in place.' }
+                    { type: 'fix', text: 'Clicking "Also Add to This Wishlist" for names already in the row list (easy to do, since the textarea is never auto-cleared) created a duplicate row per name instead of updating the existing one - which could silently drop a Star someone had already set on the original row when generating a command. Re-adding an existing name now updates that row in place.' },
+                    { type: 'fix', text: 'A character already tracked on the Ourosphere tab (with Perk 1 leveled up) is now recognized as Claimed with the matching Booster % as soon as they\'re added to a wishlist by hand - previously this only ever got picked up from a real $wishlist paste\'s own ✅/+N% markers.' },
+                    { type: 'feature', text: 'Added a "Select Shown" button to the Ourosphere tab, matching the Sort/Series tabs - bulk-selects every character currently matching your search/filter for perk leveling instead of clicking each one by hand.' }
                 ]
             },
             {
@@ -16534,10 +16537,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             const perk1Lookup = buildOuroperksPerk1Lookup();
             let anyChanged = false;
             wishlistModalCharacters.forEach(function (c) {
-                const info = computeWishlistBoosterWarning(c, perk1Lookup);
-                if (c.boosterWarning !== info.warning || c.boosterConfirmedPercent !== info.confirmedPercent) anyChanged = true;
-                c.boosterWarning = info.warning;
-                c.boosterConfirmedPercent = info.confirmedPercent;
+                const before = { isClaimed: c.isClaimed, isBooster: c.isBooster, boosterPercent: c.boosterPercent, boosterWarning: c.boosterWarning, boosterConfirmedPercent: c.boosterConfirmedPercent };
+                applyOuroperksClaimAndBoosterToCharacter(c, perk1Lookup);
+                if (c.isClaimed !== before.isClaimed || c.isBooster !== before.isBooster || c.boosterPercent !== before.boosterPercent
+                    || c.boosterWarning !== before.boosterWarning || c.boosterConfirmedPercent !== before.boosterConfirmedPercent) anyChanged = true;
             });
             if (anyChanged) renderWishlistModalRows();
         }
@@ -16554,6 +16557,32 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 byName.set(normalizeWishName(entry.name), value);
             });
             return byName;
+        }
+
+        // A character tracked on the Ourosphere tab has necessarily been
+        // claimed (that tracker only exists for characters you actually
+        // own), so it's a reliable "isClaimed" signal even for a row that
+        // never went through a real $wishlist paste - added by hand via the
+        // command builder, or saved before this character's Ourosphere
+        // data existed yet. Only ever fills in what's still unknown - never
+        // demotes an already-claimed row, and never overwrites a Booster %
+        // someone already has set (solved, estimated, or typed by hand).
+        function applyOuroperksClaimAndBoosterToCharacter(c, perk1Lookup) {
+            const lookup = perk1Lookup || buildOuroperksPerk1Lookup();
+            if (!c.isClaimed) {
+                const confirmed = lookup.get(normalizeWishName(c.name));
+                if (confirmed != null) {
+                    c.isClaimed = true;
+                    if (!c.isBooster) {
+                        c.isBooster = true;
+                        c.boosterPercent = confirmed;
+                        c.boosterPercentEstimated = false;
+                    }
+                }
+            }
+            const warningInfo = computeWishlistBoosterWarning(c, lookup);
+            c.boosterWarning = warningInfo.warning;
+            c.boosterConfirmedPercent = warningInfo.confirmedPercent;
         }
 
         function inferWishlistBoosterPercentages(characters, selfBoostRatePercent) {
@@ -16906,9 +16935,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // Recomputed fresh (not carried over from storage) since the
             // Ourosphere tab's tracked data can change independently of
             // this wishlist's own last save.
-            const warningInfo = computeWishlistBoosterWarning(backfilled);
-            backfilled.boosterWarning = warningInfo.warning;
-            backfilled.boosterConfirmedPercent = warningInfo.confirmedPercent;
+            applyOuroperksClaimAndBoosterToCharacter(backfilled);
             return backfilled;
         }
 
@@ -17842,6 +17869,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // (flags OR'd in, never cleared) instead of duplicated.
             const existingByName = new Map();
             wishlistModalCharacters.forEach(function (c) { existingByName.set(normalizeWishName(c.name), c); });
+            const perk1Lookup = buildOuroperksPerk1Lookup();
 
             let addedCount = 0;
             input.names.forEach(function (n) {
@@ -17851,15 +17879,22 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     existing.isLocked = existing.isLocked || input.lock;
                     existing.wantsKakeraBoost = existing.wantsKakeraBoost || input.kakera;
                     existing.includeInCommand = true;
+                    applyOuroperksClaimAndBoosterToCharacter(existing, perk1Lookup);
                     return;
                 }
                 addedCount++;
-                wishlistModalCharacters.push({
+                const fresh = {
                     name: n, isStarWish: input.star, isClaimed: false, boostPercent: null,
                     isLocked: input.lock, isBooster: false, boosterPercent: null,
                     wantsKakeraBoost: input.kakera, includeInCommand: true, hasUnexplainedBoost: false, hasSelfBoostPortion: false,
                     selfResidualPercent: null, boosterPercentEstimated: false, boosterWarning: null, boosterConfirmedPercent: null
-                });
+                };
+                // Already tracked on the Ourosphere tab (so definitely
+                // claimed, even though nothing here was pasted from a real
+                // $wishlist) - reflect that immediately instead of only
+                // once a real paste with a ✅ marker comes along.
+                applyOuroperksClaimAndBoosterToCharacter(fresh, perk1Lookup);
+                wishlistModalCharacters.push(fresh);
                 // Brand new to this wishlist - baseline is "nothing set"
                 // so it shows as changed/included right away.
                 wishlistRowBaselines.set(normalizeWishName(n), { isStarWish: false, isLocked: false, wantsKakeraBoost: false });
@@ -19161,6 +19196,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
         function clearOuroperksBulkSelection() {
             ouroperksBulkSelectedKeys.clear();
+            renderOuroperksCharacterList();
+        }
+
+        // Adds every character matching the current search/filter (same set
+        // the grid is actually showing) to the bulk selection, same "Select
+        // Shown" convention as the Sort/Series tabs - doesn't touch anything
+        // already selected but currently filtered out of view.
+        function selectAllShownOuroperksEntries() {
+            getVisibleOuroperksEntries().forEach(function (entry) { ouroperksBulkSelectedKeys.add(entry.key); });
             renderOuroperksCharacterList();
         }
 

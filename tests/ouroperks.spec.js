@@ -1147,5 +1147,29 @@ Erza Scarlet ✅`);
             const title = await firstLabel.getAttribute('title');
             assert.ok(title && title.length > 6, `expected the full description in the title tooltip, got: "${title}"`);
         }
+    },
+    {
+        name: '"Select Shown" bulk-selects every character currently matching the search/filter, not the whole tracked list',
+        async run(page) {
+            await openOurosphereTab(page);
+            await page.fill('#ouroInvestmentInput', 'Alpha 1,000 sp\nBeta 2,000 sp\nGamma 3,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+
+            await page.fill('#ouroPerksSearchInput', 'a');
+            await page.waitForTimeout(100);
+            assert.deepStrictEqual((await page.locator('.ouro-character-card .ouro-card-name').allTextContents()).sort(), ['Alpha', 'Beta', 'Gamma'].sort());
+
+            await page.fill('#ouroPerksSearchInput', 'al');
+            await page.waitForTimeout(100);
+            assert.deepStrictEqual(await page.locator('.ouro-character-card .ouro-card-name').allTextContents(), ['Alpha']);
+
+            await page.click('#ourosphereTabPanel button:has-text("Select Shown")');
+            await page.waitForTimeout(100);
+            const selected = await page.evaluate(() => Array.from(ouroperksBulkSelectedKeys));
+            assert.strictEqual(selected.length, 1, `expected only the filtered-in character selected, got: ${JSON.stringify(selected)}`);
+
+            assert.strictEqual(await page.locator('#ouroPerksBulkBar .sort-selection-count').textContent(), '1 selected');
+        }
     }
 ];

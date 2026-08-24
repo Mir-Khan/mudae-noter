@@ -1612,5 +1612,39 @@ Bullseye +100%`;
             assert.ok(/\$swlk Alpha\$Beta/.test(output), `expected a $swlk command for the starred pair, got: "${output}"`);
             assert.ok(/\$wishkl Gamma\$Delta/.test(output), `expected a $wishkl command for the unstarred pair, got: "${output}"`);
         }
+    },
+    {
+        // Regression test for real feedback: a character already tracked
+        // on the Ourosphere tab (Perk 1 leveled up, so definitely claimed)
+        // wasn't reflected at all when added to a wishlist by hand via the
+        // command builder - isClaimed/Booster only ever got set from a
+        // real $wishlist paste's own markers, never from Ourosphere data
+        // the app already had.
+        name: 'adding a character already tracked on the Ourosphere tab (with Perk 1 leveled) picks up Claimed + Booster % automatically',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.click('#tab-ourosphere-btn');
+            await page.waitForSelector('#ouroPerksCharacterList');
+            await page.fill('#ouroInvestmentInput', 'Monkey D. Luffy 3,000 sp');
+            await page.click('button:has-text("Import Investment Totals")');
+            await page.waitForTimeout(100);
+            await page.click('#ouroPerksCharacterList .ouro-character-card');
+            await page.fill('#ouroPerksPasteInput', '[LVL 4]  Spawn chance increased for character(s) next to this one in your $wishlist: 60%');
+            await page.click('button:has-text("Import Perks")');
+            await page.waitForTimeout(100);
+
+            await openAddWishlistModal(page);
+            await page.fill('#wishlistNameInput', 'PicksUpOuroperks');
+            await page.fill('#wishlistCommandNames', 'Monkey D. Luffy');
+            await page.click('button:has-text("Also Add to This Wishlist")');
+            await page.waitForTimeout(100);
+
+            const state = await page.evaluate(() => wishlistModalCharacters.map(c => ({ name: c.name, isClaimed: c.isClaimed, isBooster: c.isBooster, boosterPercent: c.boosterPercent })));
+            assert.deepStrictEqual(state, [{ name: 'Monkey D. Luffy', isClaimed: true, isBooster: true, boosterPercent: 60 }],
+                'expected the tracked Perk 1 level (LVL 4 -> 60%) to auto-fill Claimed + Booster on a manually-added row');
+
+            const rowText = await page.locator('.wishlist-row', { hasText: 'Monkey D. Luffy' }).textContent();
+            assert.ok(!/unconfirmed|doesn't match Ourosphere/.test(rowText), `expected no warning badge since the % matches the tracked level, got: "${rowText}"`);
+        }
     }
 ];
