@@ -80,5 +80,32 @@ module.exports = [
             assert.ok(pageScrollHeight < metrics.scrollHeight,
                 `expected the page itself to stay shorter than the group's full (unscrolled) content height, got page ${pageScrollHeight} vs group content ${metrics.scrollHeight}`);
         }
+    },
+    {
+        // Regression test for a real report: Mudae sometimes wraps the
+        // image link in Discord's own "<...>" link-suppression syntax
+        // instead of a bare URL - the character-line regex only ever
+        // expected "- https://..." right at the end, so a line in this
+        // format failed to match at all and the character was silently
+        // dropped from parsing entirely, not just missing its image.
+        name: 'a character line with the image link wrapped in "< >" (Discord\'s link-suppression syntax) still parses correctly',
+        async run(page) {
+            const text = `Some Series - 1/1
+#3,710 - Agott  💞 => bowie · ($wa) 146 ka - < https://mudae.net/uploads/4452573/dJo6eA~f3f01e2c37ea.png >`;
+            await parseText(page, text);
+
+            const chars = await page.evaluate(() => AppState.seriesData['Some Series'].characters.map(c => (
+                { name: c.name, image: c.image, kakera: c.kakera, owner: c.owner, mudaeTags: c.mudaeTags, globalRank: c.globalRank }
+            )));
+
+            assert.strictEqual(chars.length, 1, 'expected the character to actually get parsed, not silently dropped');
+            assert.strictEqual(chars[0].name, 'Agott');
+            assert.strictEqual(chars[0].image, 'https://mudae.net/uploads/4452573/dJo6eA~f3f01e2c37ea.png',
+                `expected the "< >" wrapper stripped from the image URL, got: "${chars[0].image}"`);
+            assert.strictEqual(chars[0].kakera, '146');
+            assert.strictEqual(chars[0].owner, 'bowie');
+            assert.deepStrictEqual(chars[0].mudaeTags, ['wa']);
+            assert.strictEqual(chars[0].globalRank, '3710');
+        }
     }
 ];

@@ -6278,7 +6278,13 @@
                         note: ''
                     };
                 } else if (currentSeries) {
-                    const charMatch = line.match(/^(.+?)\s+-\s+(https?:\/\/.+)$/);
+                    // Mudae sometimes wraps the image link in Discord's own
+                    // "<...>" link-suppression syntax (a real report: "-
+                    // < https://.../x.png >" instead of the usual bare URL) -
+                    // seemingly to stop Discord auto-embedding a preview -
+                    // so the angle brackets (and the space just inside them)
+                    // are optional around the URL, not part of it.
+                    const charMatch = line.match(/^(.+?)\s+-\s+<?\s*(https?:\/\/\S+?)\s*>?$/);
                     if (charMatch) {
                         let fullInfo = charMatch[1].trim();
                         const imageUrl = charMatch[2].trim();
@@ -14747,8 +14753,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-08-23';
+        const CHANGELOG_VERSION = '2026-09-02';
         const CHANGELOG = [
+            {
+                version: '2026-09-02',
+                date: 'September 2, 2026',
+                items: [
+                    { type: 'fix', text: 'Mudae sometimes wraps a character\'s image link in Discord\'s own "&lt; url &gt;" link-suppression syntax instead of a bare link - a real report found this made the parser miss the character entirely (not just its image). That format is now recognized correctly.' }
+                ]
+            },
             {
                 version: '2026-08-21',
                 date: 'August 21, 2026',
