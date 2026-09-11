@@ -14753,8 +14753,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // Each item is tagged 'feature' or 'fix' - fixes are noise to most
         // users (nothing they need to act on), so they're collapsed behind a
         // "Show N bug fixes" toggle instead of shown by default.
-        const CHANGELOG_VERSION = '2026-09-02';
+        const CHANGELOG_VERSION = '2026-09-11';
         const CHANGELOG = [
+            {
+                version: '2026-09-11',
+                date: 'September 11, 2026',
+                items: [
+                    { type: 'fix', text: 'When some of your $starwish slot bonus came from a free source (like $kl) and some from actually sacrificing wishlist slots ($sw), the app estimated the cost of your next $starwish slot by ramping from the FULL bonus instead of just the $sw-sourced part - a real report showed this asking for 24 wishlist slots when Discord itself only asked for 12. Now ramps from the correct starting point, parsed from $bonus\'s own breakdown (e.g. "+11 (6 $kl + 5 $sw)").' }
+                ]
+            },
             {
                 version: '2026-09-02',
                 date: 'September 2, 2026',
@@ -16253,9 +16260,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // the next time you open ANY wishlist flagged "mine," instead of
             // needing to be re-entered per entry.
             if (!AppState.wishlists.myCapacity || typeof AppState.wishlists.myCapacity !== 'object') {
-                AppState.wishlists.myCapacity = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null };
+                AppState.wishlists.myCapacity = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, starwishSlotsFromSw: null, updatedAt: null };
             }
             if (AppState.wishlists.myCapacity.selfBoostRatePercent === undefined) AppState.wishlists.myCapacity.selfBoostRatePercent = null;
+            if (AppState.wishlists.myCapacity.starwishSlotsFromSw === undefined) AppState.wishlists.myCapacity.starwishSlotsFromSw = null;
             return AppState.wishlists;
         }
 
@@ -16883,7 +16891,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // sense for a wishlist you actually run commands for, not one
         // you're just tracking for a friend to compare against.
         let wishlistModalIsOwn = false;
-        let wishlistModalBonusSnapshot = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null };
+        let wishlistModalBonusSnapshot = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, starwishSlotsFromSw: null, updatedAt: null };
         // Per-character baseline (name -> {isStarWish, isLocked,
         // wantsKakeraBoost}) captured whenever a row's current flags are
         // "known real" - at modal open (whatever's already saved) and after
@@ -16993,7 +17001,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             // private to this one entry - so it's already filled in
             // whether this is a brand new wishlist or one you've edited
             // (and saved capacity for) before.
-            wishlistModalBonusSnapshot = Object.assign({ wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null }, currentWishlists().myCapacity);
+            wishlistModalBonusSnapshot = Object.assign({ wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, starwishSlotsFromSw: null, updatedAt: null }, currentWishlists().myCapacity);
 
             if (title) title.textContent = existing ? 'Edit Wishlist' : 'Add Wishlist';
             if (nameField) nameField.value = existing ? existing.name : '';
@@ -17058,7 +17066,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             wishlistModalCharacters = [];
             wishlistLastImportedText = '';
             wishlistModalIsOwn = false;
-            wishlistModalBonusSnapshot = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, updatedAt: null };
+            wishlistModalBonusSnapshot = { wishlistSlots: null, starwishSlots: null, wishseriesSlots: null, selfBoostRatePercent: null, starwishSlotsFromSw: null, updatedAt: null };
             wishlistRowBaselines = new Map();
             wishlistConfirmedRealNames = new Set();
             wishlistRowOrderBaseline = [];
@@ -17646,7 +17654,12 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     const newCapacity = Math.max(STARWISH_BASE_SLOTS, capacity - count);
                     const actuallyDropped = capacity - newCapacity;
                     if (actuallyDropped > 0) {
-                        const reclaimed = estimateStarwishUpgradeCost(newCapacity, actuallyDropped);
+                        // Assumes the dropped slots come off the END of the
+                        // $sw-sourced ramp first (the natural/cheapest-to-
+                        // reclaim order) - see estimateStarwishUpgradeCost.
+                        const knownSw = wishlistModalBonusSnapshot.starwishSlotsFromSw;
+                        const remainingSw = knownSw != null ? Math.max(0, knownSw - actuallyDropped) : null;
+                        const reclaimed = estimateStarwishUpgradeCost(newCapacity, actuallyDropped, remainingSw);
                         capacityNote.innerHTML = `Discord doesn't hand back the wishlist slots these cost automatically -
                             if you also lower your saved starwish capacity from <b>${capacity}</b> to <b>${newCapacity}</b>
                             (double-check against a fresh <code>$bonus</code> first), you'd reclaim roughly
@@ -17819,7 +17832,7 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                     + typedChars.filter(function (c) { return c.isStarWish && !existingRowNames.has(normalizeWishName(c.name)); }).length;
                 if (totalStarwishAfter > capacity) {
                     const slotsNeeded = totalStarwishAfter - capacity;
-                    const estCost = estimateStarwishUpgradeCost(capacity, slotsNeeded);
+                    const estCost = estimateStarwishUpgradeCost(capacity, slotsNeeded, wishlistModalBonusSnapshot.starwishSlotsFromSw);
                     const oldWishlistCapacity = wishlistModalBonusSnapshot.wishlistSlots;
 
                     let warningHTML = `<p class="error-message">⚠ This needs ${slotsNeeded} more \$starwish slot${slotsNeeded === 1 ? '' : 's'} than your saved capacity (${capacity}) - Mudae will likely ask to sacrifice roughly <b>${estCost} wishlist slot${estCost === 1 ? '' : 's'}</b> to raise the limit (Mudae's own ramping cost: 2, 4, 6... wishlist slots per additional starwish slot).</p>`;
@@ -17951,10 +17964,31 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
 
                 return numbers.reduce(function (sum, n) { return sum + parseInt(n, 10); }, 0);
             }
+            // Real report: the starwish slots line breaks down WHERE its
+            // bonus came from, e.g. "+11 (6 $kl + 5 $sw)" - only the "$sw"
+            // portion was ever actually bought by ramped-cost wishlist-slot
+            // sacrifice (the rest, like $kl here, is free). Estimating the
+            // next sacrifice's cost from the FULL bonus (11) instead of just
+            // the $sw-sourced part (5) ramped the cost far too high - a real
+            // report showed Discord asking for 12 wishlist slots for the
+            // next slot while the app assumed 24 (ramping from 11 instead
+            // of 5). This is only extractable when the line actually shows
+            // a breakdown; an older paste/manual entry with no breakdown
+            // falls back to the old (over-)estimate elsewhere.
+            function extractStarwishSwSourcedSlots() {
+                const lineRe = /^.*starwish\s*slots?\s*:?.*$/im;
+                const lineMatch = text.match(lineRe);
+                if (!lineMatch) return null;
+                const parenMatch = lineMatch[0].match(/\(([^)]*)\)/);
+                if (!parenMatch) return null;
+                const swMatch = parenMatch[1].match(/(\d+)\s*\$sw\b/i);
+                return swMatch ? parseInt(swMatch[1], 10) : null;
+            }
             return {
                 wishlistSlots: extractNetSlots('wishlist'),
                 starwishSlots: extractNetSlots('starwish'),
-                wishseriesSlots: extractNetSlots('wishseries')
+                wishseriesSlots: extractNetSlots('wishseries'),
+                starwishSlotsFromSw: extractStarwishSwSourcedSlots()
             };
         }
 
@@ -17978,15 +18012,23 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // against multiple Mudae community guides, and cross-checked against
         // a real $bonus report: a player with 4 slots bought via $sw (0 via
         // $kl) showed exactly a -20 wishlist-slot deduction, matching
-        // 2+4+6+8=20 for 4 ramped slots exactly. Since $bonus's own total
-        // doesn't separate how many of your current bonus slots came from
-        // $kl vs $sw specifically, this assumes all of them did (the
-        // common case, and the only assumption that can be verified from
-        // what's available) - it's an estimate, not a guarantee.
+        // 2+4+6+8=20 for 4 ramped slots exactly.
         const STARWISH_SLOT_RAMP_STEP = 2;
 
-        function estimateStarwishUpgradeCost(currentStarwishCapacity, slotsNeeded) {
-            const alreadyRamped = Math.max(0, currentStarwishCapacity - STARWISH_BASE_SLOTS);
+        // knownSwSourcedSlots is how many of the current bonus were actually
+        // bought via ramped-cost $sw sacrifice, straight from $bonus's own
+        // starwish-slots breakdown (parseWishlistBonusText's
+        // starwishSlotsFromSw) - the rest of the bonus (e.g. from $kl) was
+        // free and never ramped, so ramping from the FULL bonus instead
+        // overestimates the next sacrifice's cost whenever any of it came
+        // from a free source. Falls back to assuming the whole bonus was
+        // $sw-sourced only when that breakdown isn't available (an older
+        // saved capacity with no bonus paste behind it, or manually typed) -
+        // still just an estimate then, same as before this was trackable.
+        function estimateStarwishUpgradeCost(currentStarwishCapacity, slotsNeeded, knownSwSourcedSlots) {
+            const alreadyRamped = knownSwSourcedSlots != null
+                ? Math.max(0, knownSwSourcedSlots)
+                : Math.max(0, currentStarwishCapacity - STARWISH_BASE_SLOTS);
             let cost = 0;
             for (let k = 1; k <= slotsNeeded; k++) {
                 cost += STARWISH_SLOT_RAMP_STEP * (alreadyRamped + k);
@@ -17999,6 +18041,15 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
         // itself, since Mudae could change these base defaults, or an
         // account could have some other unlisted modifier - Save Capacity
         // is a deliberate separate step so the numbers stay correctable.
+        // Remembers the $sw-sourced breakdown from the last successful
+        // "Prefill from $bonus" (keyed to the exact starwish total it
+        // prefilled), so Save Capacity can carry it into myCapacity - but
+        // only if the starwish field still shows that same total when
+        // Save is clicked. If it's been hand-edited since, the breakdown
+        // no longer necessarily applies, so it's dropped rather than
+        // silently attached to a number it was never actually parsed from.
+        let wishlistLastParsedStarwishBreakdown = null;
+
         function parseWishlistBonusSnapshot() {
             const input = document.getElementById('wishlistBonusInput');
             const message = document.getElementById('wishlistBonusMessage');
@@ -18022,6 +18073,10 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             if (starwishField) starwishField.value = parsed.starwishSlots != null ? (parsed.starwishSlots + STARWISH_BASE_SLOTS) : '';
             if (wishseriesField) wishseriesField.value = parsed.wishseriesSlots != null ? parsed.wishseriesSlots : '';
 
+            wishlistLastParsedStarwishBreakdown = parsed.starwishSlots != null
+                ? { totalStarwishCapacity: parsed.starwishSlots + STARWISH_BASE_SLOTS, starwishSlotsFromSw: parsed.starwishSlotsFromSw }
+                : null;
+
             if (message) message.innerHTML = '<p class="success-message">Prefilled below (bonus + Mudae\'s free base allowance) - double check against Mudae\'s own total before saving, since this assumes the standard 7 wishlist / 1 starwish base.</p>';
         }
 
@@ -18044,6 +18099,9 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             myCapacity.starwishSlots = readField('wishlistCapacityStarwish');
             myCapacity.wishseriesSlots = readField('wishlistCapacityWishseries');
             myCapacity.selfBoostRatePercent = readField('wishlistCapacitySelfBoostRate');
+            myCapacity.starwishSlotsFromSw = (wishlistLastParsedStarwishBreakdown && wishlistLastParsedStarwishBreakdown.totalStarwishCapacity === myCapacity.starwishSlots)
+                ? wishlistLastParsedStarwishBreakdown.starwishSlotsFromSw
+                : null;
             myCapacity.updatedAt = Date.now();
             wishlistModalBonusSnapshot = Object.assign({}, myCapacity);
 

@@ -1646,5 +1646,50 @@ Bullseye +100%`;
             const rowText = await page.locator('.wishlist-row', { hasText: 'Monkey D. Luffy' }).textContent();
             assert.ok(!/unconfirmed|doesn't match Ourosphere/.test(rowText), `expected no warning badge since the % matches the tracked level, got: "${rowText}"`);
         }
+    },
+    {
+        // Regression test for a real report: the starwish-slots line in
+        // $bonus breaks down where the bonus came from, e.g. "+11 (6 $kl +
+        // 5 $sw)" - only the "$sw" part was actually bought via ramped-cost
+        // wishlist-slot sacrifice, the rest (here, $kl) was free. The app
+        // was ramping the next sacrifice's cost from the FULL bonus (11)
+        // instead of just the $sw-sourced part (5), wildly overestimating
+        // it - the real user's own screenshot showed Discord asking for 12
+        // wishlist slots for a 13th starwish slot, while the app said 24.
+        name: 'the starwish-slot sacrifice cost only ramps from the $sw-sourced portion of the bonus, not the full bonus including free sources like $kl',
+        async run(page) {
+            const REAL_BONUS_TEXT = `:wlslot: · Wishlist slots: +95 (6 $k + 44 $kl + 8 $kt + 30 premium + 7 server premium 3) -30 ($sw)
+:wlslot: · Wishseries slots: 10 (premium)
+:sw: · Starwish slots:  +11 (6 $kl + 5 $sw)`;
+
+            await openAddWishlistModal(page);
+            await markAsOwnWishlist(page);
+            await page.fill('#wishlistNameInput', 'StarwishRampFix');
+
+            await page.fill('#wishlistBonusInput', REAL_BONUS_TEXT);
+            await page.click('button:has-text("Prefill from $bonus")');
+            await page.waitForTimeout(100);
+            assert.strictEqual(await page.inputValue('#wishlistCapacityWishlist'), '72');
+            assert.strictEqual(await page.inputValue('#wishlistCapacityStarwish'), '12');
+
+            await page.click('button:has-text("Save Capacity")');
+            await page.waitForTimeout(100);
+            const saved = await page.evaluate(() => currentWishlists().myCapacity);
+            assert.strictEqual(saved.starwishSlotsFromSw, 5, 'expected the $sw-sourced portion (5, not the full 11) to be tracked from the bonus breakdown');
+
+            const names = [];
+            for (let i = 1; i <= 13; i++) names.push(`Char${i} ⭐`);
+            await page.fill('#wishlistTextInput', names.join('\n'));
+            await page.click('button:has-text("Import/Update from Pasted Text")');
+            await page.waitForTimeout(100);
+            await page.click('button:has-text("Include All Rows")');
+            await page.waitForTimeout(100);
+
+            await page.click('button:has-text("Generate Command(s)")');
+            await page.waitForTimeout(100);
+            const output = await page.locator('#wishlistCommandOutput').textContent();
+            assert.ok(/sacrifice roughly\s*12\s*wishlist slots/.test(output.replace(/\s+/g, ' ')),
+                `expected the real 12-wishlist-slot cost (ramping from the 5 $sw-sourced slots, not the full 11), got: "${output}"`);
+        }
     }
 ];
