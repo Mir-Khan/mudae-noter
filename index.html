@@ -4588,6 +4588,22 @@
             </div>
 
             <div class="control-group" style="margin-top: 20px;">
+                <h3>Update Key Counts &amp; Colors</h3>
+                <p class="sort-hint">Run <code>$mmscy=</code> in Discord (lists every keyed character sorted by key
+                    count, with its hex color) and paste the output here to refresh key counts and colors without
+                    re-pasting your whole collection. Matches by name only - a character in this paste that isn't in
+                    your collection yet is skipped (add it via <b>+ Add New Characters</b> first), and a name
+                    matching more than one series is left untouched to avoid updating the wrong one.</p>
+                <textarea id="colorsKeysPasteInput" class="add-chars-textarea" style="min-height: 100px;"
+                    placeholder="Nico Robin | ♥ · :chaoskey:  (74) (#5fd8e7)&#10;Artoria Pendragon | ♥ · :chaoskey:  (42) (#f3f2c5)&#10;Ichiko Ohya · :silverkey:  (3) (#a1b2c3)"></textarea>
+                <div class="add-chars-modal-actions" style="justify-content: flex-start;">
+                    <button type="button" class="btn btn-secondary" onclick="importKeyCountsFromPaste()">Update Keys
+                        &amp; Colors</button>
+                </div>
+                <div id="colorsKeysMessage"></div>
+            </div>
+
+            <div class="control-group" style="margin-top: 20px;">
                 <div class="sort-column-header" style="margin-bottom: 8px;">
                     <h3 style="margin: 0;">Pick Characters</h3>
                     <div class="sort-view-toggle">
@@ -12092,6 +12108,128 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
             saveToLocalStorage();
         }
 
+        // $mmscy= is a much lighter way to refresh key counts (and colors)
+        // than re-pasting the whole $mmsaty+ri-c+x+ko collection - one line
+        // per character, sorted by key count, with no image/note/kakera
+        // data to re-parse at all: "Name [| note] · :tier:  (N) (#hex)"
+        // (both the note and the trailing hex are optional - an uncolored
+        // character skips straight to "Name · :tier:  (N)"). Matches on
+        // name only (this output carries no series info), splitting on the
+        // LAST "·" so a note containing one of its own doesn't break the
+        // split. The digit-only "(N)" and hex "(#......)" parens are
+        // distinguished by their own required prefix character, so their
+        // order in the tail doesn't matter.
+        function parseKeyCountsPasteText(text) {
+            const results = [];
+            text.split('\n').forEach(function (rawLine) {
+                const line = rawLine.trim();
+                if (!line) return;
+
+                const lastDot = line.lastIndexOf('·');
+                if (lastDot === -1) return;
+
+                const tail = line.substring(lastDot + 1);
+                const countMatch = tail.match(/\((\d+)\)/);
+                if (!countMatch) return;
+                const colorMatch = tail.match(/\(#([0-9a-fA-F]{6})\)/);
+
+                let namePart = line.substring(0, lastDot).trim();
+                const pipeIdx = namePart.indexOf('|');
+                if (pipeIdx !== -1) namePart = namePart.substring(0, pipeIdx).trim();
+                if (!namePart) return;
+
+                results.push({
+                    name: namePart,
+                    keys: parseInt(countMatch[1], 10),
+                    color: colorMatch ? ('#' + colorMatch[1].toUpperCase()) : null
+                });
+            });
+            return results;
+        }
+
+        // Name-only lookup across the WHOLE collection (every series at
+        // once), since $mmscy='s output has no series info to match against -
+        // unlike every other paste-matching lookup in this app. Keeps every
+        // character sharing a name so an ambiguous one can be detected and
+        // skipped rather than silently updating the wrong series' copy.
+        function buildCollectionNameLookup() {
+            const map = new Map();
+            for (const seriesName in AppState.seriesData) {
+                AppState.seriesData[seriesName].characters.forEach(function (char) {
+                    const key = normalizeMatchPart(char.name);
+                    if (!map.has(key)) map.set(key, []);
+                    map.get(key).push({ seriesName: seriesName, char: char });
+                });
+            }
+            return map;
+        }
+
+        function importKeyCountsFromPaste() {
+            const input = document.getElementById('colorsKeysPasteInput');
+            const message = document.getElementById('colorsKeysMessage');
+            const text = input ? input.value.trim() : '';
+
+            if (!text) {
+                if (message) message.innerHTML = '<p class="error-message">Paste the $mmscy= output first.</p>';
+                return;
+            }
+
+            const parsedEntries = parseKeyCountsPasteText(text);
+            if (parsedEntries.length === 0) {
+                if (message) message.innerHTML = '<p class="error-message">Couldn\'t find any key counts in that text - make sure it\'s the $mmscy= output.</p>';
+                return;
+            }
+
+            const nameLookup = buildCollectionNameLookup();
+            const sortDataLookup = buildSortDataLookup();
+            let updatedCount = 0;
+            const unmatchedNames = [];
+            const ambiguousNames = [];
+
+            parsedEntries.forEach(function (entry) {
+                const matches = nameLookup.get(normalizeMatchPart(entry.name));
+                if (!matches || matches.length === 0) {
+                    unmatchedNames.push(entry.name);
+                    return;
+                }
+                if (matches.length > 1) {
+                    ambiguousNames.push(entry.name);
+                    return;
+                }
+
+                const match = matches[0];
+                let changed = false;
+                const newKeys = String(entry.keys);
+                if (match.char.keys !== newKeys) {
+                    match.char.keys = newKeys;
+                    changed = true;
+                }
+                if (entry.color && match.char.color !== entry.color) {
+                    match.char.color = entry.color;
+                    changed = true;
+                }
+                if (changed) updatedCount++;
+                syncSortDataForCharacter(match.seriesName, match.char, sortDataLookup);
+            });
+
+            if (updatedCount > 0) {
+                AppState.rawInput = serializeSeriesDataToText(AppState.seriesData);
+                refreshAfterCollectionChange();
+                refreshSortTabIfVisible();
+                renderColorCharacterGrid();
+                saveToLocalStorage();
+            }
+
+            let html = `<p class="success-message">Updated key counts / colors on ${updatedCount} character${updatedCount === 1 ? '' : 's'}.</p>`;
+            if (unmatchedNames.length > 0) {
+                html += `<p class="sort-hint">${unmatchedNames.length} character${unmatchedNames.length === 1 ? '' : 's'} in this paste aren't in your collection yet (skipped - add them via <b>+ Add New Characters</b> first, then re-paste this): ${unmatchedNames.slice(0, 20).map(escapeHTML).join(', ')}${unmatchedNames.length > 20 ? `, +${unmatchedNames.length - 20} more` : ''}</p>`;
+            }
+            if (ambiguousNames.length > 0) {
+                html += `<p class="error-message">⚠ ${ambiguousNames.length} name${ambiguousNames.length === 1 ? '' : 's'} matched more than one character across different series in your collection, so ${ambiguousNames.length === 1 ? 'it was' : 'they were'} left untouched to avoid updating the wrong one: ${ambiguousNames.map(escapeHTML).join(', ')}</p>`;
+            }
+            if (message) message.innerHTML = html;
+        }
+
         // Lets a character jump straight to an exact position by typing a
         // number, instead of having to drag it across a long, scrolling list.
         function handleSortRankBadgeClick(e, index) {
@@ -14759,7 +14897,8 @@ ${byCharacter ? '<p class="sort-hint" style="margin-top: 8px;">If a character sh
                 version: '2026-09-11',
                 date: 'September 11, 2026',
                 items: [
-                    { type: 'fix', text: 'When some of your $starwish slot bonus came from a free source (like $kl) and some from actually sacrificing wishlist slots ($sw), the app estimated the cost of your next $starwish slot by ramping from the FULL bonus instead of just the $sw-sourced part - a real report showed this asking for 24 wishlist slots when Discord itself only asked for 12. Now ramps from the correct starting point, parsed from $bonus\'s own breakdown (e.g. "+11 (6 $kl + 5 $sw)").' }
+                    { type: 'fix', text: 'When some of your $starwish slot bonus came from a free source (like $kl) and some from actually sacrificing wishlist slots ($sw), the app estimated the cost of your next $starwish slot by ramping from the FULL bonus instead of just the $sw-sourced part - a real report showed this asking for 24 wishlist slots when Discord itself only asked for 12. Now ramps from the correct starting point, parsed from $bonus\'s own breakdown (e.g. "+11 (6 $kl + 5 $sw)").' },
+                    { type: 'feature', text: 'Added an <b>Update Key Counts & Colors</b> box on the Colors tab: paste <code>$mmscy=</code> output to refresh key counts and colors by name, without re-pasting your whole collection.' }
                 ]
             },
             {

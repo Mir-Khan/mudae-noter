@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { loadDemoCollection } = require('./helpers');
+const { loadDemoCollection, dismissChangelogIfPresent } = require('./helpers');
 
 module.exports = [
     {
@@ -280,6 +280,62 @@ module.exports = [
             await page.click('#tab-colors-btn');
             await page.waitForSelector('#colorCharacterGrid .sort-character-item');
             assert.strictEqual(await grid.evaluate(el => el.classList.contains('compact')), true, 'expected the chosen view mode to persist across a reload');
+        }
+    },
+    {
+        // Regression test for a real request: re-pasting the whole
+        // $mmsaty+ri-c+x+ko collection just to refresh key counts is
+        // heavy-handed - $mmscy= gives a much lighter listing ("Name
+        // [| note] · :tier: (N) (#hex)") with key count AND color, that
+        // this dedicated Update box on the Colors tab now parses and
+        // applies by name.
+        name: 'pasting real $mmscy= output updates matching characters\' key counts and colors, skips ones not in the collection, and skips ambiguous same-name matches across series',
+        async run(page) {
+            await dismissChangelogIfPresent(page);
+            await page.fill('#input', `Series A - 2/2
+#1 - Nico Robin - https://example.com/robin.png
+#2 - Ichiko Ohya - https://example.com/ohya.png
+Series B - 1/1
+#3 - Duplicate Name - https://example.com/dup-b.png`);
+            await page.click('button:has-text("Parse Input")');
+            await page.waitForTimeout(150);
+
+            // Give Series A its own "Duplicate Name" too, to test the
+            // ambiguous-match case alongside the normal ones.
+            await page.evaluate(() => {
+                AppState.seriesData['Series A'].characters.push({ name: 'Duplicate Name', displayName: 'Duplicate Name', image: 'https://example.com/dup-a.png', excluded: false, kakera: '', keys: '', note: '', color: '', isDisabled: false, rank: 0, globalRank: '', mudaeTags: [], owner: '' });
+            });
+
+            const realText = `Nico Robin | ͙͘͡★ · :chaoskey:  (74) (#5fd8e7)
+Ichiko Ohya · :silverkey:  (3) (#a1b2c3)
+Duplicate Name · :silverkey:  (5) (#000000)
+Artoria Pendragon | ͙͘͡★ · :chaoskey:  (42) (#f3f2c5)`;
+
+            await page.click('#tab-colors-btn');
+            await page.waitForTimeout(100);
+            await page.fill('#colorsKeysPasteInput', realText);
+            await page.click('button:has-text("Update Keys & Colors")');
+            await page.waitForTimeout(150);
+
+            const message = await page.locator('#colorsKeysMessage').innerHTML();
+            assert.ok(/Updated key counts \/ colors on 2 characters/.test(message), `expected exactly 2 real updates, got: "${message}"`);
+            assert.ok(/Artoria Pendragon/.test(message), `expected the not-yet-imported character named in the skipped list, got: "${message}"`);
+            assert.ok(/Duplicate Name/.test(message), `expected the ambiguous same-name character named in the skipped list, got: "${message}"`);
+
+            const chars = await page.evaluate(() => ({
+                robin: AppState.seriesData['Series A'].characters.find(c => c.name === 'Nico Robin'),
+                ohya: AppState.seriesData['Series A'].characters.find(c => c.name === 'Ichiko Ohya'),
+                dupA: AppState.seriesData['Series A'].characters.find(c => c.name === 'Duplicate Name'),
+                dupB: AppState.seriesData['Series B'].characters.find(c => c.name === 'Duplicate Name')
+            }));
+            assert.strictEqual(chars.robin.keys, '74');
+            assert.strictEqual(chars.robin.color, '#5FD8E7');
+            assert.strictEqual(chars.ohya.keys, '3');
+            assert.strictEqual(chars.ohya.color, '#A1B2C3');
+            assert.strictEqual(chars.dupA.keys, '', 'expected the ambiguous character in Series A left untouched');
+            assert.strictEqual(chars.dupA.color, '', 'expected the ambiguous character\'s color in Series A left untouched');
+            assert.strictEqual(chars.dupB.keys, '', 'expected the ambiguous character in Series B left untouched too');
+            assert.strictEqual(chars.dupB.color, '', 'expected the ambiguous character\'s color in Series B left untouched too');
         }
     }
 ];
